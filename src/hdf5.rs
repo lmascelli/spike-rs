@@ -1,24 +1,67 @@
-pub use cstr::cstr;
-
 pub use crate::sys::{
-    hid_t, H5Fopen, H5Gopen2, H5O_info1_t, H5Ovisit2, H5_index_t_H5_INDEX_UNKNOWN,
-    H5_iter_order_t_H5_ITER_UNKNOWN, H5P_DEFAULT,
+    hid_t, H5Fclose, H5Fcreate, H5Fopen, H5Gopen2, H5O_info1_t, H5Ovisit2,
+    H5_index_t_H5_INDEX_UNKNOWN, H5_iter_order_t_H5_ITER_UNKNOWN, H5P_DEFAULT,
 };
-
-pub mod h5converter;
-
+pub use cstr::cstr;
 pub use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_void};
 
-extern "C" {
-    pub static __imp_H5T_C_S1_g : hid_t;
-}
+pub mod h5converter;
 
 const NULL: *mut c_void = 0 as *mut c_void;
 
 const H5F_ACC_RDONLY: u32 = 0;
 const H5F_ACC_TRUNC: u32 = 2;
 
+///////////////////////////////////////////////////////////////////////////////
+//
+//                            H5 EXPORT STRUCTS
+//
+///////////////////////////////////////////////////////////////////////////////
+
+pub struct H5Struct {}
+
+pub struct H5File {
+    fields: Vec<H5Struct>,
+    id: hid_t,
+}
+
+impl H5File {
+    pub fn create(filepath: &str) -> Option<Self> {
+        let id;
+        let filepath = CString::new(filepath).unwrap();
+        unsafe {
+            id = H5Fcreate(
+                filepath.as_bytes().as_ptr().cast(),
+                H5F_ACC_TRUNC,
+                H5P_DEFAULT as i64,
+                H5P_DEFAULT as i64,
+            );
+        }
+        if id <= 0 {
+            return None;
+        }
+
+        Some(Self {
+            fields: Vec::new(),
+            id,
+        })
+    }
+}
+
+impl Drop for H5File {
+    fn drop(&mut self) {
+        unsafe {
+            H5Fclose(self.id);
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//
+//                            H5 EXPORT UTILITY
+//
+///////////////////////////////////////////////////////////////////////////////
 
 #[allow(temporary_cstring_as_ptr)]
 pub fn h5open_file(filename: &str, write: bool) -> Option<hid_t> {
@@ -42,7 +85,11 @@ pub fn h5open_file(filename: &str, write: bool) -> Option<hid_t> {
 pub fn h5open_group(file_id: hid_t, name: &str) -> Option<hid_t> {
     let group_id;
     unsafe {
-        group_id = H5Gopen2(file_id, CString::new(name).unwrap().as_ptr(), H5P_DEFAULT.into());
+        group_id = H5Gopen2(
+            file_id,
+            CString::new(name).unwrap().as_ptr(),
+            H5P_DEFAULT.into(),
+        );
     }
 
     if group_id > 0 {

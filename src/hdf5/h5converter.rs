@@ -10,6 +10,8 @@ use std::{
     fmt, ptr,
 };
 
+use crate::core::types::{Phase, Signal};
+
 // thanks to shurizzle
 // https://github.com/shurizzle
 macro_rules! offset_of {
@@ -446,7 +448,7 @@ pub struct H5Analog {
     channel_data: hid_t,
     n_channels: i64,
     pub labels_dict: HashMap<String, usize>,
-    info_channels: Vec<CInfoChannel>,
+    pub info_channels: Vec<CInfoChannel>,
 }
 
 impl H5Analog {
@@ -508,7 +510,7 @@ impl H5Analog {
             };
 
             for (i, val) in (ret.info_channels).iter().enumerate() {
-                // println!("{:?}", val);
+                // println!("{:#?}", val);
                 ret.labels_dict.insert(
                     val.label()
                         .map(CStr::to_string_lossy)
@@ -640,6 +642,26 @@ impl H5Content {
             None
         }
     }
+    
+    pub fn fill_phase(&self, stream_index: usize) -> Option<Phase> {
+        let mut ret = Phase::new();
+        if stream_index >= self.analogs.len() {
+            return None;
+        }
+        let analog = &self.analogs[stream_index];
+        for (channel_label, info_index) in &analog.labels_dict {
+            if let Some(raw_data) = analog.get_channel_data(channel_label) {
+                let sampling_frequency: f32 =  1000000f32 /
+                    analog.info_channels[*info_index].tick() as f32;
+                ret.raw_datas.insert(String::from(channel_label),
+                                     Signal::new(raw_data, sampling_frequency));
+            } else {
+                return None;
+            }
+        }
+
+        None
+    }
 }
 
 impl Drop for H5Content {
@@ -650,4 +672,3 @@ impl Drop for H5Content {
         }
     }
 }
-

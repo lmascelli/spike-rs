@@ -20,8 +20,8 @@ pub mod math {
 pub fn compute_threshold(range: &[f32], sampling_frequency: f32,
                          multiplier: f32) -> Result<f32, String> {
     const NUMBER_OF_WINDOWS: usize  = 30;
-    const WINDOW_DURATION_TIME: f32 = 200e-3;
-    const START_THRESHOLD: f32      = 100e-3;
+    const WINDOW_DURATION_TIME: f32 = 200e-3; // s
+    const START_THRESHOLD: f32      = 100e-3; // V
 
     let window_duration_sample: usize = WINDOW_DURATION_TIME as usize * 
         sampling_frequency as usize;
