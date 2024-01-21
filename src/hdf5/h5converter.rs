@@ -1,6 +1,7 @@
 use crate::sys::{
     H5Dclose, H5Dget_space, H5Dopen2, H5Dread, H5Fclose, H5Gclose, H5Giterate, H5Oopen, H5Sclose,
-    H5Sget_simple_extent_dims, H5Sget_simple_extent_ndims, H5Tclose, H5S_ALL,
+    H5Sget_simple_extent_dims, H5Sget_simple_extent_ndims, H5Tclose, H5S_ALL, H5Sselect_hyperslab,
+    H5S_seloper_t_H5S_SELECT_SET, H5Screate_simple, H5T_NATIVE_INT_g
 };
 use cstr::cstr;
 use std::{
@@ -455,8 +456,8 @@ impl H5Analog {
         let mut info_channels: Vec<CInfoChannel> = Vec::new();
         let mut ret;
         unsafe {
-            // ChannelData
 
+            // ChannelData
             channel_data = H5Dopen2(group_id, cstr!("ChannelData").as_ptr(), H5P_DEFAULT.into());
             if channel_data <= 0 {
                 return None;
@@ -507,6 +508,7 @@ impl H5Analog {
             };
 
             for (i, val) in (ret.info_channels).iter().enumerate() {
+                // println!("{:?}", val);
                 ret.labels_dict.insert(
                     val.label()
                         .map(CStr::to_string_lossy)
@@ -514,12 +516,7 @@ impl H5Analog {
                         .to_string(),
                     i,
                 );
-                // println!("{}", ic.info());
             }
-
-            // for (key, value) in &ret.labels_dict {
-            //     println!("{key}: {value}");
-            // }
 
             H5Sclose(info_dataspace);
             H5Dclose(info_channel);
@@ -532,10 +529,11 @@ impl H5Analog {
         if let Some(index) = self.labels_dict.get(label) {
             let ic = &self.info_channels[*index];
             let channel_data_index = ic.row_index();
-            let ad_zero = ic.ad_zero();
-            let conversion_factor =
+            let ad_zero = ic.ad_zero() as f32;
+            let conversion_factor : f32 =
                 ic.conversion_factor() as f32 * 10f32.powf(ic.exponent() as f32);
-            let ret = Vec::new();
+            let mut ret = Vec::new();
+            let mut adc_values = Vec::new();
 
             unsafe {
                 let channel_data_dataspace = H5Dget_space(self.channel_data);
@@ -556,8 +554,41 @@ impl H5Analog {
                     return None;
                 }
 
-                let storage_slab_start = [0i64];
-                let storate_slab_count = [dims[1]];
+                let storage_slab_start = [channel_data_index as u64, 0u64];
+                let storate_slab_count = [1 as u64, dims[1] as u64];
+
+                H5Sselect_hyperslab(channel_data_dataspace, H5S_seloper_t_H5S_SELECT_SET,
+                                    storage_slab_start.as_ptr(), ptr::null_mut(),
+                                    storate_slab_count.as_ptr(), ptr::null_mut());
+
+                adc_values.resize(dims[1] as usize, 0);
+
+                let memory_size = [dims[1] as u64];
+                let channel_data_memory_dataspace =
+                    H5Screate_simple(1, memory_size.as_ptr(),
+                    ptr::null_mut());
+
+                if channel_data_memory_dataspace <= 0 {
+                    return None;
+                }
+
+                H5Dread(self.channel_data,
+                        H5T_NATIVE_INT_g,
+                        channel_data_memory_dataspace,
+                        channel_data_dataspace,
+                        H5P_DEFAULT as i64, 
+                        adc_values.as_mut_ptr().cast());
+
+            }
+
+            ret.resize(adc_values.len(), 0f32);
+
+            for (i, n) in adc_values.iter().enumerate() {
+                ret[i] = ad_zero + *n as f32 * conversion_factor;
+            }
+
+            for n in &ret {
+                print!("{}, ", n);
             }
 
             Some(ret)
