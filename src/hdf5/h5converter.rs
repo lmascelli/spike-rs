@@ -589,9 +589,9 @@ impl H5Analog {
                 ret[i] = ad_zero + *n as f32 * conversion_factor;
             }
 
-            for n in &ret {
-                print!("{}, ", n);
-            }
+            // for n in &ret {
+            //     print!("{}, ", n);
+            // }
 
             Some(ret)
         } else {
@@ -646,6 +646,7 @@ impl H5Content {
     pub fn fill_phase(&self, stream_index: usize) -> Option<Phase> {
         let mut ret = Phase::new();
         if stream_index >= self.analogs.len() {
+            println!("The stream index is greater the the number of phases");
             return None;
         }
         let analog = &self.analogs[stream_index];
@@ -656,11 +657,11 @@ impl H5Content {
                 ret.raw_datas.insert(String::from(channel_label),
                                      Signal::new(raw_data, sampling_frequency));
             } else {
+                println!("Error converting channel {}", channel_label);
                 return None;
             }
         }
-
-        None
+        Some(ret)
     }
 }
 
