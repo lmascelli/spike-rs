@@ -28,7 +28,7 @@ pub fn compute_threshold(
     const WINDOW_DURATION_TIME: f32 = 200e-3; // s
     const START_THRESHOLD: f32 = 100e-3; // V
 
-    let window_duration_sample: usize = WINDOW_DURATION_TIME as usize * sampling_frequency as usize;
+    let window_duration_sample: usize = (WINDOW_DURATION_TIME * sampling_frequency) as usize;
     let windows_distance: usize = range.len() / NUMBER_OF_WINDOWS;
 
     if range.len() < (window_duration_sample * NUMBER_OF_WINDOWS) {
@@ -86,9 +86,13 @@ pub fn spike_detection(
     let mut ret = Vec::new();
 
     while index < range.len() - 1 {
+        // println!("index:     {index}
+        //           new_index: {new_index}");
         if index < new_index {
+            index += 1;
             continue;
         }
+
 
         // If a minimum or a maximum has been found ...
         if (range[index].abs() > range[index - 1].abs())
@@ -116,6 +120,7 @@ pub fn spike_detection(
                 // find the minimum
                 in_interval_index = index + 1;
                 while in_interval_index < index + interval {
+                    println!("in_interval_index: {in_interval_index}");
                     if range[in_interval_index] < peak_end_value {
                         peak_end_sample = in_interval_index;
                         peak_end_value = range[in_interval_index];
@@ -124,6 +129,7 @@ pub fn spike_detection(
                     // find the actual maximum in the interval before the minimum
                     let mut inner_interval_index = in_interval_index;
                     while inner_interval_index < peak_end_sample {
+                        println!("inner_interval_index: {inner_interval_index}");
                         if range[inner_interval_index] > peak_start_value {
                             peak_start_sample = inner_interval_index;
                             peak_start_value = range[inner_interval_index];
@@ -138,6 +144,7 @@ pub fn spike_detection(
                     {
                         let mut i = peak_end_sample + 1;
                         while i < index + interval + OVERLAP {
+                            println!("i: {i}");
                             if range[i] < peak_end_value {
                                 peak_end_sample = i;
                                 peak_end_value = range[i];

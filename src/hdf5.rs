@@ -219,6 +219,10 @@ pub fn save_phase<'a>(phase: &'a Phase, filename: &str) -> Option<&'a Phase> {
         sampling_frequency.into_h5field(channel.id(), "sampling_frequency");
         let raw_data = &raw_signal.data[..];
         raw_data.into_h5field(channel.id(), "raw_data");
+        if phase.peak_trains.contains_key(label) {
+            let peak_train = &phase.peak_trains[label][..];
+            peak_train.into_h5field(channel.id(), "peak_train");
+        }
     }
     Some(phase)
 }
