@@ -1,12 +1,9 @@
-# $env:LIB = "E:/rust/hdf5/lib;C:/Program Files (x86)/Windows Kits/10/Lib/10.0.22000.0/um/x64"
-# $env:CPATH = "E:/rust/hdf5/include"
+function Script:Init
+{
+  cargo add hdf5-sys --features=static,threadsafe
+  cargo add hdf5
+}
 
-$Script:OldPath = $env:Path;
-$env:Path += ";E:/rust/hdf5/bin";
-$env:HDF5_DIR = "E:/rust/hdf5";
-Write-Output $env:Path;
+Clear-Host
 
-
-clear && cargo build
-
-$env:Path = $Script:OldPath;
+cargo build
