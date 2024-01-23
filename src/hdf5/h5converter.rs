@@ -92,18 +92,8 @@ mod untouchable {
         }
 
         #[inline(always)]
-        pub fn set_channel_id(&mut self, channel_id: i32) {
-            self.channel_id = channel_id;
-        }
-
-        #[inline(always)]
         pub fn row_index(&self) -> i32 {
             self.row_index
-        }
-
-        #[inline(always)]
-        pub fn set_row_index(&mut self, row_index: i32) {
-            self.row_index = row_index;
         }
 
         #[inline(always)]
@@ -112,18 +102,8 @@ mod untouchable {
         }
 
         #[inline(always)]
-        pub fn set_group_id(&mut self, group_id: i32) {
-            self.group_id = group_id;
-        }
-
-        #[inline(always)]
         pub fn electrode_group(&self) -> i32 {
             self.electrode_group
-        }
-
-        #[inline(always)]
-        pub fn set_electrode_group(&mut self, electrode_group: i32) {
-            self.electrode_group = electrode_group;
         }
 
         #[inline(always)]
@@ -132,18 +112,8 @@ mod untouchable {
         }
 
         #[inline(always)]
-        pub fn set_exponent(&mut self, exponent: i32) {
-            self.exponent = exponent;
-        }
-
-        #[inline(always)]
         pub fn ad_zero(&self) -> i32 {
             self.ad_zero
-        }
-
-        #[inline(always)]
-        pub fn set_ad_zero(&mut self, ad_zero: i32) {
-            self.ad_zero = ad_zero;
         }
 
         #[inline(always)]
@@ -152,18 +122,8 @@ mod untouchable {
         }
 
         #[inline(always)]
-        pub fn set_tick(&mut self, tick: i64) {
-            self.tick = tick;
-        }
-
-        #[inline(always)]
         pub fn conversion_factor(&self) -> i64 {
             self.conversion_factor
-        }
-
-        #[inline(always)]
-        pub fn set_conversion_factor(&mut self, conversion_factor: i64) {
-            self.conversion_factor = conversion_factor;
         }
 
         #[inline(always)]
@@ -172,28 +132,13 @@ mod untouchable {
         }
 
         #[inline(always)]
-        pub fn set_adc_bits(&mut self, adc_bits: i32) {
-            self.adc_bits = adc_bits;
-        }
-
-        #[inline(always)]
         pub fn high_pass_filter_order(&self) -> i32 {
             self.high_pass_filter_order
         }
 
         #[inline(always)]
-        pub fn set_high_pass_filter_order(&mut self, high_pass_filter_order: i32) {
-            self.high_pass_filter_order = high_pass_filter_order;
-        }
-
-        #[inline(always)]
         pub fn low_pass_filter_order(&self) -> i32 {
             self.low_pass_filter_order
-        }
-
-        #[inline(always)]
-        pub fn set_low_pass_filter_order(&mut self, low_pass_filter_order: i32) {
-            self.low_pass_filter_order = low_pass_filter_order;
         }
 
         #[inline(always)]
@@ -231,40 +176,6 @@ mod untouchable {
             ocstr(self.low_pass_filter_cutoff)
         }
 
-        #[inline(always)]
-        pub fn set_label(&mut self, value: Option<&'static CStr>) {
-            self.label = ocstr_ptr(value);
-        }
-
-        #[inline(always)]
-        pub fn set_raw_data_type(&mut self, value: Option<&'static CStr>) {
-            self.raw_data_type = ocstr_ptr(value);
-        }
-
-        #[inline(always)]
-        pub fn set_unit(&mut self, value: Option<&'static CStr>) {
-            self.unit = ocstr_ptr(value);
-        }
-
-        #[inline(always)]
-        pub fn set_high_pass_filter_type(&mut self, value: Option<&'static CStr>) {
-            self.high_pass_filter_type = ocstr_ptr(value);
-        }
-
-        #[inline(always)]
-        pub fn set_high_pass_filter_cutoff(&mut self, value: Option<&'static CStr>) {
-            self.high_pass_filter_cutoff = ocstr_ptr(value);
-        }
-
-        #[inline(always)]
-        pub fn set_low_pass_filter_type(&mut self, value: Option<&'static CStr>) {
-            self.low_pass_filter_type = ocstr_ptr(value);
-        }
-
-        #[inline(always)]
-        pub fn set_low_pass_filter_cutoff(&mut self, value: Option<&'static CStr>) {
-            self.low_pass_filter_cutoff = ocstr_ptr(value);
-        }
     }
 
     #[inline]
@@ -586,12 +497,8 @@ impl H5Analog {
             ret.resize(adc_values.len(), 0f32);
 
             for (i, n) in adc_values.iter().enumerate() {
-                ret[i] = ad_zero + *n as f32 * conversion_factor;
+                ret[i] = (*n as f32 - ad_zero) * conversion_factor;
             }
-
-            // for n in &ret {
-            //     print!("{}, ", n);
-            // }
 
             Some(ret)
         } else {

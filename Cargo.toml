@@ -1,13 +1,14 @@
 [package]
-name = "code-rs"
+name = "spike-rs"
 version = "0.1.0"
 edition = "2021"
-build = "build.rs"
+# build = "build.rs"  # for the old hdf5 module
 
 [dependencies]
-cstr = "0.2.11"
+hdf5 = { git = "https://github.com/aldanor/hdf5-rust" }
+# cstr = "0.2.11"     # for the old hdf5 module
 
-[build-dependencies]
-bindgen = "0.69.2"
-pkg-config = "0.3.29"
-cc-args = { version = "0.2.0", features = ["bindgen", "pkg-config"] }
+# [build-dependencies]
+# bindgen = "0.69.2"   # for the old hdf5 module
+# pkg-config = "0.3.29" # for the old hdf5 module
+# cc-args = { version = "0.2.0", features = ["bindgen", "pkg-config"] } # for the old hdf5 module
