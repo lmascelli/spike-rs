@@ -268,9 +268,9 @@ unsafe extern "C" fn visit_fun(
     name: *const c_char,
     _info: *const H5O_info1_t,
     _op_data: *mut c_void,
-) -> i32 {
+    ) -> i32 {
     let c_name = CStr::from_ptr(name);
-    println!("{:?}", c_name);
+    // println!("{:?}", c_name);
     0
 }
 
@@ -283,6 +283,6 @@ pub fn h5tree(h5obj: hid_t) {
             Some(visit_fun),
             0 as _,
             1,
-        );
+            );
     }
 }

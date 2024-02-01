@@ -13,24 +13,21 @@ pub struct Mea {
 //     Stimulation,
 // }
 
+#[derive(Default)]
 pub struct Phase {
-    //     pub phase_type:         PhaseType,
-    pub raw_datas: HashMap<String, Signal>,
+    pub raw_data: HashMap<String, Signal>,
     pub peak_trains: HashMap<String, Vec<usize>>,
-    //     pub digital:            Option<Signal>,
+    pub digitals: Vec<Signal>,
 }
 
 impl Phase {
     pub fn new() -> Phase {
-        Phase {
-            raw_datas: HashMap::new(),
-            peak_trains: HashMap::new(),
-        }
+        Phase::default()
     }
 
     pub fn compute_peak_train(&mut self, label: &str) -> Option<()> {
-        if self.raw_datas.contains_key(label) {
-            let signal = &self.raw_datas[label];
+        if self.raw_data.contains_key(label) {
+            let signal = &self.raw_data[label];
             if let Ok(threshold) =
                 compute_threshold(&signal.data[..], signal.sampling_frequency, 8 as _)
             {
@@ -49,7 +46,7 @@ impl Phase {
     }
 
     pub fn compute_all_peak_trains(&mut self) -> Option<()> {
-        for (label, signal) in &self.raw_datas {
+        for (label, signal) in &self.raw_data {
             if let Ok(threshold) =
                 compute_threshold(&signal.data[..], signal.sampling_frequency, 8 as _)
             {

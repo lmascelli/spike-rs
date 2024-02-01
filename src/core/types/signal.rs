@@ -1,15 +1,8 @@
 use std::fmt::{Display, Error, Formatter};
 
-// pub enum SignalUnit {
-//     Unknown,
-//     Volt,
-// }
-
 pub struct Signal {
     pub data: Vec<f32>,
     pub sampling_frequency: f32,
-    //    pub unit: SignalUnit,
-    //    pub scale: f32,
 }
 
 impl Signal {
@@ -17,19 +10,17 @@ impl Signal {
         Signal {
             data,
             sampling_frequency,
-            //             unit: SignalUnit::Unknown,
-            //             scale: 1f32,
         }
     }
 }
 
 impl Display for Signal {
-    fn fmt(&self, _: &mut Formatter<'_>) -> Result<(), Error> {
-        print!("( ");
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "( ")?;
         for d in &self.data {
-            print!("{} ", d);
+            write!(f, "{} ", d)?;
         }
-        println!(")");
+        writeln!(f, ")")?;
         Ok(())
     }
 }

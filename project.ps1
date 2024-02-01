@@ -1,9 +1,4 @@
-function Script:Init
-{
-  cargo add hdf5-sys --features=static,threadsafe
-  cargo add hdf5
-}
-
+$env:HDF5_LIB_DIR = "D:/msys64/mingw64/lib";
+$env:HDF5_INCLUDE_DIR = "D:/msys64/mingw64/include";
 Clear-Host
-
-cargo build
+cargo run

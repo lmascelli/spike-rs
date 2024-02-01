@@ -155,11 +155,8 @@ pub fn spike_detection(
 
                     in_interval_index += 1;
                 } // end finding the actual minimum
-            }
-            // end maximum branch
-
-            // else look for a maximum
-            else {
+            } // end maximum branch
+            else { // else look for a maximum
                 peak_end_sample = index + 1;
                 peak_end_value = peak_start_value;
 
@@ -203,13 +200,11 @@ pub fn spike_detection(
             // check if the difference overtakes the threshold
             let difference = peak_start_value - peak_end_value;
             if difference.abs() >= threshold {
-                let last_peak;
-
-                if difference > 0f32 {
-                    last_peak = peak_start_sample;
+                let last_peak = if difference > 0f32 {
+                    peak_start_sample
                 } else {
-                    last_peak = peak_end_sample;
-                }
+                    peak_end_sample
+                };
 
                 ret.push(last_peak);
 

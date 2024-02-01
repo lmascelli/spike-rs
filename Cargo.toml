@@ -2,7 +2,7 @@
 name = "spike-rs"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
-[dependencies]
-hdf5 = "0.8.1"
-hdf5-sys = { version = "0.8.1", features = ["static", "threadsafe"] }
+[build-dependencies]
+bindgen = "*"
