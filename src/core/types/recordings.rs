@@ -16,7 +16,7 @@ pub struct Mea {
 #[derive(Default)]
 pub struct Phase {
     pub raw_data: HashMap<String, Signal>,
-    pub peak_trains: HashMap<String, Vec<usize>>,
+    pub peaks_trains: HashMap<String, Vec<usize>>,
     pub digitals: Vec<Signal>,
 }
 
@@ -31,14 +31,14 @@ impl Phase {
             if let Ok(threshold) =
                 compute_threshold(&signal.data[..], signal.sampling_frequency, 8 as _)
             {
-                let peak_train = spike_detection(
+                let peaks_train = spike_detection(
                     &signal.data[..],
                     signal.sampling_frequency,
                     threshold,
                     2e-3,
                     2e-3,
                 )?;
-                self.peak_trains.insert(label.to_string(), peak_train);
+                self.peaks_trains.insert(label.to_string(), peaks_train);
                 return Some(());
             }
         }
@@ -50,14 +50,14 @@ impl Phase {
             if let Ok(threshold) =
                 compute_threshold(&signal.data[..], signal.sampling_frequency, 8 as _)
             {
-                let peak_train = spike_detection(
+                let peaks_train = spike_detection(
                     &signal.data[..],
                     signal.sampling_frequency,
                     threshold,
                     2e-3,
                     2e-3,
                 )?;
-                self.peak_trains.insert(label.clone(), peak_train);
+                self.peaks_trains.insert(label.clone(), peaks_train);
             } else {
                 return None;
             }
