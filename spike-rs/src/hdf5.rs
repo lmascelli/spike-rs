@@ -10,7 +10,7 @@ mod sys {
 use std::ffi::{c_char, c_void, CStr, CString};
 use std::ptr::{null, null_mut};
 
-use crate::core::types::{Phase, Signal};
+use crate::core::types::Phase;
 
 use sys::{
     H5Dclose, H5Dcreate2, H5Dget_space, H5Dopen2, H5Dread, H5Dwrite, H5Fclose, H5Fcreate, H5Fopen,
@@ -74,7 +74,7 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
             // save digitals
             for (i, digital) in phase.digitals.iter().enumerate() {
                 let digital_name = format!("digital_{i}\0");
-                let digital_len = vec![digital.data.len() as u64];
+                let digital_len = vec![digital.len() as u64];
                 let digital_dataspace = unsafe {
                     H5Screate_simple(1, digital_len.as_ptr() ,null())
                 };
@@ -95,7 +95,7 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
                                  digital_dataspace,
                                  H5S_ALL,
                                  H5P_DEFAULT,
-                                 digital.data.as_ptr().cast());
+                                 digital.as_ptr().cast());
                         H5Dclose(digital_dataset);
                     }
                 } else {
@@ -115,9 +115,9 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
                                                     H5P_DEFAULT) };
             if raw_data_group > 0 {
                 for (label, channel) in &phase.raw_data {
-                    sampling_frequency = channel.sampling_frequency;
+                    sampling_frequency = phase.sampling_frequency;
                     let channel_name = format!("{label}\0");
-                    let channel_len = vec![channel.data.len() as u64];
+                    let channel_len = vec![channel.len() as u64];
                     let channel_dataspace = unsafe {
                         H5Screate_simple(1, channel_len.as_ptr() ,null())
                     };
@@ -139,7 +139,7 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
                                      channel_dataspace,
                                      H5S_ALL,
                                      H5P_DEFAULT,
-                                     channel.data.as_ptr().cast());
+                                     channel.as_ptr().cast());
                             H5Dclose(channel_dataset);
                         }
                     } else {
@@ -235,6 +235,7 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
 
 pub fn load_phase(filename: &str) -> Result<Phase, String> {
     let mut ret = Phase::default();
+    let mut sampling_frequency = 0f32;
     let cfilename = format!("{filename}\0");
     let file_id = unsafe { H5Fopen(CStr::from_bytes_with_nul(cfilename.as_bytes())
                                    .unwrap().as_ptr(),
@@ -243,6 +244,24 @@ pub fn load_phase(filename: &str) -> Result<Phase, String> {
 
     if file_id > 0 {
         // read sampling frequency
+        let sampling_frequency_dataset = unsafe { H5Dopen2(file_id, CStr::from_bytes_with_nul("sampling_frequency\0".as_bytes())
+                                                           .unwrap().as_ptr(), H5P_DEFAULT) };
+        if sampling_frequency_dataset > 0 {
+            unsafe {
+                H5Dread(sampling_frequency_dataset,
+                        H5T_NATIVE_FLOAT_g,
+                        H5S_ALL,
+                        H5S_ALL,
+                        H5P_DEFAULT,
+                        (&mut sampling_frequency as *mut f32).cast());
+            }
+            println!("{sampling_frequency}");
+
+            unsafe { H5Dclose(sampling_frequency_dataset); }
+        } else {
+            unsafe { H5Fclose(file_id); }
+            return Err(format!("load_phase: failed opening sampling_frequency dataset in file {}", filename));
+        }
         
         // read digital channels
         
@@ -504,9 +523,9 @@ extern "C" fn _parse_analog_stream(group: i64,
             }
 
             if is_digital {
-                phase.digitals.push(Signal::new(converted_data, sampling_frequency));
+                phase.digitals.push(converted_data);
             } else {
-                phase.raw_data.insert(label.to_string(), Signal::new(converted_data, sampling_frequency));
+                phase.raw_data.insert(label.to_string(), converted_data);
             }
 
         }
