@@ -19,7 +19,7 @@ use sys::{
     H5T_NATIVE_FLOAT_g, H5T_NATIVE_INT_g, H5T_NATIVE_LLONG_g, H5T_NATIVE_ULLONG_g,
     H5T_class_t_H5T_COMPOUND, H5T_cset_t_H5T_CSET_ASCII, H5T_str_t_H5T_STR_NULLPAD, H5Tclose,
     H5Tcopy, H5Tcreate, H5Tinsert, H5Tset_cset, H5Tset_size, H5Tset_strpad,
-    H5_index_t_H5_INDEX_NAME, H5_iter_order_t_H5_ITER_INC, H5open,
+    H5_index_t_H5_INDEX_NAME, H5_iter_order_t_H5_ITER_INC, H5open, H5S_class_t_H5S_SCALAR, H5Screate,
 };
 
 const H5F_ACC_RDONLY: u32 = 0;                                                                     
@@ -66,10 +66,11 @@ pub fn print_group_names(group: i64) {
 
 pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
     if let Ok(cfilename) = CString::new(filename) {
-        let sampling_frequency = 0;
+        let mut sampling_frequency = 0f32;
         let savefile_id = unsafe { H5Fcreate(cfilename.as_c_str().as_ptr(), H5F_ACC_TRUNC,
         H5P_DEFAULT, H5P_DEFAULT) };
         if savefile_id > 0 {
+
             // save digitals
             for (i, digital) in phase.digitals.iter().enumerate() {
                 let digital_name = format!("digital_{i}\0");
@@ -151,7 +152,23 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
             }
 
             // save the sampling frequency TODO
-            // create a scalar dataspace
+            let sampling_frequency_dataspace = unsafe { H5Screate(H5S_class_t_H5S_SCALAR) };
+            let sampling_frequency_dataset = unsafe { H5Dcreate2(savefile_id,
+                                                                 CStr::from_bytes_with_nul("sampling_frequency\0".as_bytes())
+                                                                 .unwrap().as_ptr(),
+                                                                 H5T_NATIVE_FLOAT_g,
+                                                                 sampling_frequency_dataspace,
+                                                                 H5P_DEFAULT,
+                                                                 H5P_DEFAULT,
+                                                                 H5P_DEFAULT) };
+            unsafe {
+                H5Dwrite(sampling_frequency_dataset,
+                         H5T_NATIVE_FLOAT_g,
+                         sampling_frequency_dataspace,
+                         H5S_ALL,
+                         H5P_DEFAULT,
+                         (&sampling_frequency as *const f32).cast());
+            }
 
             // save peak_trains
             let peaks_train_name = format!("peaks_train\0");
@@ -216,7 +233,29 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
 ///
 ////////////////////////////////////////////////////////////////////////////////
 
+pub fn load_phase(filename: &str) -> Result<Phase, String> {
+    let mut ret = Phase::default();
+    let cfilename = format!("{filename}\0");
+    let file_id = unsafe { H5Fopen(CStr::from_bytes_with_nul(cfilename.as_bytes())
+                                   .unwrap().as_ptr(),
+                                   H5F_ACC_RDONLY,
+                                   H5P_DEFAULT) };
 
+    if file_id > 0 {
+        // read sampling frequency
+        
+        // read digital channels
+        
+        // read raw_data channels
+        
+        // read peak_train channels
+
+        unsafe { H5Fclose(file_id); }
+        Ok(ret)
+    } else {
+        Err(format!("load_phase: failed opening file {}", filename))
+    }
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////
