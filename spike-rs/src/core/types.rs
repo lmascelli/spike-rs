@@ -62,6 +62,7 @@ impl Phase {
     }
 }
 
+#[allow(unused_must_use)]
 impl Debug for Phase {
     fn fmt(&self, formatter: &mut Formatter) -> Result<(), fmt::Error> {
         writeln!(formatter, "{{");
@@ -76,7 +77,8 @@ impl Debug for Phase {
         }
         writeln!(formatter, "Peak trains:");
         for (label, (data_vals, data_times)) in &self.peaks_trains {
-            writeln!(formatter, "\t{}: n_points = {}", label, data_times.len());
+            writeln!(formatter, "\t{}: values n_points = {}, times n_points = {}",
+                     label, data_vals.len(), data_times.len());
         }
         writeln!(formatter, "}}");
         Ok(())

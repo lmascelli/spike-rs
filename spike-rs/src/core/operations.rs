@@ -28,7 +28,7 @@ pub fn compute_threshold(
 ) -> Result<f32, String> {
     const NUMBER_OF_WINDOWS: usize = 30;
     const WINDOW_DURATION_TIME: f32 = 200e-3; // s
-    const START_THRESHOLD: f32 = 100e-3; // V
+    const START_THRESHOLD: f32 = 100e-6; // V
 
     let window_duration_sample: usize = (WINDOW_DURATION_TIME * sampling_frequency) as usize;
     let windows_distance: usize = range.len() / NUMBER_OF_WINDOWS;
@@ -58,25 +58,31 @@ pub fn compute_threshold(
 }
 
 pub fn spike_detection(
-    range: &[f32],
+    data: &[f32],
     sampling_frequency: f32,
     threshold: f32,
     peak_duration: f32,
     refractory_time: f32,
 ) -> Option<(Vec<f32>, Vec<usize>)> {
+    
+    // TODO check if reserving space for the ret increases performances.
+    let mut ret_values = Vec::new();
+    let mut ret_times = Vec::new();
+
     const OVERLAP: usize = 5;
-    let peak_duration: usize = peak_duration as usize * sampling_frequency as usize;
-    let refractory_time: usize = refractory_time as usize * sampling_frequency as usize;
+    let data_length = data.len();
 
-    let data_lenght = range.len();
+    let peak_duration: usize = (peak_duration * sampling_frequency) as usize;
+    let refractory_time: usize = (refractory_time * sampling_frequency) as usize;
 
-    if data_lenght < 2 || data_lenght < peak_duration {
+    if data_length < 2 || data_length < peak_duration {
+        eprintln!("spike_detection: ERROR too few samples provided");
         return None;
     }
 
-    let mut interval;
     let mut index = 2usize;
     let mut new_index = 1usize;
+    let mut interval;
     let mut in_interval_index;
 
     let mut peak_start_sample;
@@ -84,13 +90,7 @@ pub fn spike_detection(
     let mut peak_end_sample;
     let mut peak_end_value;
 
-    // TODO check if reserving space for the ret increases performances.
-    let mut ret_values = Vec::new();
-    let mut ret_times = Vec::new();
-
-    while index < range.len() - 1 {
-        // println!("index:     {index}
-        //           new_index: {new_index}");
+    while index < data_length - 1 {
         if index < new_index {
             index += 1;
             continue;
@@ -98,24 +98,23 @@ pub fn spike_detection(
 
 
         // If a minimum or a maximum has been found ...
-        if (range[index].abs() > range[index - 1].abs())
-            && (range[index].abs() >= range[index + 1].abs())
+        if (data[index].abs() > data[index - 1].abs())
+            && (data[index].abs() >= data[index + 1].abs())
         {
             // check if the end of the interval where to check for a spike excedes
             // the length of the signal and, eventually, set the interval to end
             // earlier.
-            if index + peak_duration > data_lenght {
-                interval = data_lenght - index - 1;
+            if index + peak_duration > data_length {
+                interval = data_length - index - 1;
             } else {
                 interval = peak_duration;
             }
-            // temporarely set the start of the spike to be at the current index
 
+            // temporarely set the start of the spike to be at the current index
             peak_start_sample = index;
-            peak_start_value = range[index];
+            peak_start_value = data[index];
 
             // look for minimum if the start value of the peak is positive
-
             if peak_start_value > 0f32 {
                 peak_end_sample = index + 1;
                 peak_end_value = peak_start_value;
@@ -123,19 +122,17 @@ pub fn spike_detection(
                 // find the minimum
                 in_interval_index = index + 1;
                 while in_interval_index < index + interval {
-                    println!("in_interval_index: {in_interval_index}");
-                    if range[in_interval_index] < peak_end_value {
+                    if data[in_interval_index] < peak_end_value {
                         peak_end_sample = in_interval_index;
-                        peak_end_value = range[in_interval_index];
+                        peak_end_value = data[in_interval_index];
                     }
 
                     // find the actual maximum in the interval before the minimum
                     let mut inner_interval_index = in_interval_index;
                     while inner_interval_index < peak_end_sample {
-                        println!("inner_interval_index: {inner_interval_index}");
-                        if range[inner_interval_index] > peak_start_value {
+                        if data[inner_interval_index] > peak_start_value {
                             peak_start_sample = inner_interval_index;
-                            peak_start_value = range[inner_interval_index];
+                            peak_start_value = data[inner_interval_index];
                         }
 
                         inner_interval_index += 1;
@@ -143,14 +140,13 @@ pub fn spike_detection(
 
                     // TODO understand what's going on here
                     if peak_end_sample == index + interval
-                        && index + interval + OVERLAP < data_lenght
+                        && index + interval + OVERLAP < data_length
                     {
                         let mut i = peak_end_sample + 1;
                         while i < index + interval + OVERLAP {
-                            println!("i: {i}");
-                            if range[i] < peak_end_value {
+                            if data[i] < peak_end_value {
                                 peak_end_sample = i;
-                                peak_end_value = range[i];
+                                peak_end_value = data[i];
                             }
                             i += 1;
                         }
@@ -166,17 +162,17 @@ pub fn spike_detection(
                 // find the maximum
                 in_interval_index = index + 1;
                 while in_interval_index < index + interval {
-                    if range[in_interval_index] >= peak_end_value {
+                    if data[in_interval_index] >= peak_end_value {
                         peak_end_sample = in_interval_index;
-                        peak_end_value = range[in_interval_index];
+                        peak_end_value = data[in_interval_index];
                     }
 
                     // find the actual minimum in the interval before the minimum
                     let mut inner_interval_index = in_interval_index;
                     while inner_interval_index < peak_end_sample {
-                        if range[inner_interval_index] < peak_start_value {
+                        if data[inner_interval_index] < peak_start_value {
                             peak_start_sample = inner_interval_index;
-                            peak_start_value = range[inner_interval_index];
+                            peak_start_value = data[inner_interval_index];
                         }
 
                         inner_interval_index += 1;
@@ -184,13 +180,13 @@ pub fn spike_detection(
 
                     // TODO understand what's going on here
                     if peak_end_sample == index + interval
-                        && index + interval + OVERLAP < data_lenght
+                        && index + interval + OVERLAP < data_length
                     {
                         let mut i = peak_end_sample + 1;
                         while i < index + interval + OVERLAP {
-                            if range[i] > peak_end_value {
+                            if data[i] > peak_end_value {
                                 peak_end_sample = i;
-                                peak_end_value = range[i];
+                                peak_end_value = data[i];
                             }
                             i += 1;
                         }
@@ -213,7 +209,7 @@ pub fn spike_detection(
 
                 // set the new index where to start looking for a peak
                 if last_peak_time + refractory_time > peak_end_sample &&
-                    last_peak_time + refractory_time < data_lenght {
+                    last_peak_time + refractory_time < data_length {
                         new_index = last_peak_time + refractory_time;
                     } else {
                         new_index = peak_end_sample + 1;

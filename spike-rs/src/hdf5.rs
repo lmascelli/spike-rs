@@ -392,9 +392,10 @@ extern "C" fn _load_peaks_trains(group: i64,
                                  data:  *mut c_void,
                                  ) -> i32 {
 
+    let phase = unsafe { &mut *(data as *mut Phase) } as &mut Phase;
     // return variables
-    let mut channel_values_data;
-    let mut channel_times_data;
+    let mut channel_values_data = Vec::new();
+    let mut channel_times_data = Vec::new();
 
     // open channel group
     let channel_group = unsafe { H5Gopen2(group, name, H5P_DEFAULT) };
@@ -414,7 +415,7 @@ extern "C" fn _load_peaks_trains(group: i64,
             unsafe {H5Sget_simple_extent_dims(channel_values_dataspace, &mut dims as *mut u64, null_mut())};
             // allocate memory and create memory dataspace
             let memory_dataspace = unsafe { H5Screate_simple(1, &dims as *const u64, null()) };
-            channel_values_data = vec![0f32; dims as usize];
+            channel_values_data.resize(dims as usize, 0f32);
             // read data
             unsafe {
                 H5Dread(channel_values_dataset,
@@ -447,7 +448,7 @@ extern "C" fn _load_peaks_trains(group: i64,
             unsafe {H5Sget_simple_extent_dims(channel_times_dataspace, &mut dims as *mut u64, null_mut())};
             // allocate memory and create memory dataspace
             let memory_dataspace = unsafe { H5Screate_simple(1, &dims as *const u64, null()) };
-            channel_times_data = vec![0u64; dims as usize];
+            channel_times_data.resize(dims as usize, 0usize);
             // read data
             unsafe {
                 H5Dread(channel_times_dataset,
@@ -466,6 +467,9 @@ extern "C" fn _load_peaks_trains(group: i64,
                              unsafe { CStr::from_ptr(name).to_str().unwrap() });
         }
 
+        unsafe { H5Gclose(channel_group) };
+        phase.peaks_trains.insert(unsafe { CStr::from_ptr(name).to_str().unwrap().to_string() },
+                                  (channel_values_data, channel_times_data));
     } else {
         println!("Failed to open channel {} in peaks trains group",
                          unsafe { CStr::from_ptr(name).to_str().unwrap() });
@@ -475,7 +479,6 @@ extern "C" fn _load_peaks_trains(group: i64,
 
 pub fn load_phase(filename: &str) -> Result<Phase, String> {
     let mut ret = Phase::default();
-    let mut sampling_frequency = 0f32;
     let cfilename = format!("{filename}\0");
     let file_id = unsafe { H5Fopen(CStr::from_bytes_with_nul(cfilename.as_bytes())
                                    .unwrap().as_ptr(),
@@ -493,7 +496,7 @@ pub fn load_phase(filename: &str) -> Result<Phase, String> {
                         H5S_ALL,
                         H5S_ALL,
                         H5P_DEFAULT,
-                        (&mut sampling_frequency as *mut f32).cast());
+                        (&mut ret.sampling_frequency as *mut f32).cast());
             }
 
             unsafe { H5Dclose(sampling_frequency_dataset); }
@@ -513,6 +516,7 @@ pub fn load_phase(filename: &str) -> Result<Phase, String> {
                             null_mut(),
                             Some(_load_digitals),
                             &ret as *const Phase as *mut c_void);
+                H5Gclose(digitals_group);
             }
         } else {
             unsafe { H5Fclose(file_id); }
@@ -530,6 +534,7 @@ pub fn load_phase(filename: &str) -> Result<Phase, String> {
                             null_mut(),
                             Some(_load_raw_datas),
                             &ret as *const Phase as *mut c_void);
+                H5Gclose(raw_datas_group);
             }
         } else {
             unsafe { H5Fclose(file_id); }
@@ -555,7 +560,10 @@ pub fn load_phase(filename: &str) -> Result<Phase, String> {
             return Err(format!("load_phase: failed opening peaks trains group in file {}", filename));
         }
 
-        unsafe { H5Fclose(file_id); }
+        unsafe { 
+            H5Gclose(peaks_trains_group);
+            H5Fclose(file_id);
+        }
         Ok(ret)
     } else {
         Err(format!("load_phase: failed opening file {}", filename))
