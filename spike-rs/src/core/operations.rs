@@ -2,20 +2,22 @@ use std::result::Result;
 
 pub mod math {
     pub fn mean(range: &[f32]) -> f32 {
-        let mut sum = 0.0f32;
+        let mut sum = 0f32;
         range.iter().for_each(|x| {
             sum += x;
         });
-        sum / range.len() as f32
+        let ret = sum / (range.len() as f32);
+        ret
     }
 
     pub fn stdev(range: &[f32]) -> f32 {
-        let mut sum = 0.0f32;
+        let mut sum = 0f32;
         let _mean = mean(range);
         range.iter().for_each(|x| {
             sum += (x - _mean) * (x - _mean);
         });
-        (sum / (range.len() as f32 - 1.0f32)).sqrt()
+        let ret = (sum / (range.len() as f32 - 1.0f32)).sqrt();
+        ret
     }
 }
 
@@ -61,7 +63,7 @@ pub fn spike_detection(
     threshold: f32,
     peak_duration: f32,
     refractory_time: f32,
-) -> Option<Vec<usize>> {
+) -> Option<(Vec<f32>, Vec<usize>)> {
     const OVERLAP: usize = 5;
     let peak_duration: usize = peak_duration as usize * sampling_frequency as usize;
     let refractory_time: usize = refractory_time as usize * sampling_frequency as usize;
@@ -83,7 +85,8 @@ pub fn spike_detection(
     let mut peak_end_value;
 
     // TODO check if reserving space for the ret increases performances.
-    let mut ret = Vec::new();
+    let mut ret_values = Vec::new();
+    let mut ret_times = Vec::new();
 
     while index < range.len() - 1 {
         // println!("index:     {index}
@@ -200,18 +203,18 @@ pub fn spike_detection(
             // check if the difference overtakes the threshold
             let difference = peak_start_value - peak_end_value;
             if difference.abs() >= threshold {
-                let last_peak = if difference > 0f32 {
-                    peak_start_sample
+                let (last_peak_val, last_peak_time) = if difference > 0f32 {
+                    (peak_start_value, peak_start_sample)
                 } else {
-                    peak_end_sample
+                    (peak_end_value, peak_end_sample)
                 };
-
-                ret.push(last_peak);
+                ret_values.push(last_peak_val);
+                ret_times.push(last_peak_time);
 
                 // set the new index where to start looking for a peak
-                if last_peak + refractory_time > peak_end_sample &&
-                    last_peak + refractory_time < data_lenght {
-                        new_index = last_peak + refractory_time;
+                if last_peak_time + refractory_time > peak_end_sample &&
+                    last_peak_time + refractory_time < data_lenght {
+                        new_index = last_peak_time + refractory_time;
                     } else {
                         new_index = peak_end_sample + 1;
                     }
@@ -220,5 +223,5 @@ pub fn spike_detection(
 
         index += 1;
     }
-    Some(ret)
+    Some((ret_values, ret_times))
 }

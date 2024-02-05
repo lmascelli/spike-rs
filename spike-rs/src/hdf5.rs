@@ -72,35 +72,48 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
         if savefile_id > 0 {
 
             // save digitals
-            for (i, digital) in phase.digitals.iter().enumerate() {
-                let digital_name = format!("digital_{i}\0");
-                let digital_len = vec![digital.len() as u64];
-                let digital_dataspace = unsafe {
-                    H5Screate_simple(1, digital_len.as_ptr() ,null())
-                };
-                let digital_dataset = unsafe {H5Dcreate2(savefile_id,
-                                                         CStr::from_bytes_with_nul(digital_name
-                                                                                   .as_str()
-                                                                                   .as_bytes())
-                                                         .unwrap().as_ptr(),
-                                                         H5T_NATIVE_FLOAT_g,
-                                                         digital_dataspace,
-                                                         H5P_DEFAULT,
-                                                         H5P_DEFAULT,
-                                                         H5P_DEFAULT)};
-                if digital_dataset > 0 {
-                    unsafe { 
-                        H5Dwrite(digital_dataset,
-                                 H5T_NATIVE_FLOAT_g,
-                                 digital_dataspace,
-                                 H5S_ALL,
-                                 H5P_DEFAULT,
-                                 digital.as_ptr().cast());
-                        H5Dclose(digital_dataset);
+            let digitals_group_name = format!("digitals\0");
+            let digitals_group = unsafe { H5Gcreate2(savefile_id,
+                                                     CStr::from_bytes_with_nul(digitals_group_name
+                                                                               .as_str()
+                                                                               .as_bytes())
+                                                     .unwrap().as_ptr(),
+                                                     H5P_DEFAULT,
+                                                     H5P_DEFAULT,
+                                                     H5P_DEFAULT) };
+            if digitals_group > 0 {
+                for (i, digital) in phase.digitals.iter().enumerate() {
+                    let digital_name = format!("digital_{i}\0");
+                    let digital_len = vec![digital.len() as u64];
+                    let digital_dataspace = unsafe {
+                        H5Screate_simple(1, digital_len.as_ptr() ,null())
+                    };
+                    let digital_dataset = unsafe {H5Dcreate2(digitals_group,
+                                                             CStr::from_bytes_with_nul(digital_name
+                                                                                       .as_str()
+                                                                                       .as_bytes())
+                                                             .unwrap().as_ptr(),
+                                                             H5T_NATIVE_FLOAT_g,
+                                                             digital_dataspace,
+                                                             H5P_DEFAULT,
+                                                             H5P_DEFAULT,
+                                                             H5P_DEFAULT)};
+                    if digital_dataset > 0 {
+                        unsafe { 
+                            H5Dwrite(digital_dataset,
+                                     H5T_NATIVE_FLOAT_g,
+                                     digital_dataspace,
+                                     H5S_ALL,
+                                     H5P_DEFAULT,
+                                     digital.as_ptr().cast());
+                            H5Dclose(digital_dataset);
+                        }
+                    } else {
+                        return Err(format!("save_phase: failed to create digital group {}", digital_name));
                     }
-                } else {
-                    return Err(format!("save_phase: failed to create digital group {}", digital_name));
                 }
+            } else {
+                return Err(format!("save_phase: failed to create digitals group {}", digitals_group_name));
             }
 
             // save raw_datas
@@ -181,36 +194,81 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
                                                        H5P_DEFAULT,
                                                        H5P_DEFAULT) };
             if peaks_train_group > 0 {
-                for (label, channel) in &phase.peaks_trains {
-                    let channel_name = format!("{label}\0");
-                    let channel_len = vec![channel.len() as u64];
-                    let channel_dataspace = unsafe {
+                for (label, (channel_vals, channel_times)) in &phase.peaks_trains {
+                    let channel_group_name = format!("{label}\0");
+                    let channel_group = unsafe { H5Gcreate2(peaks_train_group,
+                                                            CStr::from_bytes_with_nul(channel_group_name
+                                                                                      .as_str()
+                                                                                      .as_bytes())
+                                                            .unwrap().as_ptr(),
+                                                            H5P_DEFAULT,
+                                                            H5P_DEFAULT,
+                                                            H5P_DEFAULT) };
+
+                    // insert peaks values
+                    let channel_len = vec![channel_times.len() as u64];
+                    let channel_values_dataspace = unsafe {
                         H5Screate_simple(1, channel_len.as_ptr() ,null())
                     };
-                    let channel_dataset = unsafe {H5Dcreate2(raw_data_group,
-                                                             CStr::from_bytes_with_nul(channel_name
+                    let channel_values_name = format!("values\0");
+                    let channel_values_dataset = unsafe {H5Dcreate2(channel_group,
+                                                             CStr::from_bytes_with_nul(channel_values_name
                                                                                        .as_str()
                                                                                        .as_bytes())
                                                              .unwrap().as_ptr(),
                                                              H5T_NATIVE_FLOAT_g,
-                                                             channel_dataspace,
+                                                             channel_values_dataspace,
                                                              H5P_DEFAULT,
                                                              H5P_DEFAULT,
                                                              H5P_DEFAULT)};
 
-                    if channel_dataset > 0 {
+                    if channel_values_dataset > 0 {
                         unsafe { 
-                            H5Dwrite(channel_dataset,
-                                     H5T_NATIVE_ULLONG_g,
-                                     channel_dataspace,
+                            H5Dwrite(channel_values_dataset,
+                                     H5T_NATIVE_FLOAT_g,
+                                     channel_values_dataspace,
                                      H5S_ALL,
                                      H5P_DEFAULT,
-                                     channel.as_ptr().cast());
-                            H5Dclose(channel_dataset);
+                                     channel_vals.as_ptr().cast());
+                            H5Sclose(channel_values_dataspace);
+                            H5Dclose(channel_values_dataset);
                         }
                     } else {
                         return Err(format!("save_phase: failed to create peaks_train group {}", label));
                     }
+
+                    // insert peaks times
+                    let channel_len = vec![channel_times.len() as u64];
+                    let channel_times_dataspace = unsafe {
+                        H5Screate_simple(1, channel_len.as_ptr(), null())
+                    };
+                    let channel_times_name = format!("times\0");
+                    let channel_times_dataset = unsafe {H5Dcreate2(channel_group,
+                                                                   CStr::from_bytes_with_nul(channel_times_name
+                                                                                             .as_str()
+                                                                                             .as_bytes())
+                                                                   .unwrap().as_ptr(),
+                                                                   H5T_NATIVE_ULLONG_g,
+                                                                   channel_times_dataspace,
+                                                                   H5P_DEFAULT,
+                                                                   H5P_DEFAULT,
+                                                                   H5P_DEFAULT)};
+
+                    if channel_times_dataset > 0 {
+                        unsafe { 
+                            H5Dwrite(channel_times_dataset,
+                                     H5T_NATIVE_ULLONG_g,
+                                     channel_times_dataspace,
+                                     H5S_ALL,
+                                     H5P_DEFAULT,
+                                     channel_times.as_ptr().cast());
+                            H5Sclose(channel_times_dataspace);
+                            H5Dclose(channel_times_dataset);
+                        }
+                    } else {
+                        return Err(format!("save_phase: failed to create peaks_train group {}", label));
+                    }
+                    unsafe { H5Gclose(channel_group) };
                 }
                 unsafe { H5Gclose(peaks_train_group) };
             } else {
@@ -232,6 +290,188 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
 ///                                   Phase Loader
 ///
 ////////////////////////////////////////////////////////////////////////////////
+
+
+extern "C" fn _load_digitals(group: i64,
+                             name:   *const i8,
+                             _info:  *const H5L_info2_t,
+                             data:  *mut c_void,
+                             ) -> i32 {
+    let phase = unsafe { &mut *(data as *mut Phase) } as &mut Phase;
+
+    // open dataset
+    let digital_dataset = unsafe { H5Dopen2(group, name, H5P_DEFAULT) };
+
+    // get dataspace
+    let digital_dataspace = unsafe { H5Dget_space(digital_dataset) };
+
+    // allocate memory
+    let n_dims = unsafe { H5Sget_simple_extent_ndims(digital_dataspace) } as usize;
+    let dims = vec![0; n_dims];
+    unsafe {
+        H5Sget_simple_extent_dims(digital_dataspace, dims.as_ptr().cast_mut(), null_mut());
+    }
+
+    let digital = vec![0f32; dims[0] as usize];
+
+    // create memory dataspace
+    let memory_dataspace = unsafe { H5Screate_simple(1, dims.as_ptr().cast(), null()) };
+
+    // read data
+    unsafe {
+        H5Dread(digital_dataset,
+                H5T_NATIVE_FLOAT_g,
+                memory_dataspace,
+                H5S_ALL,
+                H5P_DEFAULT,
+                digital.as_ptr() as *mut c_void);
+    }
+
+    phase.digitals.push(digital);
+
+    // close opened ids
+    unsafe { 
+        H5Sclose(memory_dataspace);
+        H5Sclose(digital_dataspace);
+        H5Dclose(digital_dataset);
+    }
+    0
+}
+
+extern "C" fn _load_raw_datas(group: i64,
+                              name:   *const i8,
+                              _info:  *const H5L_info2_t,
+                              data:  *mut c_void,
+                              ) -> i32 {
+    let phase = unsafe { &mut *(data as *mut Phase) } as &mut Phase;
+
+    // open dataset
+    let raw_data_dataset = unsafe { H5Dopen2(group, name, H5P_DEFAULT) };
+
+    // get dataspace
+    let raw_data_dataspace = unsafe { H5Dget_space(raw_data_dataset) };
+
+    // allocate memory
+    let n_dims = unsafe { H5Sget_simple_extent_ndims(raw_data_dataspace) } as usize;
+    let dims = vec![0; n_dims];
+    unsafe {
+        H5Sget_simple_extent_dims(raw_data_dataspace,
+                                  dims.as_ptr().cast_mut(),
+                                  null_mut());
+    }
+
+    let raw_data = vec![0f32; dims[0] as usize];
+
+    // create memory dataspace
+    let memory_dataspace = unsafe { H5Screate_simple(1, dims.as_ptr().cast(), null()) };
+
+    // read data
+    unsafe {
+        H5Dread(raw_data_dataset,
+                H5T_NATIVE_FLOAT_g,
+                memory_dataspace,
+                H5S_ALL,
+                H5P_DEFAULT,
+                raw_data.as_ptr() as *mut c_void);
+    }
+
+    phase.raw_data.insert(unsafe { CStr::from_ptr(name).to_str().unwrap().to_string() }, raw_data);
+
+    // close opened ids
+    unsafe { 
+        H5Sclose(memory_dataspace);
+        H5Sclose(raw_data_dataspace);
+        H5Dclose(raw_data_dataset);
+    }
+    0
+}
+
+extern "C" fn _load_peaks_trains(group: i64,
+                                 name:   *const i8,
+                                 _info:  *const H5L_info2_t,
+                                 data:  *mut c_void,
+                                 ) -> i32 {
+
+    // return variables
+    let mut channel_values_data;
+    let mut channel_times_data;
+
+    // open channel group
+    let channel_group = unsafe { H5Gopen2(group, name, H5P_DEFAULT) };
+    if channel_group > 0 {
+
+        // open values dataset
+        let channel_values_dataset_name = "values\0";
+        let channel_values_dataset = unsafe { H5Dopen2(channel_group,
+                                                       CStr::from_bytes_with_nul(channel_values_dataset_name
+                                                                                 .as_bytes())
+                                                       .unwrap().as_ptr(),
+                                                       H5P_DEFAULT) };
+        if channel_values_dataset > 0 {
+            // get dataspace
+            let channel_values_dataspace = unsafe { H5Dget_space(channel_values_dataset) };
+            let mut dims = 0u64;
+            unsafe {H5Sget_simple_extent_dims(channel_values_dataspace, &mut dims as *mut u64, null_mut())};
+            // allocate memory and create memory dataspace
+            let memory_dataspace = unsafe { H5Screate_simple(1, &dims as *const u64, null()) };
+            channel_values_data = vec![0f32; dims as usize];
+            // read data
+            unsafe {
+                H5Dread(channel_values_dataset,
+                        H5T_NATIVE_FLOAT_g,
+                        memory_dataspace,
+                        H5S_ALL,
+                        H5P_DEFAULT,
+                        channel_values_data.as_mut_ptr().cast());
+                H5Sclose(memory_dataspace);
+                H5Sclose(channel_values_dataspace);
+                H5Dclose(channel_values_dataset);
+            }
+        }
+        else {
+            println!("Failed to open values channel {} in peaks trains group",
+                             unsafe { CStr::from_ptr(name).to_str().unwrap() });
+        }
+
+        // open times dataset
+        let channel_times_dataset_name = "times\0";
+        let channel_times_dataset = unsafe { H5Dopen2(channel_group,
+                                                       CStr::from_bytes_with_nul(channel_times_dataset_name
+                                                                                 .as_bytes())
+                                                       .unwrap().as_ptr(),
+                                                       H5P_DEFAULT) };
+        if channel_times_dataset > 0 {
+            // get dataspace
+            let channel_times_dataspace = unsafe { H5Dget_space(channel_times_dataset) };
+            let mut dims = 0u64;
+            unsafe {H5Sget_simple_extent_dims(channel_times_dataspace, &mut dims as *mut u64, null_mut())};
+            // allocate memory and create memory dataspace
+            let memory_dataspace = unsafe { H5Screate_simple(1, &dims as *const u64, null()) };
+            channel_times_data = vec![0u64; dims as usize];
+            // read data
+            unsafe {
+                H5Dread(channel_times_dataset,
+                        H5T_NATIVE_ULLONG_g,
+                        memory_dataspace,
+                        H5S_ALL,
+                        H5P_DEFAULT,
+                        channel_times_data.as_mut_ptr().cast());
+                H5Sclose(memory_dataspace);
+                H5Sclose(channel_times_dataspace);
+                H5Dclose(channel_times_dataset);
+            }
+        }
+        else {
+            println!("Failed to open values channel {} in peaks trains group",
+                             unsafe { CStr::from_ptr(name).to_str().unwrap() });
+        }
+
+    } else {
+        println!("Failed to open channel {} in peaks trains group",
+                         unsafe { CStr::from_ptr(name).to_str().unwrap() });
+    }
+    0
+}
 
 pub fn load_phase(filename: &str) -> Result<Phase, String> {
     let mut ret = Phase::default();
@@ -255,19 +495,65 @@ pub fn load_phase(filename: &str) -> Result<Phase, String> {
                         H5P_DEFAULT,
                         (&mut sampling_frequency as *mut f32).cast());
             }
-            println!("{sampling_frequency}");
 
             unsafe { H5Dclose(sampling_frequency_dataset); }
         } else {
             unsafe { H5Fclose(file_id); }
             return Err(format!("load_phase: failed opening sampling_frequency dataset in file {}", filename));
         }
-        
+
         // read digital channels
-        
+        let digitals_group = unsafe { H5Gopen2(file_id, CStr::from_bytes_with_nul("digitals\0".as_bytes())
+                                               .unwrap().as_ptr(), H5P_DEFAULT) };
+        if digitals_group > 0 {
+            unsafe {
+                H5Literate2(digitals_group, 
+                            H5_index_t_H5_INDEX_NAME,
+                            H5_iter_order_t_H5_ITER_INC,
+                            null_mut(),
+                            Some(_load_digitals),
+                            &ret as *const Phase as *mut c_void);
+            }
+        } else {
+            unsafe { H5Fclose(file_id); }
+            return Err(format!("load_phase: failed opening digitals group in file {}", filename));
+        }
+
         // read raw_data channels
-        
+        let raw_datas_group = unsafe { H5Gopen2(file_id, CStr::from_bytes_with_nul("raw_data\0".as_bytes())
+                                                .unwrap().as_ptr(), H5P_DEFAULT) };
+        if raw_datas_group > 0 {
+            unsafe {
+                H5Literate2(raw_datas_group, 
+                            H5_index_t_H5_INDEX_NAME,
+                            H5_iter_order_t_H5_ITER_INC,
+                            null_mut(),
+                            Some(_load_raw_datas),
+                            &ret as *const Phase as *mut c_void);
+            }
+        } else {
+            unsafe { H5Fclose(file_id); }
+            return Err(format!("load_phase: failed opening raw datas group in file {}", filename));
+        }
+
         // read peak_train channels
+        let peaks_trains_group = unsafe { H5Gopen2(file_id,
+                                                   CStr::from_bytes_with_nul("peaks_train\0".as_bytes())
+                                                   .unwrap().as_ptr(),
+                                                   H5P_DEFAULT) };
+        if peaks_trains_group > 0 {
+            unsafe {
+                H5Literate2(peaks_trains_group, 
+                            H5_index_t_H5_INDEX_NAME,
+                            H5_iter_order_t_H5_ITER_INC,
+                            null_mut(),
+                            Some(_load_peaks_trains),
+                            &ret as *const Phase as *mut c_void);
+            }
+        } else {
+            unsafe { H5Fclose(file_id); }
+            return Err(format!("load_phase: failed opening peaks trains group in file {}", filename));
+        }
 
         unsafe { H5Fclose(file_id); }
         Ok(ret)
@@ -527,6 +813,8 @@ extern "C" fn _parse_analog_stream(group: i64,
             } else {
                 phase.raw_data.insert(label.to_string(), converted_data);
             }
+
+            phase.sampling_frequency = sampling_frequency;
 
         }
 

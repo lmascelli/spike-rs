@@ -1,10 +1,7 @@
-extern crate spike_rs;
-use spike_rs::hdf5::{convert_mc_h5_file, save_phase, load_phase};
+use spike_rs::hdf5::{load_phase, save_phase};
+use spike_rs::core::operations::compute_threshold;
 
 fn main() {
-    let savefile = "test.h5";
-    match load_phase(savefile) {
-        Ok(_) => { println!("OK!"); },
-        Err(err) => { println!("{err}"); }
-    }
+    let filename = "test2.h5";
+    let mut phase = load_phase(filename).expect("Failed to load phase");
 }

@@ -1,5 +1,6 @@
 use crate::core::operations::{compute_threshold, spike_detection};
 use std::collections::HashMap;
+use std::fmt::{self, Debug, Formatter};
 
 pub struct Mea {
     pub name: String,
@@ -10,7 +11,7 @@ pub struct Mea {
 pub struct Phase {
     pub sampling_frequency: f32,
     pub raw_data: HashMap<String, Vec<f32>>,
-    pub peaks_trains: HashMap<String, Vec<usize>>,
+    pub peaks_trains: HashMap<String, (Vec<f32>, Vec<usize>)>,
     pub digitals: Vec<Vec<f32>>,
 }
 
@@ -58,6 +59,27 @@ impl Phase {
         }
 
         Some(())
+    }
+}
+
+impl Debug for Phase {
+    fn fmt(&self, formatter: &mut Formatter) -> Result<(), fmt::Error> {
+        writeln!(formatter, "{{");
+        writeln!(formatter, "Sampling frequency: {}", self.sampling_frequency);
+        writeln!(formatter, "Digitals:");
+        for (i, digital) in self.digitals.iter().enumerate() {
+            writeln!(formatter, "\tdigital_{}: n_samples = {}", i, digital.len());
+        }
+        writeln!(formatter, "Raw Data:");
+        for (label, data) in &self.raw_data {
+            writeln!(formatter, "\t{}: n_samples = {}", label, data.len());
+        }
+        writeln!(formatter, "Peak trains:");
+        for (label, (data_vals, data_times)) in &self.peaks_trains {
+            writeln!(formatter, "\t{}: n_points = {}", label, data_times.len());
+        }
+        writeln!(formatter, "}}");
+        Ok(())
     }
 }
 
