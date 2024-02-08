@@ -3,6 +3,8 @@ from os.path import getctime, getsize, realpath
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from scipy.io import savemat
+import matplotlib.pyplot as plt
 
 from PySide6.QtCore import QDir, Qt, QUrl  # type: ignore
 from PySide6.QtGui import QAction
@@ -30,6 +32,9 @@ ERROR_MSGBOX = None
 CURRENT_PATH = None
 CURRENT_PHASE = None
 CURRENT_PHASE_PATH = None
+
+CURRENT_SELECTED_SIGNAL = None
+
 
 ###############################################################################
 #
@@ -60,10 +65,33 @@ def open_phase():
         ERROR_MSGBOX.exec()
 
 def plot_signal():
-    pass
+    if CURRENT_PHASE is not None:
+        if CURRENT_SELECTED_SIGNAL is not None:
+            data = None
+            t, label = CURRENT_SELECTED_SIGNAL
+            print(t, label)
+            if t == 'digital':
+                data = CURRENT_PHASE.get_digital(int(label))
+            elif t == 'raw_data':
+                data = CURRENT_PHASE.get_raw_data(label)
+            else:
+                return
+            plt.plot(data)
+            plt.show()
+    else:
+        ERROR_MSGBOX.setText(f"No phase path selected")
+        ERROR_MSGBOX.exec()
 
 def convert_phase():
-    pass
+    if CURRENT_PHASE is not None:
+        save_folder = Path(QFileDialog.getExistingDirectory(
+            caption="Select the phase file")).absolute()
+        for label in CURRENT_PHASE.channel_labels:
+            savemat(f"{str(save_folder)}/{label}.mat", {'data': CURRENT_PHASE.get_raw_data(label),
+                                     })
+    else:
+        ERROR_MSGBOX.setText(f"No phase loaded")
+        ERROR_MSGBOX.exec()
 
 def peak_detection():
     pass
@@ -110,11 +138,20 @@ def state_inspect_phase():
     ROOT.viewer.setCurrentIndex(phase_info[0])
     phase_info[1].update_data()
 
+def state_selected_signal():
+    ROOT.controls.plot_signal_button.setEnabled(True)
+
+def state_unselected_signal():
+    ROOT.controls.plot_signal_button.setEnabled(False)
+
+
 GUI_STATES = {
         'STARTED': state_started,
         'INSPECT_RECORDINGS_FOLDER': state_inspect_recordings_folder,
         'INSPECT_RECORDINGS_FOLDER_PHASE_SELECTED': state_inspect_recordings_folder_phase_selected,
         'INSPECT_PHASE': state_inspect_phase,
+        'SELECTED_SIGNAL': state_selected_signal,
+        'UNSELECTED_SIGNAL': state_unselected_signal,
         }
 
 OLD_STATE = None
@@ -247,6 +284,56 @@ Creation date:  {info_h5.date}
             '''
             self.setText(content)
 
+class DigialView(QTreeWidget):
+    def __init__(self, *kargs, **kwargs):
+        super().__init__(*kargs, **kwargs)
+        self.setHeaderLabels(['Index', 'Number of Samples', 
+                                       'Sampling Frequency'])
+
+    def selectionChanged(self, new_item, old_item):
+        if new_item.count() > 0:
+            global CURRENT_SELECTED_SIGNAL
+            index = new_item.indexes()[0].data()
+            n_samples = new_item.indexes()[1].data()
+            sampling_frequency = new_item.indexes()[2].data()
+            
+            CURRENT_SELECTED_SIGNAL = ('digital', index)
+
+            switch_state('SELECTED_SIGNAL')
+            
+
+class RawDatasView(QTreeWidget):
+    def __init__(self, *kargs, **kwargs):
+        super().__init__(*kargs, **kwargs)
+        self.setHeaderLabels(['Label', 'Number of Samples', 
+                                       'Sampling Frequency'])
+
+    def selectionChanged(self, new_item, old_item):
+        if new_item.count() > 0:
+            global CURRENT_SELECTED_SIGNAL
+            label = new_item.indexes()[0].data()
+            n_samples = new_item.indexes()[1].data()
+            sampling_frequency = new_item.indexes()[2].data()
+            
+            CURRENT_SELECTED_SIGNAL = ('raw_data', label)
+            
+            switch_state('SELECTED_SIGNAL')
+
+class PeakTrainsView(QTreeWidget):
+    def __init__(self, *kargs, **kwargs):
+        super().__init__(*kargs, **kwargs)
+        self.setHeaderLabels(['Label', 'Number of Samples'])
+
+    def selectionChanged(self, new_item, old_item):
+        if new_item.count() > 0:
+            global CURRENT_SELECTED_SIGNAL
+            label = new_item.indexes()[0].data()
+            n_samples = new_item.indexes()[1].data()
+            
+            CURRENT_SELECTED_SIGNAL = ('peak_train', label)
+
+            switch_state('UNSELECTED_SIGNAL')
+
 
 class PhaseView(QWidget):
     def __init__(self, *kargs, **kwargs):
@@ -255,18 +342,15 @@ class PhaseView(QWidget):
         self.setLayout(layout)
 
         layout.addWidget(QLabel("Digitals"))
-        self.digitals = QTreeWidget(self)
-        self.digitals.setHeaderLabels(['Index', 'Number of Samples', 
-                                       'Sampling Frequency'])
+        self.digitals = DigialView(self)
         layout.addWidget(self.digitals)
+
         layout.addWidget(QLabel("Raw datas"))
-        self.raw_datas = QTreeWidget(self)
-        self.raw_datas.setHeaderLabels(['Label', 'Number of Samples', 
-                                       'Sampling Frequency'])
+        self.raw_datas = RawDatasView(self)
         layout.addWidget(self.raw_datas)
+
         layout.addWidget(QLabel("Peak trains"))
-        self.peak_trains = QTreeWidget(self)
-        self.peak_trains.setHeaderLabels(['Label', 'Number of Samples'])
+        self.peak_trains = PeakTrainsView(self)
         layout.addWidget(self.peak_trains)
 
     def update_data(self):
