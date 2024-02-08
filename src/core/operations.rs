@@ -116,6 +116,8 @@ pub fn spike_detection(
 
             // look for minimum if the start value of the peak is positive
             if peak_start_value > 0f32 {
+                println!("Minimum search");
+
                 peak_end_sample = index + 1;
                 peak_end_value = peak_start_value;
 
@@ -156,6 +158,8 @@ pub fn spike_detection(
                 } // end finding the actual minimum
             } // end maximum branch
             else { // else look for a maximum
+                println!("Maximum search");
+
                 peak_end_sample = index + 1;
                 peak_end_value = peak_start_value;
 

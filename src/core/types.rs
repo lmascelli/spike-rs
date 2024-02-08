@@ -40,17 +40,21 @@ impl Phase {
         None
     }
 
-    pub fn compute_all_peak_trains(&mut self) -> Option<()> {
+    pub fn compute_all_peak_trains(&mut self,
+                                   peak_duration: f32,
+                                   refractory_time: f32,
+                                   n_devs: f32,
+                                   ) -> Option<()> {
         for (label, signal) in &self.raw_data {
             if let Ok(threshold) =
-                compute_threshold(&signal[..], self.sampling_frequency, 8 as _)
+                compute_threshold(&signal[..], self.sampling_frequency, n_devs)
             {
                 let peaks_train = spike_detection(
                     &signal[..],
                     self.sampling_frequency,
                     threshold,
-                    2e-3,
-                    2e-3,
+                    peak_duration,
+                    refractory_time,
                 )?;
                 self.peaks_trains.insert(label.clone(), peaks_train);
             } else {

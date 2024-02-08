@@ -10,14 +10,17 @@ use pyo3::prelude::*;
 
 #[pyclass(name = "Phase")]
 struct PyPhase {
+
     #[pyo3(get)]
     channel_labels: Vec<String>,
     #[pyo3(get)]
     digitals_num: usize,
+
     phase: core::types::Phase,
 }
 
 impl PyPhase {
+
     fn from(phase: core::types::Phase) -> Self {
         PyPhase {
             channel_labels: phase.raw_data.keys().map(|x| x.clone()).collect(),
@@ -29,6 +32,7 @@ impl PyPhase {
 
 #[pymethods]
 impl PyPhase {
+
     #[new]
     pub fn new() -> Self {
         PyPhase {
@@ -54,7 +58,8 @@ impl PyPhase {
         }
     }
 
-    pub fn get_peaks_train(&self, label: &str) -> Option<(Vec<f32>, Vec<usize>)> {
+    pub fn get_peaks_train(&self, label: &str) -> Option<(Vec<f32>,
+                                                          Vec<usize>)> {
         if let Some(data) = self.phase.peaks_trains.get(label) {
             Some(data.clone())
         } else {
@@ -62,6 +67,11 @@ impl PyPhase {
         }
     }
 
+    pub fn compute_all_peak_trains(&mut self, peak_duration: f32,
+                                   refractary_time: f32, n_devs: f32) {
+        self.phase.compute_all_peak_trains(peak_duration, refractary_time,
+                                     n_devs);
+    }
 }
 
 #[pyfunction]
