@@ -8,9 +8,11 @@ from PySide6.QtCore import QDir, Qt, QUrl  # type: ignore
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
                                QFileSystemModel, QGroupBox, QLabel,
-                               QMainWindow, QMenu, QMenuBar, QMessageBox,
-                               QPushButton, QSplitter, QStackedWidget,
-                               QTextBrowser, QTreeView, QVBoxLayout, QWidget)
+                               QHeaderView, QMainWindow, QMenu, QMenuBar,
+                               QMessageBox, QPushButton, QSplitter,
+                               QStackedWidget, QTextBrowser, QTreeView,
+                               QTreeWidget, QTreeWidgetItem, QVBoxLayout,
+                               QWidget)
 
 import spyke_rs as sp
 
@@ -44,18 +46,24 @@ def open_recordings():
     switch_state('INSPECT_RECORDINGS_FOLDER')
 
 def open_phase():
+    global CURRENT_PHASE
     if CURRENT_PHASE_PATH is not None:
         CURRENT_PHASE = sp.load_phase(str(CURRENT_PHASE_PATH))
         if CURRENT_PHASE is None:
             ERROR_MSGBOX.setText(f"Failed to load {CURRENT_PHASE_PATH}")
             ERROR_MSGBOX.exec()
         else:
-            ERROR_MSGBOX.setText(f"{CURRENT_PHASE.digitals_num}")
-            ERROR_MSGBOX.exec()
+            switch_state('INSPECT_PHASE')
+
     else:
         ERROR_MSGBOX.setText(f"No phase path selected")
         ERROR_MSGBOX.exec()
 
+def plot_signal():
+    pass
+
+def convert_phase():
+    pass
 
 def peak_detection():
     pass
@@ -71,6 +79,8 @@ def state_started():
     ROOT.tree.setVisible(False)
     ROOT.controls.open_phase_button.setEnabled(False)
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    ROOT.controls.convert_phase_button.setEnabled(False)
+    ROOT.controls.plot_signal_button.setEnabled(False)
     viewer_widget = ROOT.viewer.widgets['None']
     ROOT.viewer.setCurrentIndex(viewer_widget[0])
 
@@ -78,19 +88,33 @@ def state_inspect_recordings_folder():
     ROOT.tree.setVisible(True)
     ROOT.controls.open_phase_button.setEnabled(False)
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    ROOT.controls.convert_phase_button.setEnabled(False)
+    ROOT.controls.plot_signal_button.setEnabled(False)
     viewer_widget = ROOT.viewer.widgets[ 'PhaseInfo' ]
     ROOT.viewer.setCurrentIndex(viewer_widget[0])
 
 def state_inspect_recordings_folder_phase_selected():
     # ROOT.tree.setVisible(True)                # not managed here
     ROOT.controls.open_phase_button.setEnabled(True)
+    ROOT.controls.convert_phase_button.setEnabled(False)
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    ROOT.controls.plot_signal_button.setEnabled(False)
+
+def state_inspect_phase():
+    # ROOT.tree.setVisible(True)                # not managed here
+    ROOT.controls.open_phase_button.setEnabled(True)
+    ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    ROOT.controls.convert_phase_button.setEnabled(True)
+    ROOT.controls.plot_signal_button.setEnabled(False)
+    phase_info = ROOT.viewer.widgets['PhaseView']
+    ROOT.viewer.setCurrentIndex(phase_info[0])
+    phase_info[1].update_data()
 
 GUI_STATES = {
         'STARTED': state_started,
         'INSPECT_RECORDINGS_FOLDER': state_inspect_recordings_folder,
         'INSPECT_RECORDINGS_FOLDER_PHASE_SELECTED': state_inspect_recordings_folder_phase_selected,
-        'INSPECT_PHASE': None,
+        'INSPECT_PHASE': state_inspect_phase,
         }
 
 OLD_STATE = None
@@ -131,6 +155,10 @@ class Controls(QWidget):
         self.open_phase_button.clicked.connect(open_phase)
         file_layout.addWidget(self.open_phase_button)
 
+        self.convert_phase_button = QPushButton("Convert phase to .mat files")
+        self.convert_phase_button.clicked.connect(convert_phase)
+        file_layout.addWidget(self.convert_phase_button)
+
         layout.addWidget(file_group)
         ####################
 
@@ -143,6 +171,10 @@ class Controls(QWidget):
         self.compute_peak_trains_button = QPushButton("Peak detection")
         self.compute_peak_trains_button.clicked.connect(peak_detection)
         data_layout.addWidget(self.compute_peak_trains_button)
+
+        self.plot_signal_button = QPushButton("Plot Signal")
+        self.plot_signal_button.clicked.connect(plot_signal)
+        data_layout.addWidget(self.plot_signal_button)
 
         layout.addWidget(data_group)
         ####################
@@ -219,6 +251,58 @@ Creation date:  {info_h5.date}
 class PhaseView(QWidget):
     def __init__(self, *kargs, **kwargs):
         super().__init__(*kargs, **kwargs)
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        layout.addWidget(QLabel("Digitals"))
+        self.digitals = QTreeWidget(self)
+        self.digitals.setHeaderLabels(['Index', 'Number of Samples', 
+                                       'Sampling Frequency'])
+        layout.addWidget(self.digitals)
+        layout.addWidget(QLabel("Raw datas"))
+        self.raw_datas = QTreeWidget(self)
+        self.raw_datas.setHeaderLabels(['Label', 'Number of Samples', 
+                                       'Sampling Frequency'])
+        layout.addWidget(self.raw_datas)
+        layout.addWidget(QLabel("Peak trains"))
+        self.peak_trains = QTreeWidget(self)
+        self.peak_trains.setHeaderLabels(['Label', 'Number of Samples'])
+        layout.addWidget(self.peak_trains)
+
+    def update_data(self):
+        # clear previous tables
+        self.digitals.clear()
+        self.raw_datas.clear()
+        self.peak_trains.clear()
+        
+        # digitals
+        for i, d in enumerate(CURRENT_PHASE.digitals_lengths):
+            item = QTreeWidgetItem(self.digitals)
+            item.setText(0, f"{i}")
+            item.setText(1, f"{d}")
+            item.setText(2, f"{CURRENT_PHASE.sampling_frequency}")
+
+        # raw datas
+        for i, d in enumerate(CURRENT_PHASE.raw_data_lengths):
+            item = QTreeWidgetItem(self.raw_datas)
+            item.setText(0, f"{CURRENT_PHASE.channel_labels[i]}")
+            item.setText(1, f"{d}")
+            item.setText(2, f"{CURRENT_PHASE.sampling_frequency}")
+
+        # peak trains
+        for i, d in enumerate(CURRENT_PHASE.peak_train_lengths):
+            item = QTreeWidgetItem(self.peak_trains)
+            item.setText(0, f"{CURRENT_PHASE.channel_labels[i]}")
+            item.setText(1, f"{d}")
+            item.setText(2, f"{CURRENT_PHASE.sampling_frequency}")
+
+        # resize tables columns
+        for i in range(0, self.digitals.columnCount()):
+            self.digitals.header().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+        for i in range(0, self.raw_datas.columnCount()):
+            self.raw_datas.header().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+        for i in range(0, self.peak_trains.columnCount()):
+            self.peak_trains.header().setSectionResizeMode(i, QHeaderView.ResizeToContents)
 
 
 class Viewer(QStackedWidget):

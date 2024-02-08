@@ -10,11 +10,18 @@ use pyo3::prelude::*;
 
 #[pyclass(name = "Phase")]
 struct PyPhase {
+    #[pyo3(get)]
+    sampling_frequency: f32,
 
     #[pyo3(get)]
     channel_labels: Vec<String>,
     #[pyo3(get)]
-    digitals_num: usize,
+    raw_data_lengths: Vec<usize>,
+    #[pyo3(get)]
+    peak_train_lengths: Vec<usize>,
+
+    #[pyo3(get)]
+    digitals_lengths: Vec<usize>,
 
     phase: core::types::Phase,
 }
@@ -23,8 +30,11 @@ impl PyPhase {
 
     fn from(phase: core::types::Phase) -> Self {
         PyPhase {
+            sampling_frequency: phase.sampling_frequency,
             channel_labels: phase.raw_data.keys().map(|x| x.clone()).collect(),
-            digitals_num: phase.digitals.len(),
+            raw_data_lengths: phase.raw_data.keys().map(|x| phase.raw_data[x].len()).collect(),
+            peak_train_lengths: phase.peaks_trains.keys().map(|x| phase.peaks_trains[x].0.len()).collect(),
+            digitals_lengths: phase.digitals.iter().map(|x| x.len()).collect(),
             phase: phase,
         }
     }
@@ -36,9 +46,12 @@ impl PyPhase {
     #[new]
     pub fn new() -> Self {
         PyPhase {
-            phase: core::types::Phase::default(),
-            digitals_num: 0,
+            sampling_frequency: 0f32,
             channel_labels: vec![],
+            raw_data_lengths: vec![],
+            peak_train_lengths: vec![],
+            digitals_lengths: vec![],
+            phase: core::types::Phase::default(),
         }
     }
 

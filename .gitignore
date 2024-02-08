@@ -1,5 +1,5 @@
 /target
-/pycode/spike_rs.pyd
+/pycode/spyke_rs.pyd
 /pycode/__pycache__
 Cargo.lock
 tags
