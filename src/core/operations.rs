@@ -19,6 +19,26 @@ pub mod math {
         let ret = (sum / (range.len() as f32 - 1.0f32)).sqrt();
         ret
     }
+
+    pub fn min(range: &[f32]) -> f32 {
+        let mut min = range[0];
+        for value in range {
+            if *value < min {
+                min = *value;
+            }
+        }
+        return min;
+    }
+    
+    pub fn max(range: &[f32]) -> f32 {
+        let mut max = range[0];
+        for value in range {
+            if *value > max {
+                max = *value;
+            }
+        }
+        return max;
+    }
 }
 
 pub fn compute_threshold(
@@ -224,4 +244,29 @@ pub fn spike_detection(
         index += 1;
     }
     Some((ret_values, ret_times))
+}
+
+pub fn get_peaks_bins(range: &[f32], n_bins: usize) -> Option<(Vec<usize>, f32, f32)> {
+    if n_bins == 0 {
+        return None;
+    }
+
+    let mut ret = (vec![0; n_bins+1], 0f32, 0f32);
+
+    let range_mod: Vec<f32> = range.iter().map(|x| x.abs()).collect();
+
+    let min = math::min(&range_mod[..]);
+    let max = math::max(&range_mod[..]);
+    ret.1 = min;
+    ret.2 = max;
+    let bin_size = (max - min) / n_bins as f32;
+    if bin_size == 0f32 {
+        None
+    } else {
+        for value in range_mod {
+            let index = ((value - min) / bin_size) as usize;
+            ret.0[index] += 1;
+        }
+        Some(ret)
+    }
 }

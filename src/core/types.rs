@@ -64,6 +64,24 @@ impl Phase {
 
         Some(())
     }
+
+    pub fn clear_peaks_over_threshold(&mut self, threshold: f32) {
+        let peaks_trains = &mut self.peaks_trains as *mut HashMap<String,
+                                                                  (Vec<f32>, Vec<usize>)>;
+        let peaks_trains1 = unsafe {&mut *peaks_trains};
+        let peaks_trains2 = unsafe {&mut *peaks_trains};
+        for (label, (peaks_values, peaks_times)) in peaks_trains1 {
+            let mut new_peaks_values = vec![];
+            let mut new_peaks_times = vec![];
+            for (i, value) in peaks_values.iter().enumerate() {
+                if value.abs() < threshold {
+                    new_peaks_values.push(*value);
+                    new_peaks_times.push(peaks_times[i]);
+                }
+            }
+            peaks_trains2.insert(label.clone(), (new_peaks_values, new_peaks_times));
+        }
+    }
 }
 
 #[allow(unused_must_use)]

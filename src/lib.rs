@@ -6,6 +6,7 @@ pub mod hdf5;
 ///                             Python Wrapper
 ///
 ////////////////////////////////////////////////////////////////////////////////
+use std::collections::HashMap;
 use pyo3::prelude::*;
 
 #[pyclass(name = "Phase")]
@@ -85,6 +86,35 @@ impl PyPhase {
         self.phase.compute_all_peak_trains(peak_duration, refractary_time,
                                      n_devs);
     }
+
+    pub fn get_peaks_stats(&self) -> Vec<(f32, f32)> {
+        let mut ret = vec![];
+        for (_, (peaks_values, _)) in &self.phase.peaks_trains {
+            ret.push((core::operations::math::mean(&peaks_values[..]),
+                *peaks_values.iter().max_by(|x, y|
+                    x.abs().partial_cmp(&y.abs()).unwrap())
+                    .unwrap()));
+        }
+        ret
+    }
+
+    pub fn clear_peaks_over_threshold(&mut self, threshold: f32) {
+        self.phase.clear_peaks_over_threshold(threshold);
+        self.peak_train_lengths = self.phase.peaks_trains
+            .keys().map(|x| self.phase.peaks_trains[x].0.len()).collect();
+    }
+
+    pub fn get_peaks_bins(&self, n_bins: usize) -> HashMap<String, (Vec<usize>, f32, f32)> {
+        let mut ret = HashMap::new();
+
+        for (label, (peaks_values, _peaks_times)) in &self.phase.peaks_trains {
+            ret.insert(label.clone(),
+                core::operations::get_peaks_bins(&peaks_values[..], n_bins)
+                    .unwrap_or((Vec::new(), 0f32, 0f32)));
+        }
+        
+        ret
+    }
 }
 
 #[pyfunction]
@@ -96,9 +126,19 @@ fn load_phase(filename: &str) -> Option<PyPhase> {
     }
 }
 
+#[pyfunction]
+fn save_phase(phase: &PyPhase, filename: &str) -> bool {
+    if let Ok(_) = hdf5::save_phase(&phase.phase, filename) {
+        true
+    } else {
+        false
+    }
+}
+
 #[pymodule]
 fn spyke_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(load_phase, m)?)?;
+    m.add_function(wrap_pyfunction!(save_phase, m)?)?;
     m.add_class::<PyPhase>()?;
     Ok(())
 }

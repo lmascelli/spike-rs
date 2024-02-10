@@ -2,19 +2,19 @@ from sys import argv, exit
 from os.path import getctime, getsize, realpath
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional, Tuple
 from scipy.io import savemat
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 from PySide6.QtCore import QDir, Qt, QUrl  # type: ignore
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
-                               QFileSystemModel, QGroupBox, QLabel,
-                               QHeaderView, QMainWindow, QMenu, QMenuBar,
-                               QMessageBox, QPushButton, QSplitter,
-                               QStackedWidget, QTextBrowser, QTreeView,
-                               QTreeWidget, QTreeWidgetItem, QVBoxLayout,
-                               QWidget)
+    QFileSystemModel, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+    QListWidget, QMainWindow, QMenu, QMenuBar, QMessageBox, QPushButton,
+    QSplitter, QStackedWidget, QTextBrowser, QTreeView, QTreeWidget,
+    QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import spyke_rs as sp
 
@@ -35,6 +35,7 @@ CURRENT_PHASE_PATH = None
 
 CURRENT_SELECTED_SIGNAL = None
 
+HISTO_BINS_NUMBER = 50
 
 ###############################################################################
 #
@@ -44,7 +45,7 @@ CURRENT_SELECTED_SIGNAL = None
 
 def open_recordings():
     CURRENT_PATH = Path(QFileDialog.getExistingDirectory(
-                                            caption="Select the phase file"))
+        caption="Select the phase file"))
     str_path = str(CURRENT_PATH.absolute())
     ROOT.tree.model.setRootPath(str_path)
     ROOT.tree.setRootIndex(ROOT.tree.model.index(str_path))
@@ -64,12 +65,21 @@ def open_phase():
         ERROR_MSGBOX.setText(f"No phase path selected")
         ERROR_MSGBOX.exec()
 
+def save_phase():
+    if CURRENT_PHASE is not None:
+        save_file = Path(QFileDialog.getSaveFileName(
+            filter="hdf5 (*.h5)",
+            caption="Select the phase file")[0]).absolute()
+        sp.save_phase(CURRENT_PHASE, str(save_file))
+    else:
+        ERROR_MSGBOX.setText(f"No phase loaded")
+        ERROR_MSGBOX.exec()
+
 def plot_signal():
     if CURRENT_PHASE is not None:
         if CURRENT_SELECTED_SIGNAL is not None:
             data = None
             t, label = CURRENT_SELECTED_SIGNAL
-            print(t, label)
             if t == 'digital':
                 data = CURRENT_PHASE.get_digital(int(label))
             elif t == 'raw_data':
@@ -85,13 +95,27 @@ def plot_signal():
 def convert_phase():
     if CURRENT_PHASE is not None:
         save_folder = Path(QFileDialog.getExistingDirectory(
-            caption="Select the phase file")).absolute()
+            caption="Select the export folder")).absolute()
         for label in CURRENT_PHASE.channel_labels:
             savemat(f"{str(save_folder)}/{label}.mat", {'data': CURRENT_PHASE.get_raw_data(label),
-                                     })
+                                                        })
     else:
         ERROR_MSGBOX.setText(f"No phase loaded")
         ERROR_MSGBOX.exec()
+
+class ClearOverThresholdDialog():
+    pass
+
+def clear_peaks_over_threshold():
+    if CURRENT_PHASE is not None:
+        clear_peaks_dialog = ClearOverThresholdDialog(
+            CURRENT_PHASE.get_peaks_bins(HISTO_BINS_NUMBER))
+        clear_peaks_dialog.show()
+
+    else:
+        ERROR_MSGBOX.setText(f"No phase loaded")
+        ERROR_MSGBOX.exec()
+
 
 def peak_detection():
     pass
@@ -109,6 +133,7 @@ def state_started():
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
     ROOT.controls.convert_phase_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
     viewer_widget = ROOT.viewer.widgets['None']
     ROOT.viewer.setCurrentIndex(viewer_widget[0])
 
@@ -118,6 +143,7 @@ def state_inspect_recordings_folder():
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
     ROOT.controls.convert_phase_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
     viewer_widget = ROOT.viewer.widgets[ 'PhaseInfo' ]
     ROOT.viewer.setCurrentIndex(viewer_widget[0])
 
@@ -127,6 +153,7 @@ def state_inspect_recordings_folder_phase_selected():
     ROOT.controls.convert_phase_button.setEnabled(False)
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
 
 def state_inspect_phase():
     # ROOT.tree.setVisible(True)                # not managed here
@@ -134,9 +161,20 @@ def state_inspect_phase():
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
     ROOT.controls.convert_phase_button.setEnabled(True)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
     phase_info = ROOT.viewer.widgets['PhaseView']
     ROOT.viewer.setCurrentIndex(phase_info[0])
     phase_info[1].update_data()
+
+def state_update_peaks():
+    ROOT.controls.open_phase_button.setEnabled(True)
+    ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    ROOT.controls.convert_phase_button.setEnabled(True)
+    ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
+    phase_info = ROOT.viewer.widgets['PhaseView']
+    ROOT.viewer.setCurrentIndex(phase_info[0])
+    phase_info[1].update_peaks()
 
 def state_selected_signal():
     ROOT.controls.plot_signal_button.setEnabled(True)
@@ -146,13 +184,14 @@ def state_unselected_signal():
 
 
 GUI_STATES = {
-        'STARTED': state_started,
-        'INSPECT_RECORDINGS_FOLDER': state_inspect_recordings_folder,
-        'INSPECT_RECORDINGS_FOLDER_PHASE_SELECTED': state_inspect_recordings_folder_phase_selected,
-        'INSPECT_PHASE': state_inspect_phase,
-        'SELECTED_SIGNAL': state_selected_signal,
-        'UNSELECTED_SIGNAL': state_unselected_signal,
-        }
+    'STARTED': state_started,
+    'INSPECT_RECORDINGS_FOLDER': state_inspect_recordings_folder,
+    'INSPECT_RECORDINGS_FOLDER_PHASE_SELECTED': state_inspect_recordings_folder_phase_selected,
+    'INSPECT_PHASE': state_inspect_phase,
+    'SELECTED_SIGNAL': state_selected_signal,
+    'UNSELECTED_SIGNAL': state_unselected_signal,
+    'UPDATE_PEAKS': state_update_peaks,
+}
 
 OLD_STATE = None
 CURRENT_STATE = None
@@ -192,6 +231,10 @@ class Controls(QWidget):
         self.open_phase_button.clicked.connect(open_phase)
         file_layout.addWidget(self.open_phase_button)
 
+        self.save_phase_button = QPushButton("Save phase")
+        self.save_phase_button.clicked.connect(save_phase)
+        file_layout.addWidget(self.save_phase_button)
+
         self.convert_phase_button = QPushButton("Convert phase to .mat files")
         self.convert_phase_button.clicked.connect(convert_phase)
         file_layout.addWidget(self.convert_phase_button)
@@ -213,9 +256,71 @@ class Controls(QWidget):
         self.plot_signal_button.clicked.connect(plot_signal)
         data_layout.addWidget(self.plot_signal_button)
 
+        self.clear_peaks_over_threshold_button = QPushButton("Clear peaks over threshold")
+        self.clear_peaks_over_threshold_button.clicked.connect(clear_peaks_over_threshold)
+        data_layout.addWidget(self.clear_peaks_over_threshold_button)
+
         layout.addWidget(data_group)
         ####################
 
+
+###############################################################################
+#
+#                                 DIALOGS
+#
+###############################################################################
+
+class ClearOverThresholdDialog(QDialog):
+    def __init__(self, peaks_bins: Dict[str, List[int]],
+                 *kargs, **kwargs):
+        super().__init__(*kargs, **kwargs)
+        self.setGeometry(100, 100, 800, 600)
+        layout = QHBoxLayout()
+
+        controls = QWidget()
+        controls_layout = QVBoxLayout()
+        controls.setLayout(controls_layout)
+
+        self.channels_list = QListWidget()
+        controls_layout.addWidget(self.channels_list)
+        for (label, _) in peaks_bins.items():
+            self.channels_list.addItem(f'{label}')
+
+        plot_button = QPushButton(text="Plot histogram")
+        plot_button.clicked.connect(lambda: self.plot(
+            peaks_bins[self.channels_list.currentItem().text()]))
+        controls_layout.addWidget(plot_button)
+
+        controls_layout.addWidget(QLabel("Clear threshold"))
+        self.threshold_edit = QLineEdit()
+        confirm_button = QPushButton(text="Clear")
+        confirm_button.clicked.connect(self.confirm)
+        cancel_button = QPushButton(text="Cancel")
+        cancel_button.clicked.connect(self.close)
+        layout.addWidget(controls)
+        controls_layout.addWidget(self.threshold_edit)
+        controls_layout.addWidget(confirm_button)
+        controls_layout.addWidget(cancel_button)
+
+        self.setLayout(layout)
+
+    def plot(self, data):
+        ticks_values = np.linspace(data[1], data[2], HISTO_BINS_NUMBER + 1
+                                ).tolist()
+        ticks = []
+        for tick in ticks_values:
+            ticks.append(f"{tick:3.2e}")
+        print(ticks)
+        print(len(ticks), len(data[0]), len(range(0, HISTO_BINS_NUMBER+1)))
+        plt.bar(ticks, data[0])
+        plt.xticks(rotation=45)
+        plt.show()
+
+    def confirm(self):
+        threshold_value = float(self.threshold_edit.text());
+        CURRENT_PHASE.clear_peaks_over_threshold(threshold_value);
+        switch_state('UPDATE_PEAKS')
+        self.close()
 
 
 ###############################################################################
@@ -257,7 +362,7 @@ class FileTree(QTreeView):
                 file = CURRENT_PHASE_PATH
                 info_h5 = self.InfoH5(
                     file.name, f'{"%.2f" % (getsize(file) / 1024 / 1024)}'
-                    ' MB', datetime.fromtimestamp(getctime(file))
+                        ' MB', datetime.fromtimestamp(getctime(file))
                     .strftime('%Y-%m-%d %H:%M:%S'))
                 ROOT.viewer.widgets['PhaseInfo'][1].set_h5_info(info_h5=info_h5)
                 switch_state('INSPECT_RECORDINGS_FOLDER_PHASE_SELECTED')
@@ -288,7 +393,7 @@ class DigialView(QTreeWidget):
     def __init__(self, *kargs, **kwargs):
         super().__init__(*kargs, **kwargs)
         self.setHeaderLabels(['Index', 'Number of Samples', 
-                                       'Sampling Frequency'])
+                              'Sampling Frequency'])
 
     def selectionChanged(self, new_item, old_item):
         if new_item.count() > 0:
@@ -296,17 +401,17 @@ class DigialView(QTreeWidget):
             index = new_item.indexes()[0].data()
             n_samples = new_item.indexes()[1].data()
             sampling_frequency = new_item.indexes()[2].data()
-            
+
             CURRENT_SELECTED_SIGNAL = ('digital', index)
 
             switch_state('SELECTED_SIGNAL')
-            
+
 
 class RawDatasView(QTreeWidget):
     def __init__(self, *kargs, **kwargs):
         super().__init__(*kargs, **kwargs)
         self.setHeaderLabels(['Label', 'Number of Samples', 
-                                       'Sampling Frequency'])
+                              'Sampling Frequency'])
 
     def selectionChanged(self, new_item, old_item):
         if new_item.count() > 0:
@@ -314,9 +419,9 @@ class RawDatasView(QTreeWidget):
             label = new_item.indexes()[0].data()
             n_samples = new_item.indexes()[1].data()
             sampling_frequency = new_item.indexes()[2].data()
-            
+
             CURRENT_SELECTED_SIGNAL = ('raw_data', label)
-            
+
             switch_state('SELECTED_SIGNAL')
 
 class PeakTrainsView(QTreeWidget):
@@ -329,7 +434,7 @@ class PeakTrainsView(QTreeWidget):
             global CURRENT_SELECTED_SIGNAL
             label = new_item.indexes()[0].data()
             n_samples = new_item.indexes()[1].data()
-            
+
             CURRENT_SELECTED_SIGNAL = ('peak_train', label)
 
             switch_state('UNSELECTED_SIGNAL')
@@ -353,12 +458,25 @@ class PhaseView(QWidget):
         self.peak_trains = PeakTrainsView(self)
         layout.addWidget(self.peak_trains)
 
+    def update_peaks(self):
+        self.peak_trains.clear()
+
+        # peak trains
+        for i, d in enumerate(CURRENT_PHASE.peak_train_lengths):
+            item = QTreeWidgetItem(self.peak_trains)
+            item.setText(0, f"{CURRENT_PHASE.channel_labels[i]}")
+            item.setText(1, f"{d}")
+            item.setText(2, f"{CURRENT_PHASE.sampling_frequency}")
+
+        for i in range(0, self.peak_trains.columnCount()):
+            self.peak_trains.header().setSectionResizeMode(i, QHeaderView.ResizeToContents)
+
     def update_data(self):
         # clear previous tables
         self.digitals.clear()
         self.raw_datas.clear()
         self.peak_trains.clear()
-        
+
         # digitals
         for i, d in enumerate(CURRENT_PHASE.digitals_lengths):
             item = QTreeWidgetItem(self.digitals)
@@ -394,10 +512,10 @@ class Viewer(QStackedWidget):
         super().__init__(*kargs, **kwargs)
 
         self.widgets = {
-                'None'      : (0, QWidget(self)),
-                'PhaseInfo' : (1, PhaseInfo(self)),
-                'PhaseView' : (2, PhaseView(self)),
-                }
+            'None'      : (0, QWidget(self)),
+            'PhaseInfo' : (1, PhaseInfo(self)),
+            'PhaseView' : (2, PhaseView(self)),
+        }
 
         for _, (index, widget) in self.widgets.items():
             self.insertWidget(index, widget)
