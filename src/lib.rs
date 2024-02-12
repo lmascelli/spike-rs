@@ -17,9 +17,9 @@ struct PyPhase {
     #[pyo3(get)]
     channel_labels: Vec<String>,
     #[pyo3(get)]
-    raw_data_lengths: Vec<usize>,
+    raw_data_lengths: HashMap<String, usize>,
     #[pyo3(get)]
-    peak_train_lengths: Vec<usize>,
+    peak_train_lengths: HashMap<String, usize>,
 
     #[pyo3(get)]
     digitals_lengths: Vec<usize>,
@@ -33,8 +33,8 @@ impl PyPhase {
         PyPhase {
             sampling_frequency: phase.sampling_frequency,
             channel_labels: phase.raw_data.keys().map(|x| x.clone()).collect(),
-            raw_data_lengths: phase.raw_data.keys().map(|x| phase.raw_data[x].len()).collect(),
-            peak_train_lengths: phase.peaks_trains.keys().map(|x| phase.peaks_trains[x].0.len()).collect(),
+            raw_data_lengths: phase.raw_data.keys().map(|x| (x, phase.raw_data[x].len())).collect(),
+            peak_train_lengths: phase.peaks_trains.keys().map(|x| (x, phase.peaks_trains[x].0.len())).collect(),
             digitals_lengths: phase.digitals.iter().map(|x| x.len()).collect(),
             phase: phase,
         }
@@ -49,8 +49,8 @@ impl PyPhase {
         PyPhase {
             sampling_frequency: 0f32,
             channel_labels: vec![],
-            raw_data_lengths: vec![],
-            peak_train_lengths: vec![],
+            raw_data_lengths: HashMap::new(),
+            peak_train_lengths: HashMap::new(),
             digitals_lengths: vec![],
             phase: core::types::Phase::default(),
         }

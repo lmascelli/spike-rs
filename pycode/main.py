@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from scipy.io import savemat
+from collections import OrderedDict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -498,7 +499,7 @@ class PhaseView(QWidget):
         self.peak_trains.clear()
 
         # peak trains
-        for i, d in enumerate(CURRENT_PHASE.peak_train_lengths):
+        for i, d in enumerate(sorted(CURRENT_PHASE.peak_train_lengths)):
             item = QTreeWidgetItem(self.peak_trains)
             item.setText(0, f"{CURRENT_PHASE.channel_labels[i]}")
             item.setText(1, f"{d}")
