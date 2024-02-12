@@ -136,7 +136,7 @@ fn save_phase(phase: &PyPhase, filename: &str) -> bool {
 }
 
 #[pymodule]
-fn spyke_rs(_py: Python, m: &PyModule) -> PyResult<()> {
+fn spike_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(load_phase, m)?)?;
     m.add_function(wrap_pyfunction!(save_phase, m)?)?;
     m.add_class::<PyPhase>()?;

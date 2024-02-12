@@ -1,4 +1,4 @@
-import spyke_rs as sp
+import spike_rs as sp
 import matplotlib.pyplot as plt
 
 filename = 'e:/rust/spike-rs/test.h5'

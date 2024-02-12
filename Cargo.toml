@@ -5,7 +5,7 @@ edition = "2021"
 build = "build.rs"
 
 [lib]
-name = "spyke_rs"
+name = "spike_rs"
 crate-type = ["cdylib"]
 
 [dependencies]

@@ -5,7 +5,7 @@ Clear-Host
 switch ($args[0]) {
   "build" {
     cargo build;
-    copy -Force ./target/debug/spyke_rs.dll ./pycode/spyke_rs.pyd
+    copy -Force ./target/debug/spike_rs.dll ./pycode/spike_rs.pyd
   }
   "run" {
     cargo run
@@ -15,7 +15,7 @@ switch ($args[0]) {
   }
   "release" {
     cargo build --release;
-    copy -Force ./target/release/spyke_rs.dll ./pycode/spyke_rs.pyd
+    copy -Force ./target/release/spike_rs.dll ./pycode/spike_rs.pyd
   }
   default {
     python ./pycode/main.py
