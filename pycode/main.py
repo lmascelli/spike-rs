@@ -97,8 +97,9 @@ def convert_phase():
         save_folder = Path(QFileDialog.getExistingDirectory(
             caption="Select the export folder")).absolute()
         for label in CURRENT_PHASE.channel_labels:
-            savemat(f"{str(save_folder)}/{label}.mat", {'data': CURRENT_PHASE.get_raw_data(label),
-                                                        })
+            savemat(f"{str(save_folder)}/{label}.mat", {
+                'data': CURRENT_PHASE.get_raw_data(label),
+            })
     else:
         ERROR_MSGBOX.setText(f"No phase loaded")
         ERROR_MSGBOX.exec()
