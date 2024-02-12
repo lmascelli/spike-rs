@@ -11,10 +11,10 @@ import numpy as np
 from PySide6.QtCore import QDir, Qt, QUrl  # type: ignore
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
-    QFileSystemModel, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QMainWindow, QMenu, QMenuBar, QMessageBox, QPushButton,
-    QSplitter, QStackedWidget, QTextBrowser, QTreeView, QTreeWidget,
-    QTreeWidgetItem, QVBoxLayout, QWidget)
+    QFileSystemModel, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
+    QLineEdit, QListWidget, QMainWindow, QMenu, QMenuBar, QMessageBox,
+    QPushButton, QSplitter, QStackedWidget, QTextBrowser, QTreeView,
+    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import spike_rs as sp
 
@@ -75,6 +75,21 @@ def save_phase():
         ERROR_MSGBOX.setText(f"No phase loaded")
         ERROR_MSGBOX.exec()
 
+def convert_from_mc_h5():
+    ConvertFromMultichannelH5Dialog().exec()
+
+def convert_phase():
+    if CURRENT_PHASE is not None:
+        save_folder = Path(QFileDialog.getExistingDirectory(
+            caption="Select the export folder")).absolute()
+        for label in CURRENT_PHASE.channel_labels:
+            savemat(f"{str(save_folder)}/{label}.mat", {
+                'data': CURRENT_PHASE.get_raw_data(label),
+            })
+    else:
+        ERROR_MSGBOX.setText(f"No phase loaded")
+        ERROR_MSGBOX.exec()
+
 def plot_signal():
     if CURRENT_PHASE is not None:
         if CURRENT_SELECTED_SIGNAL is not None:
@@ -113,26 +128,12 @@ def plot_peaks_histogram():
         ERROR_MSGBOX.setText(f"No phase path selected")
         ERROR_MSGBOX.exec()
 
-def convert_phase():
-    if CURRENT_PHASE is not None:
-        save_folder = Path(QFileDialog.getExistingDirectory(
-            caption="Select the export folder")).absolute()
-        for label in CURRENT_PHASE.channel_labels:
-            savemat(f"{str(save_folder)}/{label}.mat", {
-                'data': CURRENT_PHASE.get_raw_data(label),
-            })
-    else:
-        ERROR_MSGBOX.setText(f"No phase loaded")
-        ERROR_MSGBOX.exec()
-
 class ClearOverThresholdDialog():
     pass
 
 def clear_peaks_over_threshold():
     if CURRENT_PHASE is not None:
-        clear_peaks_dialog = ClearOverThresholdDialog(
-            CURRENT_PHASE.get_peaks_bins(HISTO_BINS_NUMBER))
-        clear_peaks_dialog.show()
+        ClearOverThresholdDialog().exec()
 
     else:
         ERROR_MSGBOX.setText(f"No phase loaded")
@@ -264,6 +265,10 @@ class Controls(QWidget):
         self.save_phase_button.clicked.connect(save_phase)
         file_layout.addWidget(self.save_phase_button)
 
+        self.convert_from_mc_h5_button = QPushButton("Convert MultiChannel hdf5 to phase")
+        self.convert_from_mc_h5_button.clicked.connect(convert_from_mc_h5)
+        file_layout.addWidget(self.convert_from_mc_h5_button)
+
         self.convert_phase_button = QPushButton("Convert phase to .mat files")
         self.convert_phase_button.clicked.connect(convert_phase)
         file_layout.addWidget(self.convert_phase_button)
@@ -303,26 +308,36 @@ class Controls(QWidget):
 #
 ###############################################################################
 
-class ClearOverThresholdDialog(QDialog):
-    def __init__(self, peaks_bins: Dict[str, List[int]],
-                 *kargs, **kwargs):
+class ConvertFromMultichannelH5Dialog(QDialog):
+    def __init__(self, *kargs, **kwargs):
         super().__init__(*kargs, **kwargs)
-        self.setGeometry(100, 100, 800, 600)
+        self.setGeometry(200, 200, 700, 300)
+        layout = QFormLayout()
+
+        self.source_label = QLineEdit()
+        layout.addRow("Source file:", self.source_label)
+        open_source_button = QPushButton(text="Choose file")
+        layout.addRow("Search in the filesystem", open_source_button)
+        self.dest_label = QLineEdit()
+        layout.addRow("Destination file:", self.dest_label)
+        open_source_button = QPushButton(text="Choose file")
+        open_dest_button = QPushButton(text="Choose file")
+        layout.addRow("Search in the filesystem", open_dest_button)
+        layout.addRow("", QPushButton("Convert"))
+        layout.addRow("", QPushButton("Cancel"))
+
+        self.setLayout(layout)
+        
+
+class ClearOverThresholdDialog(QDialog):
+    def __init__(self, *kargs, **kwargs):
+        super().__init__(*kargs, **kwargs)
+        self.setGeometry(200, 200, 300, 300)
         layout = QHBoxLayout()
 
         controls = QWidget()
         controls_layout = QVBoxLayout()
         controls.setLayout(controls_layout)
-
-        self.channels_list = QListWidget()
-        controls_layout.addWidget(self.channels_list)
-        for (label, _) in peaks_bins.items():
-            self.channels_list.addItem(f'{label}')
-
-        plot_button = QPushButton(text="Plot histogram")
-        plot_button.clicked.connect(lambda: self.plot(
-            peaks_bins[self.channels_list.currentItem().text()]))
-        controls_layout.addWidget(plot_button)
 
         controls_layout.addWidget(QLabel("Clear threshold"))
         self.threshold_edit = QLineEdit()
@@ -621,6 +636,7 @@ class Main(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(argv)
     win = Main()
+    win.setWindowTitle("PyCode")
     ROOT = win
     ERROR_MSGBOX = QMessageBox(ROOT)
     switch_state('STARTED')

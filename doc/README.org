@@ -3,3 +3,46 @@
 #+date: <2024-02-12 Mon> 
 
 * Introduction
+  The goal of this project is to provide a fast library for the computational part of the analysis, like
+  the conversion of the ADC data, the spikes detection and any sort of operation with data that requires
+  iterating through them.
+  The library is meant to hold the data and to be accessed via Python, requiring some operation and
+  getting back the results.
+  At the moment a GUI in Python is provided with the library so that the workflow can be managed easily
+  but in the future also a Python API is planned so that any user will be able to customize his analysis
+  the way he likes.
+
+* Spike-rs
+  Spike-rs is the name of the core library. It's written in Rust, a modern and safe alternative to C/C++
+  that provide the same performance but also guards against some common mistakes and also provides nice
+  compilations error.
+  Almost all the code is (at the moment) build just on standard library. The only requirement are related
+  to the operations with hdf5 datas, for which a build type dependency
+  ([[bindgen.rs][https://github.com/rust-lang/rust-bindgen]]) is needed; anyway this tool is provided by
+  the rust development team as well, so it's hopefully going to be supported in the long time. 
+  Also, for the creation of the Python wrapper an external dependency [[PyO3][https://pyo3.rs]] is being used.
+
+** Build instruction
+   At the moment the only supported system is on Windows with the MinGW-w64 compiler, hdf5 library and
+   CPython. The quick instruction to get it works are:
+   - install [[Msys2][https://www.msys2.org/]]
+   - open the Msys2-mingw64 terminal
+   - install the dependencies with
+   #+begin_src shell
+   pacman -Syyu
+   pacman -S mingw-w64-x86_64-rust mingw-w64-x86_64-hdf5 mingw-w64-x86_64-python mingw-w64-x86_64-python-h5py mingw-w64-x86_64-python-matplotlib mingw-w64-x86_64-scipy mingw-w64-x86_64-PySide6
+   #+end_src
+   - the modify the /project.ps1/ script changing 
+   #+begin_src shell
+   HDF5_LIB_DIR = "D:/msys64/mingw64/lib";
+   HDF5_INCLUDE_DIR = "D:/msys64/mingw64/include";
+   #+end_src
+   to point to the hdf5 library binaries and include
+   - in the end you should be able to build the library with
+   #+begin_src shell
+   ./project.ps1 release
+   #+end_src
+   and lunch the GUI with 
+   #+begin_src shell
+   ./project.ps1
+   #+end_src
