@@ -18,14 +18,14 @@
   compilations error.
   Almost all the code is (at the moment) build just on standard library. The only requirement are related
   to the operations with hdf5 datas, for which a build type dependency
-  ([[bindgen.rs][https://github.com/rust-lang/rust-bindgen]]) is needed; anyway this tool is provided by
+  ([[https://github.com/rust-lang/rust-bindgen][bindgen.rs]]) is needed; anyway this tool is provided by
   the rust development team as well, so it's hopefully going to be supported in the long time. 
-  Also, for the creation of the Python wrapper an external dependency [[PyO3][https://pyo3.rs]] is being used.
+  Also, for the creation of the Python wrapper an external dependency [[https://pyo3.rs][PyO3]] is being used.
 
 ** Build instruction
    At the moment the only supported system is on Windows with the MinGW-w64 compiler, hdf5 library and
    CPython. The quick instruction to get it works are:
-   - install [[Msys2][https://www.msys2.org/]]
+   - install [[https://www.msys2.org][Msys2]]
    - open the Msys2-mingw64 terminal
    - install the dependencies with
    #+begin_src shell
