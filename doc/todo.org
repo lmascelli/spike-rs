@@ -1,0 +1,9 @@
+* check the peak detection algorithm
+
+* creazione di intervalli
+
+** semplice lista di intervalli dove il digitale != 0
+
+** intervalli regolabili con offset_start, interval_percentage, offset_end
+
+** applicare intervallo al rasterplot con delle collection di patches

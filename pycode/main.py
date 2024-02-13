@@ -4,7 +4,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from scipy.io import savemat
-from collections import OrderedDict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -91,6 +90,19 @@ def convert_phase():
         ERROR_MSGBOX.setText(f"No phase loaded")
         ERROR_MSGBOX.exec()
 
+def plot_rasterplot():
+    if CURRENT_PHASE is not None:
+        electrodes = []
+        spikes = []
+        for label in CURRENT_PHASE.channel_labels:
+            electrodes.append(label)
+            spikes.append(CURRENT_PHASE.get_peaks_train(label)[1][:])
+        plt.eventplot(spikes)
+        plt.show()
+    else:
+        ERROR_MSGBOX.setText(f"No phase path selected")
+        ERROR_MSGBOX.exec()
+
 def plot_signal():
     if CURRENT_PHASE is not None:
         if CURRENT_SELECTED_SIGNAL is not None:
@@ -144,6 +156,9 @@ def clear_peaks_over_threshold():
 def peak_detection():
     pass
 
+def create_interval():
+    IntervalCreationDialog().exec()
+
 
 ###############################################################################
 #
@@ -156,7 +171,9 @@ def state_started():
     ROOT.controls.open_phase_button.setEnabled(False)
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
     ROOT.controls.convert_phase_button.setEnabled(False)
+    ROOT.controls.create_interval_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.plot_rasterplot_button.setEnabled(False)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
     viewer_widget = ROOT.viewer.widgets['None']
@@ -166,7 +183,9 @@ def state_inspect_recordings_folder():
     ROOT.tree.setVisible(True)
     ROOT.controls.open_phase_button.setEnabled(False)
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    ROOT.controls.plot_rasterplot_button.setEnabled(False)
     ROOT.controls.convert_phase_button.setEnabled(False)
+    ROOT.controls.create_interval_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
@@ -177,8 +196,10 @@ def state_inspect_recordings_folder_phase_selected():
     # ROOT.tree.setVisible(True)                # not managed here
     ROOT.controls.open_phase_button.setEnabled(True)
     ROOT.controls.convert_phase_button.setEnabled(False)
+    ROOT.controls.plot_rasterplot_button.setEnabled(False)
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.create_interval_button.setEnabled(False)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
 
@@ -187,7 +208,9 @@ def state_inspect_phase():
     ROOT.controls.open_phase_button.setEnabled(True)
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
     ROOT.controls.convert_phase_button.setEnabled(True)
+    ROOT.controls.create_interval_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.plot_rasterplot_button.setEnabled(True)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
     phase_info = ROOT.viewer.widgets['PhaseView']
@@ -208,11 +231,19 @@ def state_update_peaks():
 def state_selected_signal():
     ROOT.controls.plot_signal_button.setEnabled(True)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
+    ROOT.controls.create_interval_button.setEnabled(False)
+    if CURRENT_SELECTED_SIGNAL is not None and CURRENT_SELECTED_SIGNAL[0] == 'digital':
+        switch_state('SELECTED_DIGITAL')
 
 def state_selected_peak_train():
     ROOT.controls.plot_signal_button.setEnabled(False)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(True)
+    ROOT.controls.create_interval_button.setEnabled(False)
 
+def state_selected_digital():
+    ROOT.controls.plot_signal_button.setEnabled(True)
+    ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
+    ROOT.controls.create_interval_button.setEnabled(True)
 
 GUI_STATES = {
     'STARTED': state_started,
@@ -220,6 +251,7 @@ GUI_STATES = {
     'INSPECT_RECORDINGS_FOLDER_PHASE_SELECTED': state_inspect_recordings_folder_phase_selected,
     'INSPECT_PHASE': state_inspect_phase,
     'SELECTED_SIGNAL': state_selected_signal,
+    'SELECTED_DIGITAL': state_selected_digital,
     'SELECTED_PEAK_TRAIN': state_selected_peak_train,
     'UPDATE_PEAKS': state_update_peaks,
 }
@@ -277,6 +309,41 @@ class Controls(QWidget):
         layout.addWidget(file_group)
         ####################
 
+        # INTERVALS GROUP
+        intervals_group = QGroupBox(title="Intervals")
+        intervals_layout = QVBoxLayout()
+        intervals_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        intervals_group.setLayout(intervals_layout)
+
+        self.create_interval_button = QPushButton("Create interval")
+        self.create_interval_button.clicked.connect(create_interval)
+        intervals_layout.addWidget(self.create_interval_button)
+
+        layout.addWidget(intervals_group)
+
+        ####################
+
+        # PLOT GROUP
+        plot_group = QGroupBox(title="Plot")
+        plot_layout = QVBoxLayout()
+        plot_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        plot_group.setLayout(plot_layout)
+
+        self.plot_signal_button = QPushButton("Plot Signal")
+        self.plot_signal_button.clicked.connect(plot_signal)
+        plot_layout.addWidget(self.plot_signal_button)
+
+        self.plot_peaks_histogram_button = QPushButton("Peaks histogram")
+        self.plot_peaks_histogram_button.clicked.connect(plot_peaks_histogram)
+        plot_layout.addWidget(self.plot_peaks_histogram_button)
+
+        self.plot_rasterplot_button = QPushButton("Plot rasterplot")
+        self.plot_rasterplot_button.clicked.connect(plot_rasterplot)
+        plot_layout.addWidget(self.plot_rasterplot_button)
+
+        layout.addWidget(plot_group)
+        ####################
+
         # DATA OPERATIONS GROUP
         data_group = QGroupBox(title="Analysis")
         data_layout = QVBoxLayout()
@@ -286,14 +353,6 @@ class Controls(QWidget):
         self.compute_peak_trains_button = QPushButton("Peak detection")
         self.compute_peak_trains_button.clicked.connect(peak_detection)
         data_layout.addWidget(self.compute_peak_trains_button)
-
-        self.plot_signal_button = QPushButton("Plot Signal")
-        self.plot_signal_button.clicked.connect(plot_signal)
-        data_layout.addWidget(self.plot_signal_button)
-
-        self.plot_peaks_histogram_button = QPushButton("Peaks histogram")
-        self.plot_peaks_histogram_button.clicked.connect(plot_peaks_histogram)
-        data_layout.addWidget(self.plot_peaks_histogram_button)
 
         self.clear_peaks_over_threshold_button = QPushButton("Clear peaks over threshold")
         self.clear_peaks_over_threshold_button.clicked.connect(clear_peaks_over_threshold)
@@ -308,6 +367,30 @@ class Controls(QWidget):
 #                                 DIALOGS
 #
 ###############################################################################
+
+class IntervalCreationDialog(QDialog):
+    def __init__(self, *kargs, **kwargs):
+        super().__init__(*kargs, **kwargs)
+        self.setGeometry(200, 200, 800, 600)
+        layout = QVBoxLayout()
+
+        # graphical representation
+
+        # controls
+        controls_widget = QWidget()
+        controls_layout = QFormLayout()
+        self.offset_start_edit = QLineEdit()
+        self.offset_end_edit = QLineEdit()
+        self.interval_perc_edit = QLineEdit()
+        controls_layout.addRow("offset start", self.offset_start_edit)
+        controls_layout.addRow("offset end", self.offset_end_edit)
+        controls_layout.addRow("interval percentage", self.interval_perc_edit)
+
+        controls_widget.setLayout(controls_layout)
+
+        layout.addWidget(controls_widget)
+
+        self.setLayout(layout)
 
 class ConvertFromMultichannelH5Dialog(QDialog):
     def __init__(self, *kargs, **kwargs):
@@ -499,11 +582,11 @@ class PhaseView(QWidget):
         self.peak_trains.clear()
 
         # peak trains
-        for i, d in enumerate(sorted(CURRENT_PHASE.peak_train_lengths)):
+        ordered_dict = dict(sorted(CURRENT_PHASE.peak_train_lengths.items()))
+        for (label, count) in ordered_dict.items():
             item = QTreeWidgetItem(self.peak_trains)
-            item.setText(0, f"{CURRENT_PHASE.channel_labels[i]}")
-            item.setText(1, f"{d}")
-            item.setText(2, f"{CURRENT_PHASE.sampling_frequency}")
+            item.setText(0, f"{label}")
+            item.setText(1, f"{count}")
 
         for i in range(0, self.peak_trains.columnCount()):
             self.peak_trains.header().setSectionResizeMode(i, QHeaderView.ResizeToContents)
@@ -522,18 +605,19 @@ class PhaseView(QWidget):
             item.setText(2, f"{CURRENT_PHASE.sampling_frequency}")
 
         # raw datas
-        for i, d in enumerate(CURRENT_PHASE.raw_data_lengths):
+        ordered_dict = dict(sorted(CURRENT_PHASE.raw_data_lengths.items()))
+        for (label, count) in ordered_dict.items():
             item = QTreeWidgetItem(self.raw_datas)
-            item.setText(0, f"{CURRENT_PHASE.channel_labels[i]}")
-            item.setText(1, f"{d}")
+            item.setText(0, f"{label}")
+            item.setText(1, f"{count}")
             item.setText(2, f"{CURRENT_PHASE.sampling_frequency}")
 
         # peak trains
-        for i, d in enumerate(CURRENT_PHASE.peak_train_lengths):
+        ordered_dict = dict(sorted(CURRENT_PHASE.peak_train_lengths.items()))
+        for (label, count) in ordered_dict.items():
             item = QTreeWidgetItem(self.peak_trains)
-            item.setText(0, f"{CURRENT_PHASE.channel_labels[i]}")
-            item.setText(1, f"{d}")
-            item.setText(2, f"{CURRENT_PHASE.sampling_frequency}")
+            item.setText(0, f"{label}")
+            item.setText(1, f"{count}")
 
         # resize tables columns
         for i in range(0, self.digitals.columnCount()):

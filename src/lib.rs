@@ -30,11 +30,22 @@ struct PyPhase {
 impl PyPhase {
 
     fn from(phase: core::types::Phase) -> Self {
+        let mut raw_data_lengths = HashMap::new();
+        let mut peak_train_lengths = HashMap::new();
+
+        for (label, data) in &phase.raw_data {
+            raw_data_lengths.insert(label.clone(), data.len());
+        }
+
+        for (label, data) in &phase.peaks_trains {
+            peak_train_lengths.insert(label.clone(), data.0.len());
+        }
+
         PyPhase {
             sampling_frequency: phase.sampling_frequency,
             channel_labels: phase.raw_data.keys().map(|x| x.clone()).collect(),
-            raw_data_lengths: phase.raw_data.keys().map(|x| (x, phase.raw_data[x].len())).collect(),
-            peak_train_lengths: phase.peaks_trains.keys().map(|x| (x, phase.peaks_trains[x].0.len())).collect(),
+            raw_data_lengths,
+            peak_train_lengths, 
             digitals_lengths: phase.digitals.iter().map(|x| x.len()).collect(),
             phase: phase,
         }
@@ -100,8 +111,12 @@ impl PyPhase {
 
     pub fn clear_peaks_over_threshold(&mut self, threshold: f32) {
         self.phase.clear_peaks_over_threshold(threshold);
-        self.peak_train_lengths = self.phase.peaks_trains
-            .keys().map(|x| self.phase.peaks_trains[x].0.len()).collect();
+
+        let mut peak_train_lengths = HashMap::new();
+        for (label, data) in &self.phase.peaks_trains {
+            peak_train_lengths.insert(label.clone(), data.0.len());
+        }
+        self.peak_train_lengths = peak_train_lengths;
     }
 
     pub fn get_peaks_bins(&self, n_bins: usize) -> HashMap<String, (Vec<usize>, f32, f32)> {
@@ -114,6 +129,10 @@ impl PyPhase {
         }
         
         ret
+    }
+
+    pub fn spikes_count(&self, label: &str) -> usize {
+        return self.phase.peaks_trains[label].0.len();
     }
 }
 
