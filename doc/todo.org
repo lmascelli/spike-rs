@@ -1,5 +1,14 @@
 * check the peak detection algorithm
 
+* peak detection from pycode
+
+** call the peak detection on the current phase
+
+** add an update function on the PyPhase struct that update all the stats
+
+** update the current phases
+ 
+ 
 * creazione di intervalli
 
 ** semplice lista di intervalli dove il digitale != 0

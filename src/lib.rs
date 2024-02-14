@@ -28,27 +28,12 @@ struct PyPhase {
 }
 
 impl PyPhase {
-
     fn from(phase: core::types::Phase) -> Self {
-        let mut raw_data_lengths = HashMap::new();
-        let mut peak_train_lengths = HashMap::new();
-
-        for (label, data) in &phase.raw_data {
-            raw_data_lengths.insert(label.clone(), data.len());
-        }
-
-        for (label, data) in &phase.peaks_trains {
-            peak_train_lengths.insert(label.clone(), data.0.len());
-        }
-
-        PyPhase {
-            sampling_frequency: phase.sampling_frequency,
-            channel_labels: phase.raw_data.keys().map(|x| x.clone()).collect(),
-            raw_data_lengths,
-            peak_train_lengths, 
-            digitals_lengths: phase.digitals.iter().map(|x| x.len()).collect(),
-            phase: phase,
-        }
+        let mut ret = PyPhase::new();
+        ret.sampling_frequency = phase.sampling_frequency;
+        ret.phase = phase;
+        ret.update();
+        ret
     }
 }
 
@@ -65,6 +50,24 @@ impl PyPhase {
             digitals_lengths: vec![],
             phase: core::types::Phase::default(),
         }
+    }
+
+    fn update(&mut self) {
+        let mut raw_data_lengths = HashMap::new();
+        let mut peak_train_lengths = HashMap::new();
+
+        for (label, data) in &self.phase.raw_data {
+            raw_data_lengths.insert(label.clone(), data.len());
+        }
+
+        for (label, data) in &self.phase.peaks_trains {
+            peak_train_lengths.insert(label.clone(), data.0.len());
+        }
+
+        self.channel_labels =  self.phase.raw_data.keys().map(|x| x.clone()).collect();
+        self.raw_data_lengths = raw_data_lengths;
+        self.peak_train_lengths = peak_train_lengths;
+        self.digitals_lengths = self.phase.digitals.iter().map(|x| x.len()).collect();
     }
 
     pub fn get_digital(&self, index: usize) -> Option<Vec<f32>> {
@@ -96,6 +99,7 @@ impl PyPhase {
                                    refractary_time: f32, n_devs: f32) {
         self.phase.compute_all_peak_trains(peak_duration, refractary_time,
                                      n_devs);
+        self.update();
     }
 
     pub fn get_peaks_stats(&self) -> Vec<(f32, f32)> {
@@ -134,6 +138,15 @@ impl PyPhase {
     pub fn spikes_count(&self, label: &str) -> usize {
         return self.phase.peaks_trains[label].0.len();
     }
+
+    pub fn get_digital_intervals(&self, index: usize) -> Option<Vec<(usize, usize)>> {
+        if index >= self.digitals_lengths.len() {
+            None
+        } else {
+            core::operations::get_digital_intervals(&self.phase.digitals[index][..])
+        }
+    }
+
 }
 
 #[pyfunction]
@@ -154,10 +167,24 @@ fn save_phase(phase: &PyPhase, filename: &str) -> bool {
     }
 }
 
+#[pyfunction]
+fn convert_mc_h5_file(source: &str, dest: &str) -> usize {
+    if let Ok(phase) = hdf5::convert_mc_h5_file(source) {
+        if let Ok(_) = hdf5::save_phase(&phase, dest) {
+            return 0usize;
+        } else {
+            return 1usize;
+        }
+    } else {
+        return 1usize;
+    }
+}
+
 #[pymodule]
 fn spike_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(load_phase, m)?)?;
     m.add_function(wrap_pyfunction!(save_phase, m)?)?;
+    m.add_function(wrap_pyfunction!(convert_mc_h5_file, m)?)?;
     m.add_class::<PyPhase>()?;
     Ok(())
 }

@@ -1,5 +1,5 @@
 from sys import argv, exit
-from os.path import getctime, getsize, realpath
+from os.path import getctime, getsize, isfile, normpath, realpath
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from PySide6.QtCore import QDir, Qt, QUrl  # type: ignore
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
     QFileSystemModel, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
     QLineEdit, QListWidget, QMainWindow, QMenu, QMenuBar, QMessageBox,
-    QPushButton, QSplitter, QStackedWidget, QTextBrowser, QTreeView,
-    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+    QPushButton, QSizePolicy, QSplitter, QStackedWidget, QTextBrowser,
+    QTreeView, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import spike_rs as sp
 
@@ -43,6 +43,7 @@ HISTO_BINS_NUMBER = 50
 #
 ###############################################################################
 
+# FILE STUFF
 def open_recordings():
     CURRENT_PATH = Path(QFileDialog.getExistingDirectory(
         caption="Select the phase file"))
@@ -90,6 +91,7 @@ def convert_phase():
         ERROR_MSGBOX.setText(f"No phase loaded")
         ERROR_MSGBOX.exec()
 
+# PLOT STUFF
 def plot_rasterplot():
     if CURRENT_PHASE is not None:
         electrodes = []
@@ -141,6 +143,7 @@ def plot_peaks_histogram():
         ERROR_MSGBOX.setText(f"No phase path selected")
         ERROR_MSGBOX.exec()
 
+# ANALYSIS STUFF
 class ClearOverThresholdDialog():
     pass
 
@@ -152,9 +155,14 @@ def clear_peaks_over_threshold():
         ERROR_MSGBOX.setText(f"No phase loaded")
         ERROR_MSGBOX.exec()
 
+def peak_detection(peak_duration: float, refractary_time: float, n_devs: float):
+    if CURRENT_PHASE is not None:
+        switch_state('PEAK_DETECTION_DONE')
+        CURRENT_PHASE.compute_all_peak_trains(peak_duration, refractary_time, n_devs)
 
-def peak_detection():
-    pass
+    else:
+        ERROR_MSGBOX.setText(f"No phase loaded")
+        ERROR_MSGBOX.exec()
 
 def create_interval():
     IntervalCreationDialog().exec()
@@ -206,7 +214,7 @@ def state_inspect_recordings_folder_phase_selected():
 def state_inspect_phase():
     # ROOT.tree.setVisible(True)                # not managed here
     ROOT.controls.open_phase_button.setEnabled(True)
-    ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    ROOT.controls.compute_peak_trains_button.setEnabled(True)
     ROOT.controls.convert_phase_button.setEnabled(True)
     ROOT.controls.create_interval_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
@@ -245,6 +253,11 @@ def state_selected_digital():
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.create_interval_button.setEnabled(True)
 
+def state_peak_detection_done():
+    phase_info = ROOT.viewer.widgets['PhaseView']
+    ROOT.viewer.setCurrentIndex(phase_info[0])
+    phase_info[1].update_peaks()
+
 GUI_STATES = {
     'STARTED': state_started,
     'INSPECT_RECORDINGS_FOLDER': state_inspect_recordings_folder,
@@ -254,6 +267,7 @@ GUI_STATES = {
     'SELECTED_DIGITAL': state_selected_digital,
     'SELECTED_PEAK_TRAIN': state_selected_peak_train,
     'UPDATE_PEAKS': state_update_peaks,
+    'PEAK_DETECTION_DONE': state_peak_detection_done,
 }
 
 OLD_STATE = None
@@ -351,7 +365,7 @@ class Controls(QWidget):
         data_group.setLayout(data_layout)
 
         self.compute_peak_trains_button = QPushButton("Peak detection")
-        self.compute_peak_trains_button.clicked.connect(peak_detection)
+        self.compute_peak_trains_button.clicked.connect(lambda: PeakDetectionDialog().exec())
         data_layout.addWidget(self.compute_peak_trains_button)
 
         self.clear_peaks_over_threshold_button = QPushButton("Clear peaks over threshold")
@@ -365,7 +379,7 @@ class Controls(QWidget):
 ###############################################################################
 #
 #                                 DIALOGS
-#
+#.dialogs
 ###############################################################################
 
 class IntervalCreationDialog(QDialog):
@@ -375,22 +389,92 @@ class IntervalCreationDialog(QDialog):
         layout = QVBoxLayout()
 
         # graphical representation
+        self.draw_widget = QLabel()
+        self.draw_widget.setPixmap(QPixmap(750, 350))
+        layout.addWidget(self.draw_widget)
 
-        # controls
+        # controls form
         controls_widget = QWidget()
         controls_layout = QFormLayout()
-        self.offset_start_edit = QLineEdit()
-        self.offset_end_edit = QLineEdit()
-        self.interval_perc_edit = QLineEdit()
+        self.offset_start_edit = QLineEdit(text="0")
+        self.offset_end_edit = QLineEdit(text="0")
+        self.interval_perc_edit = QLineEdit(text="0")
         controls_layout.addRow("offset start", self.offset_start_edit)
         controls_layout.addRow("offset end", self.offset_end_edit)
         controls_layout.addRow("interval percentage", self.interval_perc_edit)
-
         controls_widget.setLayout(controls_layout)
-
         layout.addWidget(controls_widget)
 
+        # controls buttons
+
+        buttons_widget = QWidget()
+        buttons_layout = QHBoxLayout()
+        buttons_widget.setLayout(buttons_layout)
+
+        draw_button = QPushButton("Draw")
+        buttons_layout.addWidget(draw_button)
+        draw_button.clicked.connect(self.draw_actual)
+        create_button = QPushButton("Create")
+        buttons_layout.addWidget(create_button)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+        buttons_layout.addWidget(cancel_button)
+
+        layout.addWidget(buttons_widget)
+
         self.setLayout(layout)
+        self.draw_base()
+
+    def draw_base(self):
+        self.canvas = self.draw_widget.pixmap()
+        self.canvas.fill(Qt.white)
+        painter = QPainter(self.canvas)
+        pen = QPen()
+        pen.setColor(Qt.blue)
+        pen.setWidth(5)
+        painter.setPen(pen)
+        painter.drawLine(100, 250, 250, 250)
+        painter.drawLine(250, 250, 250, 100)
+        painter.drawLine(250, 100, 500, 100)
+        painter.drawLine(500, 100, 500, 250)
+        painter.drawLine(500, 250, 650, 250)
+        font = QFont()
+        font.setPointSize(20)
+        painter.setFont(font)
+        pen.setColor(Qt.green)
+        painter.setPen(pen)
+        painter.drawText(250, 280, "Start")
+        painter.drawText(500, 280, "End")
+        painter.drawText(350, 90, "Interval")
+        self.draw_widget.setPixmap(self.canvas)
+        
+    def draw_actual(self):
+        self.draw_base()
+        self.offset_start = -10
+        self.offset_end = -10
+        self.interval_perc = 100
+        try:
+            self.offset_start = float(self.offset_start_edit.text())
+            self.offset_end = float(self.offset_end_edit.text())
+            self.interval_perc = float(self.interval_perc_edit.text())
+        except Exception as e:
+            ERROR_MSGBOX.setText(f"{e}")
+            ERROR_MSGBOX.exec()
+
+
+        self.canvas = self.draw_widget.pixmap()
+        painter = QPainter(self.canvas)
+        pen = QPen()
+        pen.setColor(Qt.red)
+        pen.setWidth(5)
+        painter.setPen(pen)
+        painter.drawLine(100+int(self.offset_start), 250, 250+int(self.offset_start), 250)
+        painter.drawLine(250+int(self.offset_start), 250, 250+int(self.offset_start), 100)
+        painter.drawLine(250+int(self.offset_start), 100, 500+int(self.offset_start), 100)
+        painter.drawLine(500+int(self.offset_start), 100, 500+int(self.offset_start), 250)
+        painter.drawLine(500+int(self.offset_start), 250, 650+int(self.offset_start), 250)
+        self.draw_widget.setPixmap(self.canvas)
+        
 
 class ConvertFromMultichannelH5Dialog(QDialog):
     def __init__(self, *kargs, **kwargs):
@@ -401,17 +485,65 @@ class ConvertFromMultichannelH5Dialog(QDialog):
         self.source_label = QLineEdit()
         layout.addRow("Source file:", self.source_label)
         open_source_button = QPushButton(text="Choose file")
+        open_source_button.clicked.connect(lambda: self.source_label.setText(
+            QFileDialog.getOpenFileName(caption="Select the MultiChannel hdf5",
+                                        filter="HDF5 (*.h5)")[0]
+        ))
         layout.addRow("Search in the filesystem", open_source_button)
         self.dest_label = QLineEdit()
         layout.addRow("Destination file:", self.dest_label)
-        open_source_button = QPushButton(text="Choose file")
         open_dest_button = QPushButton(text="Choose file")
+        open_dest_button.clicked.connect(lambda: self.dest_label.setText(
+            QFileDialog.getSaveFileName(caption="Enter the destination hdf5",
+                                        filter="HDF5 (*.h5)")[0]
+        ))
         layout.addRow("Search in the filesystem", open_dest_button)
-        layout.addRow("", QPushButton("Convert"))
-        layout.addRow("", QPushButton("Cancel"))
+        convert_button = QPushButton("Convert")
+        convert_button.clicked.connect(self.convert)
+        layout.addRow("", convert_button)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+        layout.addRow("", cancel_button)
 
         self.setLayout(layout)
+
+class PeakDetectionDialog(QDialog):
+    def __init__(self, *kargs, **kwargs):
+        super().__init__(*kargs, **kwargs)
+        self.setGeometry(200, 200, 500, 300)
+        layout = QVBoxLayout()
+
+        form_widget = QWidget()
+        form_layout = QFormLayout()
+        form_widget.setLayout(form_layout)
+        self.peak_duration_label = QLineEdit(text="2e-3")
+        form_layout.addRow("Peak duration:", self.peak_duration_label)
+        self.refractary_time_label = QLineEdit("2e-3")
+        form_layout.addRow("Refractary time:", self.refractary_time_label)
+        self.n_devs_label = QLineEdit("8")
+        form_layout.addRow("Multiplier for the stdev to use as threshold:", self.n_devs_label)
+        layout.addWidget(form_widget)
         
+        compute_button = QPushButton("Compute")
+        compute_button.clicked.connect(self.compute)
+        layout.addWidget(compute_button)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(self.close)
+        layout.addWidget(cancel_button)
+
+        self.setLayout(layout)
+
+    def compute(self):
+        try:
+            peak_duration = float(self.peak_duration_label.text())
+            refractary_time = float(self.refractary_time_label.text())
+            n_devs = float(self.n_devs_label.text())
+            peak_detection(peak_duration, refractary_time, n_devs)
+            self.close()
+
+        except Exception as e:
+            ERROR_MSGBOX.setText(f"Failed parsing the inputs {e}")
+            ERROR_MSGBOX.exec()
 
 class ClearOverThresholdDialog(QDialog):
     def __init__(self, *kargs, **kwargs):
@@ -523,6 +655,7 @@ class DigialView(QTreeWidget):
             sampling_frequency = new_item.indexes()[2].data()
 
             CURRENT_SELECTED_SIGNAL = ('digital', index)
+            print(CURRENT_PHASE.get_digital_intervals(int(index)))
 
             switch_state('SELECTED_SIGNAL')
 
