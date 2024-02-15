@@ -6,9 +6,11 @@
 
 use std::collections::HashMap;
 use pyo3::prelude::*;
+
 use ::spike_rs::core::{operations, types::Phase};
 use ::spike_rs::hdf5;
 
+////////////////////////////////////////////////////////////////////////////////
 ///                                 PyPhase Class
 
 #[pyclass(name = "Phase")]
@@ -149,16 +151,16 @@ impl PyPhase {
         }
     }
 
-    pub fn get_peaks_in_consecutive_intervals(&self, intervals: &Vec<(usize, usize)>
-    ) -> HashMap::<String, (Vec<f32>, Vec<usize>)> {
-        self.phase.get_peaks_in_consecutive_intervals(intervals)
+    pub fn get_peaks_in_consecutive_intervals(&self, intervals: Vec<(usize, usize)>) -> HashMap<String, (Vec<f32>, Vec<usize>)> {
+        self.phase.get_peaks_in_consecutive_intervals(&intervals)
     }
 
-    pub fn get_peaks_in_interval(&self, interval: &(usize, usize)) -> HashMap::<String, (Vec<f32>, Vec<usize>)> {
-        self.phase.get_peaks_in_interval(interval)
+    pub fn get_peaks_in_interval(&self, interval: (usize, usize)) -> HashMap::<String, (Vec<f32>, Vec<usize>)> {
+        self.phase.get_peaks_in_interval(&interval)
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
 ///                                 Global functions
 
 #[pyfunction]
