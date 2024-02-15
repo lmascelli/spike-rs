@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
     QPushButton, QSizePolicy, QSplitter, QStackedWidget, QTextBrowser,
     QTreeView, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
-import spike_rs as sp
+import pycode_rs as sp
 
 
 ###############################################################################
@@ -381,6 +381,7 @@ class Controls(QWidget):
 #                                 DIALOGS
 #.dialogs
 ###############################################################################
+
 
 class IntervalCreationDialog(QDialog):
     def __init__(self, *kargs, **kwargs):
