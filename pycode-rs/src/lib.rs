@@ -183,7 +183,11 @@ fn save_phase(phase: &PyPhase, filename: &str) -> bool {
 
 #[pyfunction]
 fn convert_mc_h5_file(source: &str, dest: &str) -> usize {
-    if let Ok(phase) = hdf5::convert_mc_h5_file(source) {
+    let phase_r;
+    {
+        phase_r = hdf5::convert_mc_h5_file(source);
+    }
+    if let Ok(phase) = phase_r {
         if let Ok(_) = hdf5::save_phase(&phase, dest) {
             return 0usize;
         } else {

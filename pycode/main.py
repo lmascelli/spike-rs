@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
     QPushButton, QSizePolicy, QSplitter, QStackedWidget, QTextBrowser,
     QTreeView, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
+import pycode as pc
 import pycode_rs as sp
 
 
@@ -117,6 +118,9 @@ def plot_signal():
             else:
                 return
             plt.plot(data)
+            if ROOT.controls.plot_with_peaks_cb.isChecked():
+                peak_values, peak_times = CURRENT_PHASE.get_peaks_train(label)
+                plt.scatter(peak_times, peak_values)
             plt.show()
     else:
         ERROR_MSGBOX.setText(f"No phase path selected")
@@ -181,7 +185,9 @@ def state_started():
     ROOT.controls.convert_phase_button.setEnabled(False)
     ROOT.controls.create_interval_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
     ROOT.controls.plot_rasterplot_button.setEnabled(False)
+    ROOT.controls.plot_with_intervals_cb.setEnabled(False)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
     viewer_widget = ROOT.viewer.widgets['None']
@@ -192,9 +198,11 @@ def state_inspect_recordings_folder():
     ROOT.controls.open_phase_button.setEnabled(False)
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
     ROOT.controls.plot_rasterplot_button.setEnabled(False)
+    ROOT.controls.plot_with_intervals_cb.setEnabled(False)
     ROOT.controls.convert_phase_button.setEnabled(False)
     ROOT.controls.create_interval_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
     viewer_widget = ROOT.viewer.widgets[ 'PhaseInfo' ]
@@ -205,8 +213,10 @@ def state_inspect_recordings_folder_phase_selected():
     ROOT.controls.open_phase_button.setEnabled(True)
     ROOT.controls.convert_phase_button.setEnabled(False)
     ROOT.controls.plot_rasterplot_button.setEnabled(False)
+    ROOT.controls.plot_with_intervals_cb.setEnabled(False)
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
     ROOT.controls.create_interval_button.setEnabled(False)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
@@ -218,7 +228,9 @@ def state_inspect_phase():
     ROOT.controls.convert_phase_button.setEnabled(True)
     ROOT.controls.create_interval_button.setEnabled(False)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
     ROOT.controls.plot_rasterplot_button.setEnabled(True)
+    ROOT.controls.plot_with_intervals_cb.setEnabled(True)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
     phase_info = ROOT.viewer.widgets['PhaseView']
@@ -230,6 +242,7 @@ def state_update_peaks():
     ROOT.controls.compute_peak_trains_button.setEnabled(False)
     ROOT.controls.convert_phase_button.setEnabled(True)
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
     ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     phase_info = ROOT.viewer.widgets['PhaseView']
@@ -238,6 +251,7 @@ def state_update_peaks():
 
 def state_selected_signal():
     ROOT.controls.plot_signal_button.setEnabled(True)
+    ROOT.controls.plot_with_peaks_cb.setEnabled(True)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.create_interval_button.setEnabled(False)
     if CURRENT_SELECTED_SIGNAL is not None and CURRENT_SELECTED_SIGNAL[0] == 'digital':
@@ -245,11 +259,13 @@ def state_selected_signal():
 
 def state_selected_peak_train():
     ROOT.controls.plot_signal_button.setEnabled(False)
+    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(True)
     ROOT.controls.create_interval_button.setEnabled(False)
 
 def state_selected_digital():
     ROOT.controls.plot_signal_button.setEnabled(True)
+    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
     ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
     ROOT.controls.create_interval_button.setEnabled(True)
 
@@ -344,17 +360,20 @@ class Controls(QWidget):
         plot_group.setLayout(plot_layout)
 
         self.plot_signal_button = QPushButton("Plot Signal")
+        self.plot_with_peaks_cb = QCheckBox(text="Spikes in signal plot")
         self.plot_signal_button.clicked.connect(plot_signal)
         plot_layout.addWidget(self.plot_signal_button)
+        plot_layout.addWidget(self.plot_with_peaks_cb)
 
         self.plot_peaks_histogram_button = QPushButton("Peaks histogram")
         self.plot_peaks_histogram_button.clicked.connect(plot_peaks_histogram)
         plot_layout.addWidget(self.plot_peaks_histogram_button)
 
         self.plot_rasterplot_button = QPushButton("Plot rasterplot")
+        self.plot_with_intervals_cb = QCheckBox(text="Highlight intervals of selected digital")
         self.plot_rasterplot_button.clicked.connect(plot_rasterplot)
         plot_layout.addWidget(self.plot_rasterplot_button)
-
+        plot_layout.addWidget(self.plot_with_intervals_cb)
         layout.addWidget(plot_group)
         ####################
 
@@ -507,6 +526,21 @@ class ConvertFromMultichannelH5Dialog(QDialog):
         layout.addRow("", cancel_button)
 
         self.setLayout(layout)
+
+    def convert(self):
+        try:
+            source = Path(self.source_label.text())
+            dest = Path(self.dest_label.text())
+            if pc.convert_mc_h5_phase(source, dest):
+                return
+            else:
+                ERROR_MSGBOX.exec()
+                ERROR_MSGBOX.setText(f"Failed converting the selected file")
+
+        except Exception as e:
+            ERROR_MSGBOX.setText(f"Failed parsing the source or destination files {e}")
+            ERROR_MSGBOX.exec()
+
 
 class PeakDetectionDialog(QDialog):
     def __init__(self, *kargs, **kwargs):

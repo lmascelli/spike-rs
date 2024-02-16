@@ -2,6 +2,13 @@ from typing import Dict, List, Tuple
 from pathlib import Path
 import pycode_rs as sp
 
+def convert_mc_h5_phase(source: Path, dest: Path) -> bool:
+    result = sp.convert_mc_h5_file(str(source.absolute()), str(dest.absolute()))
+    if result == 0:
+        return True
+    else:
+        return False
+
 class PyPhase:
     def __init__(self, filepath: Path):
         self._phase = sp.load_phase(str(filepath.absolute()))
