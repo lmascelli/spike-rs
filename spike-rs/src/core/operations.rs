@@ -246,6 +246,14 @@ pub fn spike_detection(
     Some((ret_values, ret_times))
 }
 
+/// Build an histogram of `n_bins` equidistant values containing the distribution of
+/// the magnitude of the peaks. Returns the built histogram and the minimum and
+/// maximum values found
+///
+/// # Arguments
+///
+/// * `range` -  the sequence of the value of the peaks
+/// * `n_bins` - number of bins of the histogram
 pub fn get_peaks_bins(range: &[f32], n_bins: usize) -> Option<(Vec<usize>, f32, f32)> {
     if n_bins == 0 {
         return None;
@@ -271,6 +279,12 @@ pub fn get_peaks_bins(range: &[f32], n_bins: usize) -> Option<(Vec<usize>, f32, 
     }
 }
 
+/// Build a sequence of couples of values (start, end) from a digital signal
+/// representing the boundaries of active periods
+///
+/// # Arguments
+///
+/// * `digital` - the digital signal
 pub fn get_digital_intervals(digital: &[f32]) -> Option<Vec<(usize, usize)>> {
     let mut ret = vec![];
     let mut start = 0usize;
@@ -293,4 +307,44 @@ pub fn get_digital_intervals(digital: &[f32]) -> Option<Vec<(usize, usize)>> {
         ret.push((start, digital.len()));
     }
     Some(ret)
+}
+
+/// Subsample the given range returning a vector with the number of spikes in
+/// each bin. The input range shoulds contain the times of each peak detected
+/// sorted in an increasing order
+///
+/// # Arguments
+/// * `range` -           a range that contains the times of the peaks
+/// * `starting_sample` - the starting value of the samples range
+/// * `bin_size` -        the length of each bin
+/// * `n_bins` -          then total number of bins
+pub fn subsample_range(peak_times: &[usize], starting_sample: usize, bin_size: usize, n_bins: usize) -> Vec<usize> {
+    let mut ret = vec![0; n_bins];
+    let mut current_bin_index = 0;
+    let mut current_bin_start = starting_sample;
+    let mut current_bin_end = current_bin_start + bin_size;
+    for peak in peak_times {
+        if *peak < current_bin_start { // we are not in a useful bin yet
+            continue;
+        }
+        else if *peak >= current_bin_start && *peak < current_bin_end { // we are in a useful bin
+            ret[current_bin_index] += 1;
+        }
+        else { // we've overcome the current bin. need to find the index of the following bin
+            loop {
+                current_bin_index += 1; // advance to the next bin
+                if current_bin_index == n_bins { // if we reached the end of the bins return
+                    return ret;
+                }
+                current_bin_start += bin_size;
+                current_bin_end += bin_size;
+                if *peak >= current_bin_start && *peak < current_bin_end { // check if the peak is
+                    // contained in this bin
+                    ret[current_bin_index] += 1;
+                    break;
+                }
+            }
+        }
+    }
+    return ret;
 }

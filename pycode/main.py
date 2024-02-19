@@ -56,7 +56,7 @@ def open_recordings():
 def open_phase():
     global CURRENT_PHASE
     if CURRENT_PHASE_PATH is not None:
-        CURRENT_PHASE = sp.load_phase(str(CURRENT_PHASE_PATH))
+        CURRENT_PHASE = pc.PyPhase(CURRENT_PHASE_PATH)
         if CURRENT_PHASE is None:
             ERROR_MSGBOX.setText(f"Failed to load {CURRENT_PHASE_PATH}")
             ERROR_MSGBOX.exec()
@@ -72,7 +72,7 @@ def save_phase():
         save_file = Path(QFileDialog.getSaveFileName(
             filter="hdf5 (*.h5)",
             caption="Select the phase file")[0]).absolute()
-        sp.save_phase(CURRENT_PHASE, str(save_file))
+        CURRENT_PHASE.save_phase(CURRENT_PHASE, str(save_file))
     else:
         ERROR_MSGBOX.setText(f"No phase loaded")
         ERROR_MSGBOX.exec()
