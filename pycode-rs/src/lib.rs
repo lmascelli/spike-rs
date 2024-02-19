@@ -106,16 +106,16 @@ impl PyPhase {
         self.update();
     }
 
-    pub fn get_peaks_stats(&self) -> Vec<(f32, f32)> {
-        let mut ret = vec![];
-        for (_, (peaks_values, _)) in &self.phase.peaks_trains {
-            ret.push((operations::math::mean(&peaks_values[..]),
-                *peaks_values.iter().max_by(|x, y|
-                    x.abs().partial_cmp(&y.abs()).unwrap())
-                    .unwrap()));
-        }
-        ret
-    }
+    // pub fn get_peaks_stats(&self) -> Vec<(f32, f32)> {
+    //     let mut ret = vec![];
+    //     for (_, (peaks_values, _)) in &self.phase.peaks_trains {
+    //         ret.push((operations::math::mean(&peaks_values[..]),
+    //             *peaks_values.iter().max_by(|x, y|
+    //                 x.abs().partial_cmp(&y.abs()).unwrap())
+    //                 .unwrap()));
+    //     }
+    //     ret
+    // }
 
     pub fn clear_peaks_over_threshold(&mut self, threshold: f32) {
         self.phase.clear_peaks_over_threshold(threshold);
@@ -139,9 +139,9 @@ impl PyPhase {
         ret
     }
 
-    pub fn spikes_count(&self, label: &str) -> usize {
-        return self.phase.peaks_trains[label].0.len();
-    }
+    // pub fn spikes_count(&self, label: &str) -> usize {
+    //     return self.phase.peaks_trains[label].0.len();
+    // }
 
     pub fn get_digital_intervals(&self, index: usize) -> Option<Vec<(usize, usize)>> {
         if index >= self.digitals_lengths.len() {

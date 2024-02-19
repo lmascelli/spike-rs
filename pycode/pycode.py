@@ -47,6 +47,12 @@ class PyPhase:
         else:
             self._valid = False
 
+    def update(self):
+        """
+        Updates the fields of this instance"
+        """
+        self._phase.update()
+
     def save(self, filepath: Path):
         """
         Save this instance of PyPhase to the given filepath
@@ -82,7 +88,7 @@ class PyPhase:
         """
         return self._phase.get_raw_data(label)
 
-    def get_peaks_train(self, label):
+    def get_peaks_train(self, label) -> Option[List[int]]:
         """
         Query for the peaks train for the given label
 
@@ -133,3 +139,12 @@ class PyPhase:
         """
         return self._phase.get_digital_intervals(index)
 
+    def clear_peaks_over_threshold(self, threshold: float):
+        """
+        Removes from each peaks train all the peaks where the absolute value is
+        greater than `threshold`
+
+        Args:
+            threshold (float)
+        """
+        self._phase.clear_peaks_over_threshold(threshold)
