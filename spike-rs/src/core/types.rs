@@ -1,4 +1,5 @@
-use crate::core::operations::{compute_threshold, spike_detection};
+use crate::core::operations::{check_valid_bin_size, compute_threshold, spike_detection,
+                              subsample_range};
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 
@@ -136,6 +137,99 @@ impl Phase {
             ret.insert(label.clone(), (ret_values, ret_times));
         }
          
+        ret
+    }
+
+    pub fn get_subsampled_pre_stim_post_from_intervals(&self,
+                                                       intervals: &Vec<(usize, usize)>,
+                                                       bin_size: usize
+                        ) -> HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>> 
+    {
+        let n_intervals = intervals.len();
+        let raw_data_len = self.raw_data[self.raw_data.keys().collect::<Vec<&String>>()[0]].len(); 
+        assert!(n_intervals != 0, "No intervals provided!!!");
+
+        // adjust the bin_size
+        let bin_size = check_valid_bin_size(intervals[0], bin_size);
+
+        // get the intervals to subsample
+        let mut scan_intervals = vec![];
+
+        for i in 0..n_intervals {
+            let start_pre;
+            let n_pre;
+            let start_stim;
+            let n_stim;
+            let start_post;
+            let n_post;
+            let mut data_len;
+            if i != 0 && i != n_intervals - 1 {
+
+                // pre
+                data_len = intervals[i].0 - intervals[i-1].1;
+                n_pre =  data_len / bin_size;
+                start_pre = data_len - n_pre * bin_size;
+
+                // stim
+                data_len = intervals[i].1 - intervals[i].0;
+                start_stim = intervals[i].0;
+                n_stim =  data_len / bin_size;
+
+                // post
+                data_len = intervals[i+1].0 - intervals[i].1;
+                start_post = intervals[i].1;
+                n_post = data_len / bin_size;
+
+            } else if i == 0 {
+
+                // pre
+                data_len = intervals[i].0;
+                n_pre =  data_len / bin_size;
+                start_pre = data_len - n_pre * bin_size;
+
+                // stim
+                data_len = intervals[i].1 - intervals[i].0;
+                start_stim = intervals[i].0;
+                n_stim =  data_len / bin_size;
+
+                // post
+                data_len = intervals[i+1].0 - intervals[i].1;
+                start_post = intervals[i].1;
+                n_post = data_len / bin_size;
+
+            } else {
+
+                // pre
+                data_len = intervals[i].0 - intervals[i-1].1;
+                n_pre =  data_len / bin_size;
+                start_pre = data_len - n_pre * bin_size;
+
+                // stim
+                data_len = intervals[i].1 - intervals[i].0;
+                start_stim = intervals[i].0;
+                n_stim =  data_len / bin_size;
+
+                // post
+                data_len = raw_data_len - intervals[i].1;
+                start_post = intervals[i].1;
+                n_post = data_len / bin_size;
+            }
+
+            scan_intervals.push((start_pre, n_pre, start_stim, n_stim, start_post, n_post));
+        }
+
+        let mut ret = HashMap::new();
+        for (label, (_, data_times)) in &self.peaks_trains {
+            let mut current_ret = vec![];
+            for interval in &scan_intervals {
+                current_ret.push((
+                    subsample_range(&data_times[..], interval.0, interval.1, bin_size),
+                    subsample_range(&data_times[..], interval.2, interval.3, bin_size),
+                    subsample_range(&data_times[..], interval.4, interval.5, bin_size),
+                ));
+            }
+            ret.insert(label.clone(), current_ret);
+        }
         ret
     }
 }

@@ -348,3 +348,25 @@ pub fn subsample_range(peak_times: &[usize], starting_sample: usize, bin_size: u
     }
     return ret;
 }
+
+/// Check if a bin_size exactly divides an interval and suggest a near valid one if not.
+pub fn check_valid_bin_size(interval: (usize, usize), bin_size: usize) -> usize {
+    assert!(bin_size != 0, "bin_size should be greater than 0");
+
+    const MAX_RESIDUE: i64 = 3;
+    let interval_length = (interval.1 - interval.0) as i64;
+    let n_bins = interval_length / bin_size as i64;
+    let mut current_increment = 0i64;
+    let mut sign = 1i64;
+    let mut current_residue = interval_length - n_bins * (bin_size as i64 + sign * current_increment);
+    while current_residue.abs() > MAX_RESIDUE {
+        if sign < 0 {
+            current_increment += 1;
+        }
+        sign *= -1;
+        current_residue = interval_length - n_bins * (bin_size as i64 + current_increment * sign);
+    }
+
+    // println!("bin_size: {}\ncurrent_increment:{}\nsign:{}", bin_size, current_increment, sign);
+    return bin_size + ( current_increment * sign ) as usize;
+}

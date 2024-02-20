@@ -158,6 +158,14 @@ impl PyPhase {
     pub fn get_peaks_in_interval(&self, interval: (usize, usize)) -> HashMap::<String, (Vec<f32>, Vec<usize>)> {
         self.phase.get_peaks_in_interval(&interval)
     }
+
+    pub fn get_subsampled_pre_stim_post_from_intervals(&self,
+                                                       intervals: Vec<(usize, usize)>,
+                                                       bin_size: usize
+                        ) -> HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>  {
+        self.phase.get_subsampled_pre_stim_post_from_intervals(&intervals, bin_size)
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -198,11 +206,17 @@ fn convert_mc_h5_file(source: &str, dest: &str) -> usize {
     }
 }
 
+#[pyfunction]
+fn check_valid_bin_size(interval: (usize, usize), bin_size: usize) -> usize {
+   operations::check_valid_bin_size(interval, bin_size) 
+}
+
 #[pymodule]
 fn pycode_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(load_phase, m)?)?;
     m.add_function(wrap_pyfunction!(save_phase, m)?)?;
     m.add_function(wrap_pyfunction!(convert_mc_h5_file, m)?)?;
+    m.add_function(wrap_pyfunction!(check_valid_bin_size, m)?)?;
     m.add_class::<PyPhase>()?;
     Ok(())
 }

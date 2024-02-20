@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import pycode_rs as sp
 
@@ -19,6 +19,9 @@ def convert_mc_h5_phase(source: Path, dest: Path) -> bool:
         return True
     else:
         return False
+
+def check_valid_bin_size(interval: Tuple[int, int], bin_size: int) -> int:
+    return sp.check_valid_bin_size(interval, bin_size)
 
 class PyPhase:
     """
@@ -63,7 +66,7 @@ class PyPhase:
         if self._valid:
             sp.save(self._phase, str(filepath.absolute()))
 
-    def get_digital(self, index: int) -> Option[List[float]]:
+    def get_digital(self, index: int) -> Optional[List[float]]:
         """
         Query for the `index`th digital signal
 
@@ -71,12 +74,12 @@ class PyPhase:
             label (str)
 
         Returns:
-            (Option[List[Float]]): the array of the digital signal if found, None otherwise
+            (Optional[List[Float]]): the array of the digital signal if found, None otherwise
         """
 
         return self._phase.get_digital(index)
 
-    def get_raw_data(self, label) -> Option[List[float]]:
+    def get_raw_data(self, label) -> Optional[List[float]]:
         """
         Query for the raw data for the given label
 
@@ -84,11 +87,11 @@ class PyPhase:
             label (str)
 
         Returns:
-            (Option[List[Float]]): the array of the raw data if found, None otherwise
+            (Optional[List[Float]]): the array of the raw data if found, None otherwise
         """
         return self._phase.get_raw_data(label)
 
-    def get_peaks_train(self, label) -> Option[List[int]]:
+    def get_peaks_train(self, label) -> Optional[List[int]]:
         """
         Query for the peaks train for the given label
 
@@ -96,9 +99,22 @@ class PyPhase:
             label (str)
 
         Returns:
-            (Option[List[float]]): the list of the peaks if found, None otherwise
+            (Optional[List[float]]): the list of the peaks if found, None otherwise
         """
         return self._phase.get_peaks_train(label)
+
+    def get_peaks_bins(self, n_bins: int = 50) -> Dict[str, Tuple[List[int], float, float]]:
+        """
+        Build an histogram of the peaks magnitude distribution for each channel
+
+        Args:
+            n_bins (int): number of bins in the histogram
+
+        Returns:
+            (Dict[str, Tuple[List[int], float, float]]): a map between the channel name
+                and the bin histogram, the min and the max values of the bins
+        """
+        return self._phase.get_peaks_bins(n_bins)
 
     def peak_detection(self, peak_duration: float, refractary_time: float, n_devs: float):
         """
@@ -148,3 +164,8 @@ class PyPhase:
             threshold (float)
         """
         self._phase.clear_peaks_over_threshold(threshold)
+
+    def get_subsampled_pre_stim_post_from_intervals(self, intervals: List[Tuple[int, int]],
+                                                    bin_size: int
+                                                    ) -> Dict[str, List[Tuple[List[int], List[int, List[int]]]]]:
+        return self._phase.get_subsampled_pre_stim_post_from_intervals(intervals, bin_size)
