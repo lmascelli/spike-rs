@@ -6,7 +6,16 @@ from pathlib import Path
 filename = Path('e:/rust/spike-rs/test2.h5')
 phase = pc.PyPhase(filename)
 
+digital = phase.get_digital(1)
 intervals = phase.get_digital_intervals(1)
+
+def check_intervals():
+    plt.plot(digital)
+    for interval in intervals:
+        plt.plot([interval[0], interval[0]], [0, 1])
+        plt.plot([interval[1], interval[1]], [0, 1])
+
+
 bin_size = phase.sampling_frequency * 0.010 #s
 channel_histos = phase.get_subsampled_pre_stim_post_from_intervals(intervals, int(bin_size))
 
@@ -50,6 +59,8 @@ for n in range(n_intervals):
 
 for channel, intervals in channel_histos.items():
     for i, data in enumerate(intervals):
+        # print(data[0])
+        # print(data[2])
         for j, val in enumerate(data[0]):
             pre[i][j] += val
             tot[i][j] += val
@@ -60,8 +71,18 @@ for channel, intervals in channel_histos.items():
             post[i][j] += val
             tot[i][j+max_pre+max_stim] += val
 
+tot_sum = []
+for i in range(len(tot[0])):
+    tot_sum.append(0)
+
+for row in tot:
+    for i, val in enumerate(row):
+        tot_sum[i] += val
+
+fig, ax = plt.subplots(2)
 tot_np = np.array(tot)
-plt.imshow(tot_np)
-plt.plot([max_pre, max_pre], [-1, n_intervals + 1], 'r', linewidth = 2)
-plt.plot([max_pre + max_stim, max_pre + max_stim], [-1, n_intervals + 1], 'r', linewidth = 2)
+ax[0].bar(np.linspace(0, len(tot_np[0]), len(tot_np[0])), tot_sum)
+ax[1].imshow(tot_np)
+ax[1].plot([max_pre, max_pre], [-1, n_intervals + 1], 'r', linewidth = 2)
+ax[1].plot([max_pre + max_stim, max_pre + max_stim], [-1, n_intervals + 1], 'r', linewidth = 2)
 plt.show()

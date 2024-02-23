@@ -172,30 +172,23 @@ impl Phase {
                 // pre
                 data_len = intervals[i].0 - intervals[i-1].1;
                 n_pre =  data_len / bin_size;
-                start_pre = data_len - n_pre * bin_size;
-                // println!("n pre: {}", n_pre);
-                // println!("data len pre: {}", data_len);
+                start_pre = intervals[i].0 - n_pre * bin_size;
 
                 // stim
                 data_len = intervals[i].1 - intervals[i].0;
                 start_stim = intervals[i].0;
                 n_stim =  data_len / bin_size;
-                // println!("n stim: {}", n_stim);
-                // println!("data len stim: {}", data_len);
 
                 // post
                 data_len = intervals[i+1].0 - intervals[i].1;
                 start_post = intervals[i].1;
                 n_post = data_len / bin_size;
-                // println!("n post: {}", n_post);
-                // println!("data len post: {}", data_len);
 
             } else if i == 0 {
-
                 // pre
                 data_len = intervals[i].0;
                 n_pre =  data_len / bin_size;
-                start_pre = data_len - n_pre * bin_size;
+                start_pre = intervals[i].0 - n_pre * bin_size;
 
                 // stim
                 data_len = intervals[i].1 - intervals[i].0;
@@ -208,11 +201,10 @@ impl Phase {
                 n_post = data_len / bin_size;
 
             } else {
-
                 // pre
                 data_len = intervals[i].0 - intervals[i-1].1;
                 n_pre =  data_len / bin_size;
-                start_pre = data_len - n_pre * bin_size;
+                start_pre = intervals[i].0 - n_pre * bin_size;
 
                 // stim
                 data_len = intervals[i].1 - intervals[i].0;
@@ -223,6 +215,7 @@ impl Phase {
                 data_len = raw_data_len - intervals[i].1;
                 start_post = intervals[i].1;
                 n_post = data_len / bin_size;
+
             }
 
             scan_intervals.push((start_pre, n_pre, start_stim, n_stim, start_post, n_post));
