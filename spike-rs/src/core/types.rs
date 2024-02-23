@@ -173,16 +173,22 @@ impl Phase {
                 data_len = intervals[i].0 - intervals[i-1].1;
                 n_pre =  data_len / bin_size;
                 start_pre = data_len - n_pre * bin_size;
+                // println!("n pre: {}", n_pre);
+                // println!("data len pre: {}", data_len);
 
                 // stim
                 data_len = intervals[i].1 - intervals[i].0;
                 start_stim = intervals[i].0;
                 n_stim =  data_len / bin_size;
+                // println!("n stim: {}", n_stim);
+                // println!("data len stim: {}", data_len);
 
                 // post
                 data_len = intervals[i+1].0 - intervals[i].1;
                 start_post = intervals[i].1;
                 n_post = data_len / bin_size;
+                // println!("n post: {}", n_post);
+                // println!("data len post: {}", data_len);
 
             } else if i == 0 {
 
@@ -227,9 +233,9 @@ impl Phase {
             let mut current_ret = vec![];
             for interval in &scan_intervals {
                 current_ret.push((
-                    subsample_range(&data_times[..], interval.0, interval.1, bin_size),
-                    subsample_range(&data_times[..], interval.2, interval.3, bin_size),
-                    subsample_range(&data_times[..], interval.4, interval.5, bin_size),
+                    subsample_range(&data_times[..], interval.0, bin_size, interval.1),
+                    subsample_range(&data_times[..], interval.2, bin_size, interval.3),
+                    subsample_range(&data_times[..], interval.4, bin_size, interval.5),
                 ));
             }
             ret.insert(label.clone(), current_ret);
