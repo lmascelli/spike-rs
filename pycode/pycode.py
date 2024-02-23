@@ -167,5 +167,5 @@ class PyPhase:
 
     def get_subsampled_pre_stim_post_from_intervals(self, intervals: List[Tuple[int, int]],
                                                     bin_size: int
-                                                    ) -> Dict[str, List[Tuple[List[int], List[int, List[int]]]]]:
-        return self._phase.get_subsampled_pre_stim_post_from_intervals(intervals, bin_size)
+                                                    ) -> Dict[str, List[Tuple[List[int], List[int], List[int]]]]:
+        return self._phase.get_subsampled_pre_stim_post_from_intervals(intervals, int(bin_size))

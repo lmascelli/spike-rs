@@ -152,6 +152,10 @@ impl Phase {
         // adjust the bin_size
         let bin_size = check_valid_bin_size(intervals[0], bin_size);
 
+        // println!("n_intervals: {n_intervals}");
+        // println!("raw_data_len: {raw_data_len}");
+        // println!("bin_size: {bin_size}");
+
         // get the intervals to subsample
         let mut scan_intervals = vec![];
 

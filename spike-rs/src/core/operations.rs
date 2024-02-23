@@ -355,16 +355,24 @@ pub fn check_valid_bin_size(interval: (usize, usize), bin_size: usize) -> usize 
 
     const MAX_RESIDUE: i64 = 3;
     let interval_length = (interval.1 - interval.0) as i64;
+
+    assert!(bin_size < (interval_length / 2) as usize, "bin_size shouldn't be greater than half the interval size");
     let n_bins = interval_length / bin_size as i64;
     let mut current_increment = 0i64;
     let mut sign = 1i64;
     let mut current_residue = interval_length - n_bins * (bin_size as i64 + sign * current_increment);
+    // let mut i = 0;
     while current_residue.abs() > MAX_RESIDUE {
         if sign < 0 {
             current_increment += 1;
         }
         sign *= -1;
         current_residue = interval_length - n_bins * (bin_size as i64 + current_increment * sign);
+        // i += 1;
+        // println!("iteration {i} -> current_increment: {current_increment}");
+        // println!("iteration {i} -> interval length:   {interval_length}");
+        // println!("iteration {i} -> current residue:   {current_residue}");
+        // println!("------------------------------------------------------------");
     }
 
     // println!("bin_size: {}\ncurrent_increment:{}\nsign:{}", bin_size, current_increment, sign);
