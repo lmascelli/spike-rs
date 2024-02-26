@@ -5,6 +5,7 @@ from pathlib import Path
 
 filename = Path('e:/rust/spike-rs/test2.h5')
 phase = pc.PyPhase(filename)
+phase.clear_peaks_over_threshold(7e-5)
 
 digital = phase.get_digital(1)
 intervals = phase.get_digital_intervals(1)
@@ -16,7 +17,7 @@ def check_intervals():
         plt.plot([interval[1], interval[1]], [0, 1])
 
 
-bin_size = phase.sampling_frequency * 0.010 #s
+bin_size = phase.sampling_frequency * 0.020 #s
 channel_histos = phase.get_subsampled_pre_stim_post_from_intervals(intervals, int(bin_size))
 
 n_intervals = 0

@@ -4,3 +4,17 @@
  
 * subsampling
 ** test it
+
+* controllare conversione con experimenter
+** tensioni corrispondenti
+
+* controllare se possibile salvare in hdf5 da experimente
+
+* tabella degli esperimenti fatti
+
+* caratterizzazione Repetto
+* data cellule pronte Giulia
+
+* imparare experimenter
+* scaricare manuale experimenter
+* fine costruzione setup

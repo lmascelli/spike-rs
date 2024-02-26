@@ -72,7 +72,7 @@ def save_phase():
         save_file = Path(QFileDialog.getSaveFileName(
             filter="hdf5 (*.h5)",
             caption="Select the phase file")[0]).absolute()
-        CURRENT_PHASE.save_phase(CURRENT_PHASE, str(save_file))
+        CURRENT_PHASE.save(save_file)
     else:
         ERROR_MSGBOX.setText(f"No phase loaded")
         ERROR_MSGBOX.exec()
@@ -162,7 +162,7 @@ def clear_peaks_over_threshold():
 def peak_detection(peak_duration: float, refractary_time: float, n_devs: float):
     if CURRENT_PHASE is not None:
         switch_state('PEAK_DETECTION_DONE')
-        CURRENT_PHASE.compute_all_peak_trains(peak_duration, refractary_time, n_devs)
+        CURRENT_PHASE.peak_detection(peak_duration, refractary_time, n_devs)
 
     else:
         ERROR_MSGBOX.setText(f"No phase loaded")

@@ -64,7 +64,7 @@ class PyPhase:
             filepath (Path): path of the save file
         """
         if self._valid:
-            sp.save(self._phase, str(filepath.absolute()))
+            sp.save_phase(self._phase, str(filepath.absolute()))
 
     def get_digital(self, index: int) -> Optional[List[float]]:
         """

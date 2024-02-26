@@ -140,6 +140,12 @@ impl Phase {
         ret
     }
 
+    pub fn psth(&self, intervals: &Vec<(usize, usize)>,
+                       bin_size: usize) -> Vec<Vec<usize>> {
+        
+        todo!()
+    }
+
     pub fn get_subsampled_pre_stim_post_from_intervals(&self,
                                                        intervals: &Vec<(usize, usize)>,
                                                        bin_size: usize
