@@ -21,6 +21,17 @@ def convert_mc_h5_phase(source: Path, dest: Path) -> bool:
         return False
 
 def check_valid_bin_size(interval: Tuple[int, int], bin_size: int) -> int:
+    """
+    Checks if a bin_size can divide the inteval without too much residue and,
+    if not, provide a near bin_size that does it
+
+    Args:
+        interval (Tuple[int, int])
+        bin_size (int)
+
+    Returns:
+        a valid bin size (int)
+    """
     return sp.check_valid_bin_size(interval, bin_size)
 
 class PyPhase:
@@ -168,4 +179,17 @@ class PyPhase:
     def get_subsampled_pre_stim_post_from_intervals(self, intervals: List[Tuple[int, int]],
                                                     bin_size: int
                                                     ) -> Dict[str, List[Tuple[List[int], List[int], List[int]]]]:
+        """
+        Divide the peak trains in a series of (pre, stimulation, post) around the stimulation `intervals`
+        provided as argument and subsample all the channels in bin of size `bin_size` containing the peak 
+        count in that bin
+
+        Args:
+            intervals (List[Tuple[int, int]]): a list of the stimulation intervals (start, end)
+            bin_size (int): the size of the bins
+
+        Returns:
+            a map between each channel and the list of peak counts in the bin of pre, stimulation and
+            post intervals (Dict[str, List[Tuple[List[int], List[int], List[int]]]])
+        """
         return self._phase.get_subsampled_pre_stim_post_from_intervals(intervals, int(bin_size))

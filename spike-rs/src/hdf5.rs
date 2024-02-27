@@ -1,3 +1,11 @@
+/// Spike-rs
+/// Author: Mascelli Leonardo
+/// Organization: University of Genoa
+///
+/// This module contains all the functionalities relative to the read and write
+/// of HDF5 files and the implementation of a custom save format for the
+/// converted data
+
 mod sys {
   #![allow(unused)]
   #![allow(non_upper_case_globals)]
