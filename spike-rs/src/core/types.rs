@@ -1,5 +1,5 @@
 use crate::core::operations::{check_valid_bin_size, compute_threshold, spike_detection,
-                              subsample_range};
+                              subsample_range, get_digital_intervals};
 use std::collections::HashMap;
 use std::fmt::{self, Debug, Formatter};
 
@@ -140,10 +140,53 @@ impl Phase {
         ret
     }
 
-    pub fn psth(&self, intervals: &Vec<(usize, usize)>,
-                       bin_size: usize) -> Vec<Vec<usize>> {
+    pub fn psth(&self, bin_size: usize,
+                       digital_index: usize) -> Result<Vec<Vec<usize>>, String> {
         
-        todo!()
+        if digital_index >= self.digitals.len() {
+            return Err("Phase.psth: digital_index out of bounds of digitals Vec".to_string());
+        }
+        let stim_intervals = get_digital_intervals(&self.digitals[digital_index][..]);
+        let channel_histos = self.get_subsampled_pre_stim_post_from_intervals(
+            &stim_intervals, bin_size);
+
+        let mut n_intervals = 0;
+        let mut max_pre = 0;
+        let mut max_stim = 0;
+        let mut max_post = 0;
+
+        for (_, intervals) in &channel_histos {
+            n_intervals = intervals.len();
+            for (pre, stim, post) in intervals {
+                if pre.len() > max_pre {
+                    max_pre = pre.len();
+                }
+                if stim.len() > max_stim {
+                    max_stim = stim.len();
+                }
+                if post.len() > max_post {
+                    max_post = post.len();
+                }
+            }
+        }
+
+        let mut ret = vec![];
+        ret.resize(n_intervals, vec![0;max_pre+max_stim+max_post]);
+        for (i, (_, intervals)) in channel_histos.iter().enumerate() {
+            for (pre, stim, post) in intervals {
+
+                for (j, val) in pre.iter().enumerate() {
+                    ret[i][j] += val;
+                }
+                for (j, val) in stim.iter().enumerate() {
+                    ret[i][j+max_pre] += val;
+                }
+                for (j, val) in post.iter().enumerate() {
+                    ret[i][j+max_pre+max_stim] += val;
+                }
+            }
+        }
+        Ok(ret)
     }
 
     pub fn get_subsampled_pre_stim_post_from_intervals(&self,

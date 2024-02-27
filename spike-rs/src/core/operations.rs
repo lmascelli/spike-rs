@@ -446,7 +446,7 @@ pub fn get_peaks_bins(range: &[f32], n_bins: usize) -> Option<(Vec<usize>, f32, 
 /// # Arguments
 ///
 /// * `digital` - the digital signal
-pub fn get_digital_intervals(digital: &[f32]) -> Option<Vec<(usize, usize)>> {
+pub fn get_digital_intervals(digital: &[f32]) -> Vec<(usize, usize)> {
     let mut ret = vec![];
     let mut start = 0usize;
     let mut in_interval = false;
@@ -467,7 +467,7 @@ pub fn get_digital_intervals(digital: &[f32]) -> Option<Vec<(usize, usize)>> {
     if in_interval {
         ret.push((start, digital.len()));
     }
-    Some(ret)
+    ret
 }
 
 /// Subsample the given range returning a vector with the number of spikes in

@@ -147,7 +147,7 @@ impl PyPhase {
         if index >= self.digitals_lengths.len() {
             None
         } else {
-            operations::get_digital_intervals(&self.phase.digitals[index][..])
+            Some(operations::get_digital_intervals(&self.phase.digitals[index][..]))
         }
     }
 
@@ -164,6 +164,13 @@ impl PyPhase {
                                                        bin_size: usize
                         ) -> HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>  {
         self.phase.get_subsampled_pre_stim_post_from_intervals(&intervals, bin_size)
+    }
+
+    pub fn psth(&self, bin_size: usize, digital_index: usize) -> Option<Vec<Vec<usize>>> {
+        match self.phase.psth(bin_size, digital_index) {
+            Ok(ret) => Some(ret),
+            Err(_err) => None,
+        }
     }
 
 }

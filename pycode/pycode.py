@@ -193,3 +193,6 @@ class PyPhase:
             post intervals (Dict[str, List[Tuple[List[int], List[int], List[int]]]])
         """
         return self._phase.get_subsampled_pre_stim_post_from_intervals(intervals, int(bin_size))
+    
+    def psth(self, bin_size: int, digital_index: int) -> Optional[List[List[int]]]:
+        return self._phase.psth(int(bin_size), digital_index)
