@@ -46,25 +46,25 @@ pub fn compute_threshold(
     sampling_frequency: f32,
     multiplier: f32,
 ) -> Result<f32, String> {
-    const NUMBER_OF_WINDOWS: usize = 30;
     const WINDOW_DURATION_TIME: f32 = 200e-3; // s
     const START_THRESHOLD: f32 = 100e-6; // V
 
     let window_duration_sample: usize = (WINDOW_DURATION_TIME * sampling_frequency) as usize;
-    let windows_distance: usize = range.len() / NUMBER_OF_WINDOWS;
+    let number_of_windows: usize = range.len() / window_duration_sample;
+    let windows_distance: usize = range.len() / number_of_windows;
 
-    if range.len() < (window_duration_sample * NUMBER_OF_WINDOWS) {
+    if range.len() < (window_duration_sample * number_of_windows) {
         return Err(format!(
             "compute_threshold: too few samples ({}) to
         automatically compute threshold; needed at least {}",
             range.len(),
-            window_duration_sample * NUMBER_OF_WINDOWS
+            window_duration_sample * number_of_windows
         ));
     }
 
     let mut threshold = START_THRESHOLD;
 
-    for i in 0..NUMBER_OF_WINDOWS {
+    for i in 0..number_of_windows {
         let starting_point = windows_distance * i;
         let ending_point = starting_point + window_duration_sample;
         let new_threshold = math::stdev(&range[starting_point..ending_point]);

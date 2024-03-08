@@ -114,6 +114,18 @@ class PyPhase:
         """
         return self._phase.get_peaks_train(label)
 
+    def get_el_stim_intervals(self) -> Optional[List[List[int]]]:
+        """
+        Gets the timestamps of the electric stimulation events. Usually they are
+        divided in two different vectors, the first with the starts of the
+        stimulations and the second with the ends
+
+        Returns:
+            (Optional[List[List[int]]]): the list of the timestamps of the stimulation
+                                         if any, None otherwise
+        """
+        return self._phase.get_el_stim_intervals()
+
     def get_peaks_bins(self, n_bins: int = 50) -> Dict[str, Tuple[List[int], float, float]]:
         """
         Build an histogram of the peaks magnitude distribution for each channel

@@ -14,6 +14,7 @@ pub struct Phase {
     pub raw_data: HashMap<String, Vec<f32>>,
     pub peaks_trains: HashMap<String, (Vec<f32>, Vec<usize>)>,
     pub digitals: Vec<Vec<f32>>,
+    pub el_stim_intervals: Vec<Vec<u64>>,
 }
 
 impl Phase {
@@ -50,6 +51,7 @@ impl Phase {
             if let Ok(threshold) =
                 compute_threshold(&signal[..], self.sampling_frequency, n_devs)
             {
+                // println!("{} -> {}", label, threshold);
                 let peaks_train = spike_detection(
                     &signal[..],
                     self.sampling_frequency,

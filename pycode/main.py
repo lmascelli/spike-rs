@@ -120,7 +120,7 @@ def plot_signal():
             plt.plot(data)
             if ROOT.controls.plot_with_peaks_cb.isChecked():
                 peak_values, peak_times = CURRENT_PHASE.get_peaks_train(label)
-                plt.scatter(peak_times, peak_values)
+                plt.scatter(peak_times, peak_values, color="red")
             plt.show()
     else:
         ERROR_MSGBOX.setText(f"No phase path selected")

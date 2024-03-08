@@ -124,6 +124,51 @@ pub fn save_phase(phase: &Phase, filename: &str) -> Result<(), String> {
                 return Err(format!("save_phase: failed to create digitals group {}", digitals_group_name));
             }
 
+            // save electric stimulation timestamps
+            let el_stim_group_name = format!("electric_stim_events\0");
+            let el_stim_group = unsafe { H5Gcreate2(savefile_id,
+                                                    CStr::from_bytes_with_nul(el_stim_group_name
+                                                                              .as_str()
+                                                                              .as_bytes())
+                                                    .unwrap().as_ptr(),
+                                                    H5P_DEFAULT,
+                                                    H5P_DEFAULT,
+                                                    H5P_DEFAULT) };
+
+            if el_stim_group > 0 {
+                for (i, events) in phase.el_stim_intervals.iter().enumerate() {
+                    let events_dataset_name = format!("events_{}\0", i);
+                    let events_len = vec![events.len() as u64];
+                    let events_dataspace = unsafe { H5Screate_simple(1, events_len.as_ptr(), null()) };
+                    let events_dataset = unsafe {H5Dcreate2(el_stim_group,
+                                                           CStr::from_bytes_with_nul(events_dataset_name
+                                                                                     .as_str()
+                                                                                     .as_bytes())
+                                                           .unwrap().as_ptr(),
+                                                           H5T_NATIVE_LLONG_g,
+                                                           events_dataspace,
+                                                           H5P_DEFAULT,
+                                                           H5P_DEFAULT,
+                                                           H5P_DEFAULT)};
+                    if events_dataset > 0 {
+                        unsafe { 
+                            H5Dwrite(events_dataset,
+                                     H5T_NATIVE_LLONG_g,
+                                     events_dataspace,
+                                     H5S_ALL,
+                                     H5P_DEFAULT,
+                                     events.as_ptr().cast());
+                            H5Dclose(events_dataset);
+                        }
+                    } else {
+                        return Err(format!("save_phase: failed to create events dataset {}", events_dataset_name));
+                    }
+                }
+            } else {
+                return Err(format!("save_phase: failed to create electric stimulation group {}", el_stim_group_name));
+            }
+
+
             // save raw_datas
             let raw_data_name = format!("raw_data\0");
             let raw_data_group = unsafe {H5Gcreate2(savefile_id,
@@ -412,10 +457,10 @@ extern "C" fn _load_peaks_trains(group: i64,
         // open values dataset
         let channel_values_dataset_name = "values\0";
         let channel_values_dataset = unsafe { H5Dopen2(channel_group,
-                                                       CStr::from_bytes_with_nul(channel_values_dataset_name
-                                                                                 .as_bytes())
-                                                       .unwrap().as_ptr(),
-                                                       H5P_DEFAULT) };
+            CStr::from_bytes_with_nul(channel_values_dataset_name
+                .as_bytes())
+                .unwrap().as_ptr(),
+            H5P_DEFAULT) };
         if channel_values_dataset > 0 {
             // get dataspace
             let channel_values_dataspace = unsafe { H5Dget_space(channel_values_dataset) };
@@ -445,10 +490,10 @@ extern "C" fn _load_peaks_trains(group: i64,
         // open times dataset
         let channel_times_dataset_name = "times\0";
         let channel_times_dataset = unsafe { H5Dopen2(channel_group,
-                                                       CStr::from_bytes_with_nul(channel_times_dataset_name
-                                                                                 .as_bytes())
-                                                       .unwrap().as_ptr(),
-                                                       H5P_DEFAULT) };
+            CStr::from_bytes_with_nul(channel_times_dataset_name
+                .as_bytes())
+                .unwrap().as_ptr(),
+            H5P_DEFAULT) };
         if channel_times_dataset > 0 {
             // get dataspace
             let channel_times_dataspace = unsafe { H5Dget_space(channel_times_dataset) };
@@ -481,6 +526,54 @@ extern "C" fn _load_peaks_trains(group: i64,
     } else {
         println!("Failed to open channel {} in peaks trains group",
                          unsafe { CStr::from_ptr(name).to_str().unwrap() });
+    }
+    0
+}
+
+extern "C" fn _load_el_stim_intervals(group: i64,
+                                      name:   *const i8,
+                                      _info:  *const H5L_info2_t,
+                                      data:  *mut c_void,
+                                      ) -> i32 {
+    let phase = unsafe { &mut *(data as *mut Phase) } as &mut Phase;
+    
+    // open dataset
+    let events_dataset = unsafe { H5Dopen2(group, name, H5P_DEFAULT) };
+
+    // get dataspace
+    let events_dataspace = unsafe { H5Dget_space(events_dataset) };
+    
+    // allocate memory
+    let n_dims = unsafe { H5Sget_simple_extent_ndims(events_dataspace) } as usize;
+    let dims = vec![0; n_dims];
+    unsafe {
+        H5Sget_simple_extent_dims(events_dataspace,
+                                  dims.as_ptr().cast_mut(),
+                                  null_mut());
+    }
+
+    let events = vec![0u64; dims[0] as usize];
+
+    // create memory dataspace
+    let memory_dataspace = unsafe { H5Screate_simple(1, dims.as_ptr().cast(), null()) };
+    
+    // read data
+    unsafe {
+        H5Dread(events_dataset,
+                H5T_NATIVE_LLONG_g,
+                memory_dataspace,
+                H5S_ALL,
+                H5P_DEFAULT,
+                events.as_ptr() as *mut c_void);
+    }
+
+    phase.el_stim_intervals.push(events);
+
+    // close opened ids
+    unsafe { 
+        H5Sclose(memory_dataspace);
+        H5Sclose(events_dataspace);
+        H5Dclose(events_dataset);
     }
     0
 }
@@ -529,6 +622,25 @@ pub fn load_phase(filename: &str) -> Result<Phase, String> {
         } else {
             unsafe { H5Fclose(file_id); }
             return Err(format!("load_phase: failed opening digitals group in file {}", filename));
+        }
+
+        // read electric stimulation channels
+        let el_stim_group = unsafe { H5Gopen2(file_id, CStr::from_bytes_with_nul("electric_stim_events\0".as_bytes())
+                                               .unwrap().as_ptr(), H5P_DEFAULT) };
+
+        if el_stim_group > 0 {
+            unsafe {
+                H5Literate2(el_stim_group, 
+                            H5_index_t_H5_INDEX_NAME,
+                            H5_iter_order_t_H5_ITER_INC,
+                            null_mut(),
+                            Some(_load_el_stim_intervals),
+                            &ret as *const Phase as *mut c_void);
+                H5Gclose(el_stim_group);
+            }
+        } else {
+            unsafe { H5Fclose(file_id); }
+            return Err(format!("load_phase: failed opening electric stimulation group in file {}", filename));
         }
 
         // read raw_data channels
@@ -840,6 +952,49 @@ extern "C" fn _parse_analog_stream(group: i64,
     0
 }
 
+extern "C" fn _parse_event_stream(group: i64,
+                                  name: *const i8,
+                                  _info: *const H5L_info2_t,
+                                  data: *mut c_void) -> i32 {
+    let phase = unsafe { &mut*(data as *mut Phase) };
+    let name_str = unsafe { CStr::from_ptr(name).to_str().unwrap() };
+    if name_str.starts_with("EventEntity_") {
+        unsafe {
+            // get the dataset and dataspace of the group
+            let events_dataset = H5Dopen2(group, name, H5P_DEFAULT);
+            let events_dataspace = H5Dget_space(events_dataset);
+
+            // check the rank of the dataset
+            let events_dims = H5Sget_simple_extent_ndims(events_dataspace);
+            assert!(events_dims == 2, "convert_mc_h5_file: error in converting the EventStream. Wrong rank of the EventEntity dataset");
+
+            // get the number of samples
+            let dims = vec![0; events_dims as usize];
+            H5Sget_simple_extent_dims(events_dataspace, dims.as_ptr().cast_mut(), null_mut());
+            let n_samples = dims[1] as usize;
+
+            // set the hyperslab of the data to be read
+            let starting_point = [0, 0];
+            let length_data_to_read = [1, n_samples as u64];
+            H5Sselect_hyperslab(events_dataspace, H5S_SELECT_SET, starting_point.as_ptr(),
+                                null(), length_data_to_read.as_ptr(), null());
+
+            // create the memory dataspace
+            //  and allocate memory for reading the samples
+            let events = vec![0u64; n_samples];
+            let memory_size = [n_samples as u64];
+            let events_memory_dataspace = H5Screate_simple(1, memory_size.as_ptr(), null_mut());
+
+            // read the data
+            H5Dread(events_dataset, H5T_NATIVE_LLONG_g, events_memory_dataspace, events_dataspace,
+                    H5P_DEFAULT, events.as_ptr() as _);
+
+            phase.el_stim_intervals.push(events);
+        }
+    }
+    0
+}
+
 pub fn convert_mc_h5_file(filename: &str) -> Result<Phase, String> {
 
     let ret = Phase::default();
@@ -866,6 +1021,22 @@ pub fn convert_mc_h5_file(filename: &str) -> Result<Phase, String> {
                         null_mut(),
                         Some(_parse_analog_stream),
                         &ret as *const Phase as *mut c_void);
+        }
+
+        // parse the Stream_X channel in the EventStream id
+        let events_id = unsafe { H5Gopen2(fid,
+                                          CStr::from_bytes_with_nul("/Data/Recording_0/EventStream/Stream_0\0"
+                                                                    .as_bytes()).unwrap().as_ptr(),
+                                                                    H5P_DEFAULT) };
+        if events_id > 0 {
+            unsafe {
+                H5Literate2(events_id, 
+                    H5_index_t_H5_INDEX_NAME,
+                    H5_iter_order_t_H5_ITER_INC,
+                    null_mut(),
+                    Some(_parse_event_stream),
+                    &ret as *const Phase as *mut c_void);
+            }
         }
 
         unsafe {

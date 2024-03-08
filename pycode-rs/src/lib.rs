@@ -90,6 +90,14 @@ impl PyPhase {
         }
     }
 
+    pub fn get_el_stim_intervals(&self) -> Option<Vec<Vec<u64>>> {
+        if self.phase.el_stim_intervals.len() == 0 {
+            None
+        } else {
+            Some( self.phase.el_stim_intervals.clone() )
+        }
+    }
+
     pub fn get_peaks_train(&self, label: &str) -> Option<(Vec<f32>,
                                                           Vec<usize>)> {
         if let Some(data) = self.phase.peaks_trains.get(label) {
