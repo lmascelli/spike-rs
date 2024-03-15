@@ -981,13 +981,20 @@ extern "C" fn _parse_event_stream(group: i64,
 
             // create the memory dataspace
             //  and allocate memory for reading the samples
-            let events = vec![0u64; n_samples];
+            let mut events = vec![0u64; n_samples];
             let memory_size = [n_samples as u64];
             let events_memory_dataspace = H5Screate_simple(1, memory_size.as_ptr(), null_mut());
 
             // read the data
             H5Dread(events_dataset, H5T_NATIVE_LLONG_g, events_memory_dataspace, events_dataspace,
                     H5P_DEFAULT, events.as_ptr() as _);
+
+	    // rescale the events from microseconds to bins. this requires the sampling frequency
+	    // to be correctly set at this time!!!
+	    let scaling_factor = phase.sampling_frequency * 1e-6;
+	    for event in &mut events {
+		*event = (*event as f32 * scaling_factor) as u64;
+	    }
 
             phase.el_stim_intervals.push(events);
         }

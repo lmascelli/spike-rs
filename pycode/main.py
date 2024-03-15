@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 from scipy.io import savemat
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import numpy as np
 
 from PySide6.QtCore import QDir, Qt, QUrl  # type: ignore
@@ -101,6 +102,11 @@ def plot_rasterplot():
             electrodes.append(label)
             spikes.append(CURRENT_PHASE.get_peaks_train(label)[1][:])
         plt.eventplot(spikes)
+        if ROOT.controls.plot_with_intervals_cb.isChecked():
+            ax = plt.gca()
+            ymin, ymax = ax.get_ylim()
+            for start, end in CURRENT_PHASE.get_digital_intervals(0):
+                ax.add_patch(Rectangle((start, ymin), end-start, ymax-ymin, fill=None, alpha=1, color="red"))
         plt.show()
     else:
         ERROR_MSGBOX.setText(f"No phase path selected")

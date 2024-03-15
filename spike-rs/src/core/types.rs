@@ -8,10 +8,15 @@ pub struct Mea {
     pub active_electrodes: Vec<String>,
 }
 
+pub struct RawData {
+    pub data: HashMap<String, Vec<f32>>,
+    pub label: String,
+}
+
 #[derive(Default)]
 pub struct Phase {
     pub sampling_frequency: f32,
-    pub raw_data: HashMap<String, Vec<f32>>,
+    pub raw_data: HashMap<String, Vec<f32>>,// Vec<RawData>,
     pub peaks_trains: HashMap<String, (Vec<f32>, Vec<usize>)>,
     pub digitals: Vec<Vec<f32>>,
     pub el_stim_intervals: Vec<Vec<u64>>,
