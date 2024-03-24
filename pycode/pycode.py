@@ -208,3 +208,14 @@ class PyPhase:
     
     def psth(self, bin_size: int, digital_index: int) -> Optional[List[List[int]]]:
         return self._phase.psth(int(bin_size), digital_index)
+
+
+class H5Content:
+    def __init__(self, filename: Path):
+        self._content = sp.H5Content(str(filename.absolute()))
+
+    def __str__(self):
+        return f"{self._content}"
+
+    def test(self):
+        self._content.test()
