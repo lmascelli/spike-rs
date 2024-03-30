@@ -1,5 +1,6 @@
 /target
 /pycode/pycode_rs.pyd
+/pycode/pycode_rs.so
 /pycode/__pycache__
 Cargo.lock
 tags
