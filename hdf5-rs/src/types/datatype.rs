@@ -105,19 +105,14 @@ impl DataType {
                     let cset = H5Tget_cset(dtype_id);
                     let is_variable = {
                         let r = H5Tis_variable_str(dtype_id);
+                        println!("------------> {}", r);
                         match r {
-                            0   => true,
-                            _ if r > 0 => false,
+                            0   => false,
+                            _ if r > 0 => true,
                             _   => {
                                 panic!("DataType::parse: Failed to retrieve if the string type is variable");
                             },
                         }
-                        // if r > 0 {
-                        //     true
-                        // } else if r == 0 {
-                        //     false
-                        // } else {
-                        // }
                     };
 
                     if padding == H5T_str_t_H5T_STR_NULLTERM && cset == H5T_cset_t_H5T_CSET_ASCII {

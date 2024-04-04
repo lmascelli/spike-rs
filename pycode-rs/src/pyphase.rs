@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use pyo3::prelude::*;
 use ::spike_rs::core::{operations, types::Phase};
-use ::spike_rs::hdf5;
 
 #[pyclass(name = "Phase")]
 pub struct PyPhase {

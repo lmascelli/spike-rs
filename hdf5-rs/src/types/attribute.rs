@@ -119,7 +119,17 @@ impl AttributeFillable<String> for String {
                 }
             },
             DataTypeL::StringDynamic => {
-                todo!("Dynamic string not yet implemented")
+                let mut str_ptr = 0usize;
+                unsafe {
+                    H5Aread(attribute.get_aid(),
+                            data_type.get_tid(),
+                            &mut str_ptr as *mut usize as *mut c_void);
+                    if let Ok(string) = CStr::from_ptr(str_ptr as *const i8).to_str() {
+                            Ok(string.to_string())
+                    } else {
+                        Err("Attribute::AttributeFillable: failed to retrieve string attribute".to_string())
+                    }
+                }
             },
             _ => {
                 Err("Attribute::from_attribute: cannot extract a string from this attribute".to_string())

@@ -3,7 +3,7 @@
 
 
 use pyo3::prelude::*;
-use ::spike_rs::hdf5::h5explorer::H5Content;
+use mc_explorer::H5Content;
 
 #[pyclass(name = "H5Content")]
 pub struct PyH5Content {
@@ -14,7 +14,7 @@ pub struct PyH5Content {
 impl PyH5Content {
     #[new]
     pub fn new(filename: &str) -> Self {
-        let content = H5Content::from_file(filename);
+        let content = H5Content::open(filename);
         if let Ok(content) = content {
             PyH5Content {
                 content: Some(content),

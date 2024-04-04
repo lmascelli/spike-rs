@@ -4,6 +4,6 @@ resolver = "2"
 members = [
   "hdf5-rs",
   "mc_explorer",
-  #  "spike-rs",
-  #  "pycode-rs",
+  "spike-rs",
+  "pycode-rs",
 ]
