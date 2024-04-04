@@ -15,13 +15,16 @@ Clear-Host
 switch ($args[0]) {
   "build" {
     cargo build;
-    copy -Force ./target/debug/$Script:pycode_input ./pycode/$Script:pycode_output
+#    copy -Force ./target/debug/$Script:pycode_input ./pycode/$Script:pycode_output
   }
   "run" {
     cargo run
   }
   "doc" {
     cargo doc --open
+  }
+  "test" {
+    cargo test -- --test $args[1] --nocapture --test-threads=1
   }
   "release" {
     cargo build --release;

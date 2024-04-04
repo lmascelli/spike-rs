@@ -5,7 +5,7 @@ edition = "2021"
 build = "build.rs"
 
 [lib]
-name = "spike_rs"
+name = "hdf5_rs"
 
 [build-dependencies]
 bindgen = "*"

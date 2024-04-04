@@ -1,6 +1,19 @@
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import pycode_rs as sp
+import os
+import subprocess
+
+def convert_mc_acquisition(source: Path,
+                           dest: Path,
+                           mcdataconv_path: Path,
+                           wine_prefix: Optional[str] = None) -> bool:
+    os.chdir(dest.parent)
+    if wine_prefix is not None:
+        command = "WINEPREFIX=" + wine_prefix + " wine "+ mcdataconv_path + " -t hdf5 \"z:/" + source.absolute() + "\""
+    else:
+        command = mcdataconv_path + " -t hdf5 \"" + source.absolute() + "\""
+    subprocess.run(command, shell=True, capture_output=True, text=True)
 
 def convert_mc_h5_phase(source: Path, dest: Path) -> bool:
     """
