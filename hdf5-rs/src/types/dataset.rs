@@ -106,7 +106,9 @@ impl std::fmt::Display for Dataset {
 impl Drop for Dataset {
     fn drop(&mut self) {
         if self.did > 0 {
-            println!("Closing dataset {}", self.path);
+            #[cfg(debug_assertions)] {
+                println!("Closing dataset {}", self.path);
+            }
             unsafe { H5Dclose(self.did); }
         }
     }

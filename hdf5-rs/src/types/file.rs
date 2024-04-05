@@ -11,23 +11,12 @@ pub struct File {
 }
 
 impl File {
-    pub fn open(filename: &str, plist: Option<PList>) -> Result<Self, String> {
+    pub fn open(filename: &str) -> Result<Self, String> {
         let fid = unsafe { 
             H5Fopen(
                 str_to_cchar!(filename),
                 H5F_ACC_RDONLY,
-                match plist {
-                    None => H5P_DEFAULT,
-                    Some(plist) => {
-                        debug_assert!(plist.get_ptype() == PListType::File, "File::Open: the passed property is not a file one");
-                        let pid = plist.get_pid().unwrap_or(-1);
-                        if pid > 0 {
-                            pid
-                        } else {
-                            return Err("File::Open: the passed property list is unvalid".to_string());
-                        }
-                    }
-                }
+                H5P_DEFAULT,
             )
         };
         Ok(File {
@@ -44,7 +33,9 @@ impl File {
 impl Drop for File {
     fn drop(&mut self) {
         if self.fid > 0 {
-            println!("Closing file: {}", self.filename);
+            #[cfg(debug_assertions)] {
+                println!("Closing file: {}", self.filename);
+            }
             unsafe { H5Fclose(self.fid); }
         }
     }

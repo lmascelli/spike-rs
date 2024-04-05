@@ -46,7 +46,9 @@ impl Attr {
 impl Drop for Attr {
     fn drop(&mut self) {
         if self.aid > 0 {
-            println!("Closing attribute: {}", self.aid);
+            #[cfg(debug_assertions)] {
+                println!("Closing attribute: {}", self.aid);
+            }
             unsafe { H5Aclose(self.aid); }
         }
     }

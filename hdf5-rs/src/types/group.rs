@@ -50,7 +50,9 @@ pub trait GroupOpener {
 impl Drop for Group {
     fn drop(&mut self) {
         if self.gid > 0 {
-            println!("Closing group: {}", self.path);
+            #[cfg(debug_assertions)] {
+                println!("Closing group: {}", self.path);
+            }
             unsafe { H5Gclose(self.gid) };
         }
     }

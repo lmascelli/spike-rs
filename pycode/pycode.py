@@ -47,6 +47,11 @@ def check_valid_bin_size(interval: Tuple[int, int], bin_size: int) -> int:
     """
     return sp.check_valid_bin_size(interval, bin_size)
 
+
+################################################################################
+#                                PyPhase
+################################################################################
+
 class PyPhase:
     """
     Contains and manage data for a phase recording

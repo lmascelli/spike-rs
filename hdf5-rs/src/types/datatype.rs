@@ -105,7 +105,6 @@ impl DataType {
                     let cset = H5Tget_cset(dtype_id);
                     let is_variable = {
                         let r = H5Tis_variable_str(dtype_id);
-                        println!("------------> {}", r);
                         match r {
                             0   => false,
                             _ if r > 0 => true,
@@ -154,7 +153,9 @@ impl DataType {
 impl Drop for DataType {
     fn drop(&mut self) {
         if self.tid > 0 {
-            println!("Closing type: {}", self.tid);
+            #[cfg(debug_assertions)] {
+                println!("Closing type: {}", self.tid);
+            }
             unsafe { H5Tclose(self.tid) };
         }
     }

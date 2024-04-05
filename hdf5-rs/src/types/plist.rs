@@ -7,7 +7,7 @@ pub enum PListType {
 
 pub struct PList {
     ptype: PListType,
-    pid: Option<i64>,
+    pid: i64,
 }
 
 impl PList {
@@ -15,21 +15,18 @@ impl PList {
         self.ptype
     }
 
-    pub fn get_pid(&self) -> Option<i64> {
+    pub fn get_pid(&self) -> i64 {
         self.pid
     }
 }
 
-impl Default for PList {
-    fn default() -> Self {
-        let pid = unsafe {H5Pcopy(H5P_DEFAULT)};
-        PList {
-            ptype: PListType::File,
-            pid: if pid > 0 {
-                Some(pid)
-            } else {
-                None
-            },
+impl Drop for PList {
+    fn drop(&mut self) {
+        if self.pid > 0 {
+            #[cfg(debug_assertions)] {
+                println!("Closing PList {}", self.pid);
+            }
+            unsafe { H5Pclose(self.pid); }
         }
     }
 }

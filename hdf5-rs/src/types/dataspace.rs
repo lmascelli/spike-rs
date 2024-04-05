@@ -100,7 +100,9 @@ impl DataSpace {
 impl Drop for DataSpace {
     fn drop(&mut self) {
         if self.did > 0 {
-            println!("Closing dataspace: {}", self.did);
+            #[cfg(debug_assertions)] {
+                println!("Closing dataspace: {}", self.did);
+            }
             unsafe { H5Sclose(self.did); }
         }
     }

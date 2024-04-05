@@ -15,7 +15,7 @@ Clear-Host
 switch ($args[0]) {
   "build" {
     cargo build;
-#    copy -Force ./target/debug/$Script:pycode_input ./pycode/$Script:pycode_output
+    copy -Force ./target/debug/$Script:pycode_input ./pycode/$Script:pycode_output
   }
   "run" {
     cargo run

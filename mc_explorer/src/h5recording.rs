@@ -17,7 +17,6 @@ impl H5Recording {
 
         if let Ok(group) = group.open_group("AnalogStream") {
             for analog in group.list_groups() {
-                println!("-----> {analog}");
                 if analog.starts_with("Stream_") {
                     analogs.push(H5Analog::open(group.open_group(&analog)?)?);
                 }

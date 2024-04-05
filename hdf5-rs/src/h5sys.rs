@@ -24,7 +24,7 @@ pub use sys::{
 
     H5L_info2_t, H5Literate2,
 
-    H5Pcopy,
+    H5Pclose, H5Pcopy,
 
     H5Sclose, H5Screate_simple, H5Sget_simple_extent_dims,
     H5Sget_simple_extent_ndims, H5Sselect_all, H5Sselect_hyperslab, H5S_class_t_H5S_SCALAR,
