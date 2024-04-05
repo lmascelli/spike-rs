@@ -11,6 +11,7 @@ pub enum DataTypeL {
     Float32,
     Float64,
     Unimplemented,
+    Compound,
 }
 
 pub struct DataType {
@@ -129,7 +130,10 @@ impl DataType {
                 },
 
                 H5T_class_t_H5T_COMPOUND => {
-                    todo!()
+                        DataType {
+                            tid: dtype_id,
+                            dtype: DataTypeL::Compound,
+                        }
                 },
                 _ => {
                     DataType {
@@ -173,6 +177,7 @@ impl std::fmt::Display for DataType {
             DataTypeL::Float64 => "Float64",
             DataTypeL::StringStatic => "String static",
             DataTypeL::StringDynamic => "String dynamic",
+            DataTypeL::Compound => "Compound datatype",
             DataTypeL::Unimplemented => "Unimplemented type conversion",
         })?;
         writeln!(f, "  tid: {}", self.tid)?;

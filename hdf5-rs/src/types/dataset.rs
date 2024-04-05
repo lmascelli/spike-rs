@@ -40,6 +40,23 @@ impl Dataset {
         self.did
     }
     
+    pub fn get_dataspace(&self) -> Result<&DataSpace, String> {
+        if let Some(ref dataspace) = self.dataspace {
+            Ok(dataspace)
+        } else {
+            Err(format!("Dataset::get_dataspace: {} dataset does not contain a dataspace",
+                        self.get_path()))
+        }
+    }
+
+    pub fn get_datatype(&self) -> Option<&DataType> {
+        if let Some(ref datatype) = self.datatype {
+            Some(datatype)
+        } else {
+            None
+        }
+    }
+
     #[allow(unused_unsafe)]
     pub fn open(parent: i64, name: &str) -> Result<Self, String> {
         let did;
@@ -71,19 +88,24 @@ impl Dataset {
         Ok(ret)
     }
 
-    pub fn get_dataspace(&self) -> Option<&DataSpace> {
-        if let Some(ref dataspace) = self.dataspace {
-            Some(dataspace)
-        } else {
-            None
+    pub fn fill_memory<T>(&self, memory_datatype: i64, data: &mut Vec<T>) -> Result<(), String> {
+        let res;
+        unsafe {
+            let mem_type_id = H5Dget_type(self.did);
+            res = H5Dread(
+                self.did,
+                memory_datatype,
+                H5S_ALL,
+                H5S_ALL,
+                H5P_DEFAULT,
+                data.as_ptr() as *mut T as *mut c_void
+                );
         }
-    }
-
-    pub fn get_datatype(&self) -> Option<&DataType> {
-        if let Some(ref datatype) = self.datatype {
-            Some(datatype)
+        if res >= 0 {
+            Ok(())
         } else {
-            None
+            Err(format!("Dataset::fill_memory: failed to fill memory from dataset {}",
+                        self.get_path()))
         }
     }
 }
@@ -146,7 +168,7 @@ impl DatasetFillable<i32> for i32 {
             .get_dtype()
         {
             DataTypeL::Signed32 => {
-                if let Some(dataspace) = dataset.get_dataspace() {
+                if let Ok(dataspace) = dataset.get_dataspace() {
                     let dims = dataspace.get_dims();
 
                     // set subspace
