@@ -1,15 +1,26 @@
-use std::collections::HashMap;
-use hdf5_rs::types::{AttributeFillable, AttrOpener, DatasetOwner, Group};
 use hdf5_rs::cchar_to_string;
 use hdf5_rs::h5sys::CStr;
+use hdf5_rs::types::{AttrOpener, AttributeFillable, DatasetFillable, DatasetOwner, Group};
+use std::cell::RefCell;
+use std::collections::HashMap;
 
 mod info_channel;
-use info_channel::{CInfoChannel, info_channel_type};
+use info_channel::{info_channel_type, CInfoChannel};
+
+#[derive(Default)]
+struct ChannelInfo {
+    index: usize,
+    conversion_factor: f32,
+    offset: f32,
+    exponent: f32,
+}
 
 pub struct H5Analog {
     path: String,
     label: String,
-    channels: HashMap<String, Option<Vec<f32>>>,
+
+    channels_info: HashMap<String, ChannelInfo>,
+    channels_data: HashMap<String, RefCell<Option<Vec<f32>>>>,
     analog_group: Group,
 }
 
@@ -21,18 +32,70 @@ impl H5Analog {
         assert!(dims.len() == 1, "InfoChannel dataset should be a vector");
         let mut data = vec![CInfoChannel::default(); dims[0]];
 
-        let info_channels = infochannel_ds.fill_memory(info_channel_type(), &mut data)?;
+        infochannel_ds.fill_memory(info_channel_type(), &mut data)?;
 
+        let mut channels_info = HashMap::new();
+        let mut channels_data = HashMap::new();
         for info_channel in &data {
-            println!("{}", cchar_to_string!(info_channel.label));
+            channels_info.insert(
+                cchar_to_string!(info_channel.label),
+                ChannelInfo {
+                    index: info_channel.row_index as usize,
+                    conversion_factor: info_channel.conversion_factor as f32,
+                    offset: info_channel.ad_zero as f32,
+                    exponent: info_channel.exponent as f32,
+                },
+            );
+            channels_data.insert(cchar_to_string!(info_channel.label), RefCell::new(None));
         }
-        
+
         Ok(Self {
             path: group.get_path(),
             label: String::from_attribute(&label)?,
-            channels: HashMap::new(),
+            channels_info,
+            channels_data,
             analog_group: group,
         })
+    }
+
+    pub fn get_path(&self) -> String {
+        self.path.clone()
+    }
+
+    pub fn get_channel(&self, label: &str) -> Result<Vec<f32>, String> {
+        if self.channels_info.contains_key(label) {
+            let mut ret = vec![];
+            let channel_data = self.channels_data.get(label).unwrap().borrow_mut();
+            if let Some(data) = channel_data.as_ref() {
+                ret.extend_from_slice(&data[..]);
+            } else {
+                let channel_info = self.channels_info.get(label).unwrap();
+                let channel_data_ds = self.analog_group.get_dataset("ChannelData")?;
+                let data = i32::from_dataset_row(&channel_data_ds, channel_info.index)?;
+                let offset = channel_info.offset;
+                let conversion_factor =
+                    channel_info.conversion_factor * 10f32.powf(channel_info.exponent);
+                ret.resize(data.len(), 0f32);
+                for (i, val) in data.iter().enumerate() {
+                    ret[i] = (*val as f32 - offset) * conversion_factor;
+                }
+            }
+            Ok(ret)
+        } else {
+            Err(format!(
+                r#"H5Analog::get_channel: this stream does not contain
+                        a channel named {}"#,
+                label
+            ))
+        }
+    }
+
+    pub fn get_labels(&self) -> Vec<String> {
+        let mut ret = vec![];
+        for label in self.channels_info.keys() {
+            ret.push(label.clone());
+        }
+        ret
     }
 }
 

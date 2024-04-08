@@ -6,7 +6,7 @@ use h5analog::H5Analog;
 pub struct H5Recording {
     path: String,
     duration: i64, 
-    recording_group: Group,
+    _recording_group: Group,
     analogs: Vec<H5Analog>,
 }
 
@@ -26,9 +26,30 @@ impl H5Recording {
         Ok(Self {
             path: group.get_path(),
             duration: i64::from_attribute(&duration)?,
-            recording_group: group,
+            _recording_group: group,
             analogs,
         })
+    }
+
+    pub fn get_path(&self) -> String {
+        self.path.clone()
+    }
+
+    pub fn list_analogs(&self) -> Vec<(usize, String)> {
+        let mut ret = vec![];
+        for (i, analog) in self.analogs.iter().enumerate() {
+            ret.push((i, analog.get_path()));
+        }
+        ret
+    }
+
+    pub fn get_analog(&self, index: usize) -> Result<&H5Analog, String> {
+        if index < self.analogs.len() {
+            Ok(&self.analogs[index])
+        } else {
+            Err(format!("H5Recordig::get_analog: H5Recording {} index {} out of bounds",
+                        self.path, index))
+        }
     }
 }
 

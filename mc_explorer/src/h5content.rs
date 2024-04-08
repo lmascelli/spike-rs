@@ -5,10 +5,10 @@ use h5recording::H5Recording;
 use hdf5_rs::types::{AttributeFillable, AttrOpener, File, Group, GroupOpener};
 
 pub struct H5Content {
-    path: String,
-    data_group: Group,
-    date: String,
     recordings: Vec<H5Recording>,
+    path: String,
+    _data_group: Group,
+    date: String,
 }
 
 impl H5Content {
@@ -23,10 +23,27 @@ impl H5Content {
         }
         Ok(Self {
             path: filename.to_string(),
-            data_group,
+            _data_group: data_group,
             date,
             recordings,
         })
+    }
+
+    pub fn list_recordings(&self) -> Vec<(usize, String)> {
+        let mut ret = vec![];
+        for (i, recording) in self.recordings.iter().enumerate() {
+            ret.push((i, recording.get_path()));
+        }
+        ret
+    }
+
+    pub fn get_recording(&self, index: usize) -> Result<&H5Recording, String> {
+        if index < self.recordings.len() {
+            Ok(&self.recordings[index])
+        } else {
+            Err(format!("H5Content::get_recording: H5Content {} index {} out of bounds",
+                        self.path, index))
+        }
     }
 }
 
