@@ -20,25 +20,8 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
 import pycode as pc
 import pycode_rs as sp
 from converter import Explorer
+import globals
 
-
-###############################################################################
-#
-#                              GLOBAL VARIABLES
-#.globals
-###############################################################################
-
-# handlers
-ROOT = None                                      
-ERROR_MSGBOX = None
-
-CURRENT_PATH = None
-CURRENT_PHASE = None
-CURRENT_PHASE_PATH = None
-
-CURRENT_SELECTED_SIGNAL = None
-
-HISTO_BINS_NUMBER = 50
 
 ###############################################################################
 #
@@ -48,102 +31,101 @@ HISTO_BINS_NUMBER = 50
 
 # FILE STUFF
 def open_recordings():
-    CURRENT_PATH = Path(QFileDialog.getExistingDirectory(
+    globals.CURRENT_PATH = Path(QFileDialog.getExistingDirectory(
         caption="Select the phase file"))
-    str_path = str(CURRENT_PATH.absolute())
-    ROOT.tree.model.setRootPath(str_path)
-    ROOT.tree.setRootIndex(ROOT.tree.model.index(str_path))
+    str_path = str(globals.CURRENT_PATH.absolute())
+    globals.ROOT.tree.model.setRootPath(str_path)
+    globals.ROOT.tree.setRootIndex(globals.ROOT.tree.model.index(str_path))
     switch_state('INSPECT_RECORDINGS_FOLDER')
 
 def open_phase():
-    global CURRENT_PHASE
-    if CURRENT_PHASE_PATH is not None:
-        CURRENT_PHASE = pc.PyPhase(CURRENT_PHASE_PATH)
-        if CURRENT_PHASE is None:
-            ERROR_MSGBOX.setText(f"Failed to load {CURRENT_PHASE_PATH}")
-            ERROR_MSGBOX.exec()
+    if globals.globals.CURRENT_PHASE_PATH is not None:
+        globals.CURRENT_PHASE = pc.PyPhase(globals.globals.CURRENT_PHASE_PATH)
+        if globals.CURRENT_PHASE is None:
+            globals.ERROR_MSGBOX.setText(f"Failed to load {globals.globals.CURRENT_PHASE_PATH}")
+            globals.ERROR_MSGBOX.exec()
         else:
             switch_state('INSPECT_PHASE')
 
     else:
-        ERROR_MSGBOX.setText(f"No phase path selected")
-        ERROR_MSGBOX.exec()
+        globals.ERROR_MSGBOX.setText(f"No phase path selected")
+        globals.ERROR_MSGBOX.exec()
 
 def save_phase():
-    if CURRENT_PHASE is not None:
+    if globals.CURRENT_PHASE is not None:
         save_file = Path(QFileDialog.getSaveFileName(
             filter="hdf5 (*.h5)",
             caption="Select the phase file")[0]).absolute()
-        CURRENT_PHASE.save(save_file)
+        globals.CURRENT_PHASE.save(save_file)
     else:
-        ERROR_MSGBOX.setText(f"No phase loaded")
-        ERROR_MSGBOX.exec()
+        globals.ERROR_MSGBOX.setText(f"No phase loaded")
+        globals.ERROR_MSGBOX.exec()
 
 def convert_from_mc_h5():
-    switch_state('CONVERTER_ENTER')
+    switch_state('EXPLORER_ENTER')
     # ConvertFromMultichannelH5Dialog().exec()
 
 def convert_phase():
-    if CURRENT_PHASE is not None:
+    if globals.CURRENT_PHASE is not None:
         save_folder = Path(QFileDialog.getExistingDirectory(
             caption="Select the export folder")).absolute()
-        for label in CURRENT_PHASE.channel_labels:
+        for label in globals.CURRENT_PHASE.channel_labels:
             savemat(f"{str(save_folder)}/{label}.mat", {
-                'data': CURRENT_PHASE.get_raw_data(label),
+                'data': globals.CURRENT_PHASE.get_raw_data(label),
             })
     else:
-        ERROR_MSGBOX.setText(f"No phase loaded")
-        ERROR_MSGBOX.exec()
+        globals.ERROR_MSGBOX.setText(f"No phase loaded")
+        globals.ERROR_MSGBOX.exec()
 
 # PLOT STUFF
 def plot_rasterplot():
-    if CURRENT_PHASE is not None:
+    if globals.CURRENT_PHASE is not None:
         electrodes = []
         spikes = []
-        for label in CURRENT_PHASE.channel_labels:
+        for label in globals.CURRENT_PHASE.channel_labels:
             electrodes.append(label)
-            spikes.append(CURRENT_PHASE.get_peaks_train(label)[1][:])
+            spikes.append(globals.CURRENT_PHASE.get_peaks_train(label)[1][:])
         plt.eventplot(spikes)
-        if ROOT.controls.plot_with_intervals_cb.isChecked():
+        if globals.ROOT.controls.plot_with_intervals_cb.isChecked():
             ax = plt.gca()
             ymin, ymax = ax.get_ylim()
-            for start, end in CURRENT_PHASE.get_digital_intervals(0):
+            for start, end in globals.CURRENT_PHASE.get_digital_intervals(0):
                 ax.add_patch(Rectangle((start, ymin), end-start, ymax-ymin, fill=None, alpha=1, color="red"))
         plt.show()
     else:
-        ERROR_MSGBOX.setText(f"No phase path selected")
-        ERROR_MSGBOX.exec()
+        globals.ERROR_MSGBOX.setText(f"No phase path selected")
+        globals.ERROR_MSGBOX.exec()
 
 def plot_signal():
-    if CURRENT_PHASE is not None:
-        if CURRENT_SELECTED_SIGNAL is not None:
+    if globals.CURRENT_PHASE is not None:
+        if globals.CURRENT_SELECTED_SIGNAL is not None:
             data = None
-            t, label = CURRENT_SELECTED_SIGNAL
+            t, label = globals.CURRENT_SELECTED_SIGNAL
             if t == 'digital':
-                data = CURRENT_PHASE.get_digital(int(label))
+                data = globals.CURRENT_PHASE.get_digital(int(label))
             elif t == 'raw_data':
-                data = CURRENT_PHASE.get_raw_data(label)
+                data = globals.CURRENT_PHASE.get_raw_data(label)
             else:
                 return
             plt.plot(data)
-            if ROOT.controls.plot_with_peaks_cb.isChecked():
-                peak_values, peak_times = CURRENT_PHASE.get_peaks_train(label)
+            if globals.ROOT.controls.plot_with_peaks_cb.isChecked():
+                peak_values, peak_times = globals.CURRENT_PHASE.get_peaks_train(label)
                 plt.scatter(peak_times, peak_values, color="red")
             plt.show()
     else:
-        ERROR_MSGBOX.setText(f"No phase path selected")
-        ERROR_MSGBOX.exec()
+        globals.ERROR_MSGBOX.setText(f"No phase path selected")
+        globals.ERROR_MSGBOX.exec()
 
 def plot_peaks_histogram():
-    if CURRENT_PHASE is not None:
-        if CURRENT_SELECTED_SIGNAL is not None:
+    if globals.CURRENT_PHASE is not None:
+        if globals.CURRENT_SELECTED_SIGNAL is not None:
             data = None
-            t, label = CURRENT_SELECTED_SIGNAL
+            t, label = globals.CURRENT_SELECTED_SIGNAL
             if t == 'peak_train':
-                data = CURRENT_PHASE.get_peaks_bins(HISTO_BINS_NUMBER)[label]
+                data = globals.CURRENT_PHASE.get_peaks_bins(globals.HISTO_BINS_NUMBER)[label]
             else:
                 return
-            ticks_values = np.linspace(data[1], data[2], HISTO_BINS_NUMBER + 1
+            ticks_values = np.linspace(data[1], data[2], globals.HISTO_BINS_NUMBER + 1
                                     ).tolist()
             ticks = []
             for tick in ticks_values:
@@ -152,29 +134,29 @@ def plot_peaks_histogram():
             plt.xticks(rotation=45)
             plt.show()
     else:
-        ERROR_MSGBOX.setText(f"No phase path selected")
-        ERROR_MSGBOX.exec()
+        globals.ERROR_MSGBOX.setText(f"No phase path selected")
+        globals.ERROR_MSGBOX.exec()
 
 # ANALYSIS STUFF
 class ClearOverThresholdDialog():
     pass
 
 def clear_peaks_over_threshold():
-    if CURRENT_PHASE is not None:
+    if globals.CURRENT_PHASE is not None:
         ClearOverThresholdDialog().exec()
 
     else:
-        ERROR_MSGBOX.setText(f"No phase loaded")
-        ERROR_MSGBOX.exec()
+        globals.ERROR_MSGBOX.setText(f"No phase loaded")
+        globals.ERROR_MSGBOX.exec()
 
 def peak_detection(peak_duration: float, refractary_time: float, n_devs: float):
-    if CURRENT_PHASE is not None:
+    if globals.CURRENT_PHASE is not None:
         switch_state('PEAK_DETECTION_DONE')
-        CURRENT_PHASE.peak_detection(peak_duration, refractary_time, n_devs)
+        globals.CURRENT_PHASE.peak_detection(peak_duration, refractary_time, n_devs)
 
     else:
-        ERROR_MSGBOX.setText(f"No phase loaded")
-        ERROR_MSGBOX.exec()
+        globals.ERROR_MSGBOX.setText(f"No phase loaded")
+        globals.ERROR_MSGBOX.exec()
 
 def create_interval():
     IntervalCreationDialog().exec()
@@ -187,104 +169,104 @@ def create_interval():
 ###############################################################################
 
 def state_started():
-    ROOT.tree.setVisible(False)
-    ROOT.controls.open_phase_button.setEnabled(False)
-    ROOT.controls.compute_peak_trains_button.setEnabled(False)
-    ROOT.controls.convert_phase_button.setEnabled(False)
-    ROOT.controls.create_interval_button.setEnabled(False)
-    ROOT.controls.plot_signal_button.setEnabled(False)
-    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    ROOT.controls.plot_rasterplot_button.setEnabled(False)
-    ROOT.controls.plot_with_intervals_cb.setEnabled(False)
-    ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
-    viewer_widget = ROOT.viewer.widgets['None']
-    ROOT.viewer.setCurrentIndex(viewer_widget[0])
+    globals.ROOT.tree.setVisible(False)
+    globals.ROOT.controls.open_phase_button.setEnabled(False)
+    globals.ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    globals.ROOT.controls.convert_phase_button.setEnabled(False)
+    globals.ROOT.controls.create_interval_button.setEnabled(False)
+    globals.ROOT.controls.plot_signal_button.setEnabled(False)
+    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
+    globals.ROOT.controls.plot_rasterplot_button.setEnabled(False)
+    globals.ROOT.controls.plot_with_intervals_cb.setEnabled(False)
+    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
+    globals.ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
+    viewer_widget = globals.ROOT.viewer.widgets['None']
+    globals.ROOT.viewer.setCurrentIndex(viewer_widget[0])
 
 def state_inspect_recordings_folder():
-    ROOT.tree.setVisible(True)
-    ROOT.controls.open_phase_button.setEnabled(False)
-    ROOT.controls.compute_peak_trains_button.setEnabled(False)
-    ROOT.controls.plot_rasterplot_button.setEnabled(False)
-    ROOT.controls.plot_with_intervals_cb.setEnabled(False)
-    ROOT.controls.convert_phase_button.setEnabled(False)
-    ROOT.controls.create_interval_button.setEnabled(False)
-    ROOT.controls.plot_signal_button.setEnabled(False)
-    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
-    viewer_widget = ROOT.viewer.widgets[ 'PhaseInfo' ]
-    ROOT.viewer.setCurrentIndex(viewer_widget[0])
+    globals.ROOT.tree.setVisible(True)
+    globals.ROOT.controls.open_phase_button.setEnabled(False)
+    globals.ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    globals.ROOT.controls.plot_rasterplot_button.setEnabled(False)
+    globals.ROOT.controls.plot_with_intervals_cb.setEnabled(False)
+    globals.ROOT.controls.convert_phase_button.setEnabled(False)
+    globals.ROOT.controls.create_interval_button.setEnabled(False)
+    globals.ROOT.controls.plot_signal_button.setEnabled(False)
+    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
+    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
+    globals.ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
+    viewer_widget = globals.ROOT.viewer.widgets[ 'PhaseInfo' ]
+    globals.ROOT.viewer.setCurrentIndex(viewer_widget[0])
 
 def state_inspect_recordings_folder_phase_selected():
-    # ROOT.tree.setVisible(True)                # not managed here
-    ROOT.controls.open_phase_button.setEnabled(True)
-    ROOT.controls.convert_phase_button.setEnabled(False)
-    ROOT.controls.plot_rasterplot_button.setEnabled(False)
-    ROOT.controls.plot_with_intervals_cb.setEnabled(False)
-    ROOT.controls.compute_peak_trains_button.setEnabled(False)
-    ROOT.controls.plot_signal_button.setEnabled(False)
-    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    ROOT.controls.create_interval_button.setEnabled(False)
-    ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
+    # globals.ROOT.tree.setVisible(True)                # not managed here
+    globals.ROOT.controls.open_phase_button.setEnabled(True)
+    globals.ROOT.controls.convert_phase_button.setEnabled(False)
+    globals.ROOT.controls.plot_rasterplot_button.setEnabled(False)
+    globals.ROOT.controls.plot_with_intervals_cb.setEnabled(False)
+    globals.ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    globals.ROOT.controls.plot_signal_button.setEnabled(False)
+    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
+    globals.ROOT.controls.create_interval_button.setEnabled(False)
+    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
+    globals.ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
 
 def state_inspect_phase():
-    # ROOT.tree.setVisible(True)                # not managed here
-    ROOT.controls.open_phase_button.setEnabled(True)
-    ROOT.controls.compute_peak_trains_button.setEnabled(True)
-    ROOT.controls.convert_phase_button.setEnabled(True)
-    ROOT.controls.create_interval_button.setEnabled(False)
-    ROOT.controls.plot_signal_button.setEnabled(False)
-    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    ROOT.controls.plot_rasterplot_button.setEnabled(True)
-    ROOT.controls.plot_with_intervals_cb.setEnabled(True)
-    ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
-    phase_info = ROOT.viewer.widgets['PhaseView']
-    ROOT.viewer.setCurrentIndex(phase_info[0])
+    # globals.ROOT.tree.setVisible(True)                # not managed here
+    globals.ROOT.controls.open_phase_button.setEnabled(True)
+    globals.ROOT.controls.compute_peak_trains_button.setEnabled(True)
+    globals.ROOT.controls.convert_phase_button.setEnabled(True)
+    globals.ROOT.controls.create_interval_button.setEnabled(False)
+    globals.ROOT.controls.plot_signal_button.setEnabled(False)
+    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
+    globals.ROOT.controls.plot_rasterplot_button.setEnabled(True)
+    globals.ROOT.controls.plot_with_intervals_cb.setEnabled(True)
+    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
+    globals.ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
+    phase_info = globals.ROOT.viewer.widgets['PhaseView']
+    globals.ROOT.viewer.setCurrentIndex(phase_info[0])
     phase_info[1].update_data()
 
 def state_update_peaks():
-    ROOT.controls.open_phase_button.setEnabled(True)
-    ROOT.controls.compute_peak_trains_button.setEnabled(False)
-    ROOT.controls.convert_phase_button.setEnabled(True)
-    ROOT.controls.plot_signal_button.setEnabled(False)
-    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
-    ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    phase_info = ROOT.viewer.widgets['PhaseView']
-    ROOT.viewer.setCurrentIndex(phase_info[0])
+    globals.ROOT.controls.open_phase_button.setEnabled(True)
+    globals.ROOT.controls.compute_peak_trains_button.setEnabled(False)
+    globals.ROOT.controls.convert_phase_button.setEnabled(True)
+    globals.ROOT.controls.plot_signal_button.setEnabled(False)
+    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
+    globals.ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
+    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
+    phase_info = globals.ROOT.viewer.widgets['PhaseView']
+    globals.ROOT.viewer.setCurrentIndex(phase_info[0])
     phase_info[1].update_peaks()
 
 def state_selected_signal():
-    ROOT.controls.plot_signal_button.setEnabled(True)
-    ROOT.controls.plot_with_peaks_cb.setEnabled(True)
-    ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    ROOT.controls.create_interval_button.setEnabled(False)
-    if CURRENT_SELECTED_SIGNAL is not None and CURRENT_SELECTED_SIGNAL[0] == 'digital':
+    globals.ROOT.controls.plot_signal_button.setEnabled(True)
+    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(True)
+    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
+    globals.ROOT.controls.create_interval_button.setEnabled(False)
+    if globals.CURRENT_SELECTED_SIGNAL is not None and globals.CURRENT_SELECTED_SIGNAL[0] == 'digital':
         switch_state('SELECTED_DIGITAL')
 
 def state_selected_peak_train():
-    ROOT.controls.plot_signal_button.setEnabled(False)
-    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    ROOT.controls.plot_peaks_histogram_button.setEnabled(True)
-    ROOT.controls.create_interval_button.setEnabled(False)
+    globals.ROOT.controls.plot_signal_button.setEnabled(False)
+    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
+    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(True)
+    globals.ROOT.controls.create_interval_button.setEnabled(False)
 
 def state_selected_digital():
-    ROOT.controls.plot_signal_button.setEnabled(True)
-    ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    ROOT.controls.create_interval_button.setEnabled(True)
+    globals.ROOT.controls.plot_signal_button.setEnabled(True)
+    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
+    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
+    globals.ROOT.controls.create_interval_button.setEnabled(True)
 
 def state_peak_detection_done():
-    phase_info = ROOT.viewer.widgets['PhaseView']
-    ROOT.viewer.setCurrentIndex(phase_info[0])
+    phase_info = globals.ROOT.viewer.widgets['PhaseView']
+    globals.ROOT.viewer.setCurrentIndex(phase_info[0])
     phase_info[1].update_peaks()
 
 def state_explorer_enter():
-    explorer = ROOT.viewer.widgets['Explorer']
-    ROOT.viewer.setCurrentIndex(explorer[0])
+    explorer = globals.ROOT.viewer.widgets['Explorer']
+    globals.ROOT.viewer.setCurrentIndex(explorer[0])
     pass
 
 GUI_STATES = {
@@ -415,7 +397,6 @@ class Controls(QWidget):
 #.dialogs
 ###############################################################################
 
-
 class IntervalCreationDialog(QDialog):
     def __init__(self, *kargs, **kwargs):
         super().__init__(*kargs, **kwargs)
@@ -492,8 +473,8 @@ class IntervalCreationDialog(QDialog):
             self.offset_end = float(self.offset_end_edit.text())
             self.interval_perc = float(self.interval_perc_edit.text())
         except Exception as e:
-            ERROR_MSGBOX.setText(f"{e}")
-            ERROR_MSGBOX.exec()
+            globals.ERROR_MSGBOX.setText(f"{e}")
+            globals.ERROR_MSGBOX.exec()
 
 
         self.canvas = self.draw_widget.pixmap()
@@ -548,12 +529,12 @@ class ConvertFromMultichannelH5Dialog(QDialog):
             if pc.convert_mc_h5_phase(source, dest):
                 return
             else:
-                ERROR_MSGBOX.exec()
-                ERROR_MSGBOX.setText(f"Failed converting the selected file")
+                globals.ERROR_MSGBOX.exec()
+                globals.ERROR_MSGBOX.setText(f"Failed converting the selected file")
 
         except Exception as e:
-            ERROR_MSGBOX.setText(f"Failed parsing the source or destination files {e}")
-            ERROR_MSGBOX.exec()
+            globals.ERROR_MSGBOX.setText(f"Failed parsing the source or destination files {e}")
+            globals.ERROR_MSGBOX.exec()
 
 
 class PeakDetectionDialog(QDialog):
@@ -591,8 +572,8 @@ class PeakDetectionDialog(QDialog):
             self.close()
 
         except Exception as e:
-            ERROR_MSGBOX.setText(f"Failed parsing the inputs {e}")
-            ERROR_MSGBOX.exec()
+            globals.ERROR_MSGBOX.setText(f"Failed parsing the inputs {e}")
+            globals.ERROR_MSGBOX.exec()
 
 class ClearOverThresholdDialog(QDialog):
     def __init__(self, *kargs, **kwargs):
@@ -619,7 +600,7 @@ class ClearOverThresholdDialog(QDialog):
 
     def confirm(self):
         threshold_value = float(self.threshold_edit.text());
-        CURRENT_PHASE.clear_peaks_over_threshold(threshold_value);
+        globals.CURRENT_PHASE.clear_peaks_over_threshold(threshold_value);
         switch_state('UPDATE_PEAKS')
         self.close()
 
@@ -656,16 +637,15 @@ class FileTree(QTreeView):
         def file_selection_changed(new_file, old_file):
             count = new_file.count()
             if count > 0:
-                global CURRENT_PHASE_PATH
                 model_index = new_file.indexes()[0]
                 path = self.model.filePath(model_index)
-                CURRENT_PHASE_PATH = Path(path)
-                file = CURRENT_PHASE_PATH
+                globals.globals.CURRENT_PHASE_PATH = Path(path)
+                file = globals.globals.CURRENT_PHASE_PATH
                 info_h5 = self.InfoH5(
                     file.name, f'{"%.2f" % (getsize(file) / 1024 / 1024)}'
                         ' MB', datetime.fromtimestamp(getctime(file))
                     .strftime('%Y-%m-%d %H:%M:%S'))
-                ROOT.viewer.widgets['PhaseInfo'][1].set_h5_info(info_h5=info_h5)
+                globals.ROOT.viewer.widgets['PhaseInfo'][1].set_h5_info(info_h5=info_h5)
                 switch_state('INSPECT_RECORDINGS_FOLDER_PHASE_SELECTED')
 
         self.selectionChanged = file_selection_changed
@@ -698,13 +678,12 @@ class DigialView(QTreeWidget):
 
     def selectionChanged(self, new_item, old_item):
         if new_item.count() > 0:
-            global CURRENT_SELECTED_SIGNAL
             index = new_item.indexes()[0].data()
             n_samples = new_item.indexes()[1].data()
             sampling_frequency = new_item.indexes()[2].data()
 
-            CURRENT_SELECTED_SIGNAL = ('digital', index)
-            print(CURRENT_PHASE.get_digital_intervals(int(index)))
+            globals.CURRENT_SELECTED_SIGNAL = ('digital', index)
+            print(globals.CURRENT_PHASE.get_digital_intervals(int(index)))
 
             switch_state('SELECTED_SIGNAL')
 
@@ -717,12 +696,11 @@ class RawDatasView(QTreeWidget):
 
     def selectionChanged(self, new_item, old_item):
         if new_item.count() > 0:
-            global CURRENT_SELECTED_SIGNAL
             label = new_item.indexes()[0].data()
             n_samples = new_item.indexes()[1].data()
             sampling_frequency = new_item.indexes()[2].data()
 
-            CURRENT_SELECTED_SIGNAL = ('raw_data', label)
+            globals.CURRENT_SELECTED_SIGNAL = ('raw_data', label)
 
             switch_state('SELECTED_SIGNAL')
 
@@ -733,11 +711,10 @@ class PeakTrainsView(QTreeWidget):
 
     def selectionChanged(self, new_item, old_item):
         if new_item.count() > 0:
-            global CURRENT_SELECTED_SIGNAL
             label = new_item.indexes()[0].data()
             n_samples = new_item.indexes()[1].data()
 
-            CURRENT_SELECTED_SIGNAL = ('peak_train', label)
+            globals.CURRENT_SELECTED_SIGNAL = ('peak_train', label)
 
             switch_state('SELECTED_PEAK_TRAIN')
 
@@ -764,7 +741,7 @@ class PhaseView(QWidget):
         self.peak_trains.clear()
 
         # peak trains
-        ordered_dict = dict(sorted(CURRENT_PHASE.peak_train_lengths.items()))
+        ordered_dict = dict(sorted(globals.CURRENT_PHASE.peak_train_lengths.items()))
         for (label, count) in ordered_dict.items():
             item = QTreeWidgetItem(self.peak_trains)
             item.setText(0, f"{label}")
@@ -780,22 +757,22 @@ class PhaseView(QWidget):
         self.peak_trains.clear()
 
         # digitals
-        for i, d in enumerate(CURRENT_PHASE.digitals_lengths):
+        for i, d in enumerate(globals.CURRENT_PHASE.digitals_lengths):
             item = QTreeWidgetItem(self.digitals)
             item.setText(0, f"{i}")
             item.setText(1, f"{d}")
-            item.setText(2, f"{CURRENT_PHASE.sampling_frequency}")
+            item.setText(2, f"{globals.CURRENT_PHASE.sampling_frequency}")
 
         # raw datas
-        ordered_dict = dict(sorted(CURRENT_PHASE.raw_data_lengths.items()))
+        ordered_dict = dict(sorted(globals.CURRENT_PHASE.raw_data_lengths.items()))
         for (label, count) in ordered_dict.items():
             item = QTreeWidgetItem(self.raw_datas)
             item.setText(0, f"{label}")
             item.setText(1, f"{count}")
-            item.setText(2, f"{CURRENT_PHASE.sampling_frequency}")
+            item.setText(2, f"{globals.CURRENT_PHASE.sampling_frequency}")
 
         # peak trains
-        ordered_dict = dict(sorted(CURRENT_PHASE.peak_train_lengths.items()))
+        ordered_dict = dict(sorted(globals.CURRENT_PHASE.peak_train_lengths.items()))
         for (label, count) in ordered_dict.items():
             item = QTreeWidgetItem(self.peak_trains)
             item.setText(0, f"{label}")
@@ -905,8 +882,8 @@ if __name__ == "__main__":
     app = QApplication(argv)
     win = Main()
     win.setWindowTitle("PyCode")
-    ROOT = win
-    ERROR_MSGBOX = QMessageBox(ROOT)
+    globals.ROOT = win
+    globals.ERROR_MSGBOX = QMessageBox(globals.ROOT)
     switch_state('STARTED')
     win.showMaximized()
     exit(app.exec())
