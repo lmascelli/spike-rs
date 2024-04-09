@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import (QGroupBox, QHBoxLayout, QLabel, QListWidget,
-                               QPushButton, QVBoxLayout, QWidget)
+                               QListWidgetItem, QPushButton, QVBoxLayout,
+                               QWidget)
 
 from mc_explorer import MCExplorer
 import globals
@@ -13,11 +14,16 @@ class Explorer(QWidget):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        self.recording_index = None
+        self.raw_stream_index = None
+        self.digital_stream_index = None
+
         # recordings group
         recordings_group = QGroupBox(title="Recordings")
         recordings_layout = QHBoxLayout()
         recordings_group.setLayout(recordings_layout)
         self.recordings = QListWidget()
+        self.recordings.selectionChanged = self.selected_recording
 
         self.recording_info = QLabel()
 
@@ -27,6 +33,7 @@ class Explorer(QWidget):
         open_file_btn = QPushButton(text="Open file")
         open_file_btn.clicked.connect(self.open_mc_file)
         open_recording_btn = QPushButton(text="Open recording")
+        open_recording_btn.clicked.connect(self.open_recording)
         recordings_btn_layout.addWidget(open_file_btn)
         recordings_btn_layout.addWidget(open_recording_btn)
 
@@ -41,6 +48,7 @@ class Explorer(QWidget):
         analogs_group.setLayout(analogs_layout)
 
         self.analogs = QListWidget()
+        self.analogs.selectionChanged = self.selected_analog
 
         self.analog_info = QLabel()
 
@@ -82,6 +90,12 @@ class Explorer(QWidget):
         convert_layout = QHBoxLayout()
         convert_group.setLayout(convert_layout)
 
+        self.convert_text = {
+                "intro": """""",
+                "raw_data": "",
+                "digital": "",
+                }
+
         self.convert_summary = QLabel()
         
         convert_btn = QPushButton(text="Convert")
@@ -97,4 +111,32 @@ class Explorer(QWidget):
 
     def open_mc_file(self):
         globals.open_mc_file(None)
-        self.explorer = MCExplorer(globals.CURRENT_MC_FILE)
+        if globals.CURRENT_MC_FILE is not None:
+            self.explorer = MCExplorer(globals.CURRENT_MC_FILE)
+            # read recordings
+            for recording in self.explorer.list_recordings():
+                item = QListWidgetItem()
+                item.setText(recording[1])
+                item.setData(1, recording[0])
+                self.recordings.addItem(item)
+
+    def selected_recording(self, new_item, old_item):
+        index = new_item.indexes()[0].data(1)
+        self.recording_info.setText(self.explorer.recording_info(index))
+        self.recording_index = index
+
+    def open_recording(self):
+        currentRecording = self.recordings.currentItem()
+        if currentRecording is not None:
+            recording_index = currentRecording.data(1)
+            # read analogs
+            for analog in self.explorer.list_analogs(recording_index):
+                item = QListWidgetItem()
+                item.setText(analog[1])
+                item.setData(1, analog[0])
+                self.analogs.addItem(item)
+
+    def selected_analog(self, new_item, old_item):
+       index = new_item.indexes()[0].data(1)
+       self.analog_info.setText(self.explorer.analog_info(self.recording_index, index))
+

@@ -28,11 +28,53 @@ impl PyMCExplorer {
         }
     }
 
+    pub fn recording_info(&self, recording_index: usize) -> Option<String> {
+        if let Some(ref content) = self.content {
+            match content.get_recording(recording_index) {
+                Ok(recording) => {
+                    Some(format!("{}", recording))
+                },
+                Err(err) => {
+                    eprintln!("{err}");
+                    None
+                }
+            }
+        } else {
+            eprintln!("MCExplorer: no content set");
+            None
+        }
+    }
+
     pub fn list_analogs(&self, recording_index: usize) -> Option<Vec<(usize, String)>> {
         if let Some(ref content) = self.content {
             match content.get_recording(recording_index) {
                 Ok(recording) => {
                     Some(recording.list_analogs())
+                },
+                Err(err) => {
+                    eprintln!("{err}");
+                    None
+                }
+            }
+        } else {
+            eprintln!("MCExplorer: no content set");
+            None
+        }
+    }
+
+    pub fn analog_info(&self, recording_index: usize, analog_index: usize) -> Option<String> {
+        if let Some(ref content) = self.content {
+            match content.get_recording(recording_index) {
+                Ok(recording) => {
+                    match recording.get_analog(analog_index) {
+                        Ok(analog) => {
+                            Some(format!("{}", analog))
+                        },
+                        Err(err) => {
+                            eprintln!("{err}");
+                            None
+                        }
+                    }
                 },
                 Err(err) => {
                     eprintln!("{err}");

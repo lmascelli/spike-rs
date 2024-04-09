@@ -14,8 +14,14 @@ class MCExplorer:
     def list_recordings(self) -> Optional[List[Tuple[int, str]]]:
         return self.explorer.list_recordings()
 
+    def recording_info(self, recording_index: int) -> Optional[str]:
+        return self.explorer.recording_info(recording_index)
+
     def list_analogs(self, recording_index: int) -> Optional[List[Tuple[int, str]]]:
         return self.explorer.list_analogs(recording_index)
+
+    def analog_info(self, recording_index: int, analog_index: int) -> Optional[str]:
+        return self.explorer.analog_info(recording_index, analog_index)
 
     def list_analog_channels(self, recording_index: int, analog_index: int
                              ) -> Optional[List[str]]:
