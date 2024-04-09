@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
 
 import pycode as pc
 import pycode_rs as sp
+from converter import Explorer
 
 
 ###############################################################################
@@ -79,7 +80,8 @@ def save_phase():
         ERROR_MSGBOX.exec()
 
 def convert_from_mc_h5():
-    ConvertFromMultichannelH5Dialog().exec()
+    switch_state('CONVERTER_ENTER')
+    # ConvertFromMultichannelH5Dialog().exec()
 
 def convert_phase():
     if CURRENT_PHASE is not None:
@@ -280,6 +282,11 @@ def state_peak_detection_done():
     ROOT.viewer.setCurrentIndex(phase_info[0])
     phase_info[1].update_peaks()
 
+def state_explorer_enter():
+    explorer = ROOT.viewer.widgets['Explorer']
+    ROOT.viewer.setCurrentIndex(explorer[0])
+    pass
+
 GUI_STATES = {
     'STARTED': state_started,
     'INSPECT_RECORDINGS_FOLDER': state_inspect_recordings_folder,
@@ -290,6 +297,7 @@ GUI_STATES = {
     'SELECTED_PEAK_TRAIN': state_selected_peak_train,
     'UPDATE_PEAKS': state_update_peaks,
     'PEAK_DETECTION_DONE': state_peak_detection_done,
+    'EXPLORER_ENTER': state_explorer_enter,
 }
 
 OLD_STATE = None
@@ -810,6 +818,7 @@ class Viewer(QStackedWidget):
             'None'      : (0, QWidget(self)),
             'PhaseInfo' : (1, PhaseInfo(self)),
             'PhaseView' : (2, PhaseView(self)),
+            'Explorer'  : (3, Explorer(self)),
         }
 
         for _, (index, widget) in self.widgets.items():

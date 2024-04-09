@@ -100,7 +100,7 @@ impl Dataset {
         Ok(ret)
     }
 
-    pub fn fill_memory<T>(&self, memory_datatype: i64, data: &mut Vec<T>) -> Result<(), String> {
+    pub fn fill_memory<T>(&self, memory_datatype: i64, data: &mut [T]) -> Result<(), String> {
         let res;
         unsafe {
             res = H5Dread(
