@@ -8,20 +8,16 @@ pub struct Mea {
     pub active_electrodes: Vec<String>,
 }
 
-pub struct RawData {
-    pub data: HashMap<String, Vec<f32>>,
-    pub label: String,
-}
-
 #[derive(Default)]
 pub struct Phase {
     pub sampling_frequency: f32,
-    pub raw_data: HashMap<String, Vec<f32>>,// Vec<RawData>,
+    pub raw_data: HashMap<String, Vec<f32>>,
     pub peaks_trains: HashMap<String, (Vec<f32>, Vec<usize>)>,
     pub digitals: Vec<Vec<f32>>,
     pub el_stim_intervals: Vec<Vec<u64>>,
 }
 
+#[allow(clippy::type_complexity)]
 impl Phase {
     pub fn new() -> Phase {
         Phase::default()
@@ -113,7 +109,7 @@ impl Phase {
         ret
     }
 
-    pub fn get_peaks_in_consecutive_intervals(&self, intervals: &Vec<(usize, usize)>
+    pub fn get_peaks_in_consecutive_intervals(&self, intervals: &[(usize, usize)]
     ) -> HashMap::<String, (Vec<f32>, Vec<usize>)> {
         // assume that the peaks are consecutives and non overlapped
         // also the peaks are supposed to be consecutives
@@ -162,7 +158,7 @@ impl Phase {
         let mut max_stim = 0;
         let mut max_post = 0;
 
-        for (_, intervals) in &channel_histos {
+        for intervals in channel_histos.values() {
             n_intervals = intervals.len();
             for (pre, stim, post) in intervals {
                 if pre.len() > max_pre {
@@ -197,7 +193,7 @@ impl Phase {
     }
 
     pub fn get_subsampled_pre_stim_post_from_intervals(&self,
-                                                       intervals: &Vec<(usize, usize)>,
+                                                       intervals: &[(usize, usize)],
                                                        bin_size: usize
                         ) -> HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>> 
     {

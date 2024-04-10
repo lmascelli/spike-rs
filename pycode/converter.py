@@ -5,8 +5,6 @@ from PySide6.QtWidgets import (QGroupBox, QHBoxLayout, QLabel, QListWidget,
 from mc_explorer import MCExplorer
 import globals
 
-import matplotlib.pyplot as plt
-
 
 class Explorer(QWidget):
     def __init__(self, *kargs, **kwargs):
@@ -139,4 +137,3 @@ class Explorer(QWidget):
     def selected_analog(self, new_item, old_item):
        index = new_item.indexes()[0].data(1)
        self.analog_info.setText(self.explorer.analog_info(self.recording_index, index))
-

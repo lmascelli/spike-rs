@@ -1,26 +1,29 @@
 from sys import argv, exit
-from os.path import getctime, getsize, isfile, normpath, realpath
+from os.path import getctime, getsize
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional 
 from scipy.io import savemat
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
 
-from PySide6.QtCore import QDir, Qt, QUrl  # type: ignore
-from PySide6.QtGui import QAction, QFont, QPainter, QPen, QPixmap
+from PySide6.QtCore import QDir, Qt
+from PySide6.QtGui import QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
-    QFileSystemModel, QFormLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel,
-    QLineEdit, QListWidget, QMainWindow, QMenu, QMenuBar, QMessageBox,
-    QPushButton, QSizePolicy, QSplitter, QStackedWidget, QTextBrowser,
-    QTreeView, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+                               QFileSystemModel, QFormLayout, QGroupBox,
+                               QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+                               QMainWindow, QMessageBox, QPushButton,
+                               QSplitter, QStackedWidget, QTreeView,
+                               QTreeWidget, QTreeWidgetItem, QVBoxLayout,
+                               QWidget)
 
 import pycode as pc
-import pycode_rs as sp
-from converter import Explorer
+
 import globals
+import states
+from converter import Explorer
 
 
 ###############################################################################
@@ -36,7 +39,7 @@ def open_recordings():
     str_path = str(globals.CURRENT_PATH.absolute())
     globals.ROOT.tree.model.setRootPath(str_path)
     globals.ROOT.tree.setRootIndex(globals.ROOT.tree.model.index(str_path))
-    switch_state('INSPECT_RECORDINGS_FOLDER')
+    states.switch_state('INSPECT_RECORDINGS_FOLDER')
 
 def open_phase():
     if globals.globals.CURRENT_PHASE_PATH is not None:
@@ -45,7 +48,7 @@ def open_phase():
             globals.ERROR_MSGBOX.setText(f"Failed to load {globals.globals.CURRENT_PHASE_PATH}")
             globals.ERROR_MSGBOX.exec()
         else:
-            switch_state('INSPECT_PHASE')
+            states.switch_state('INSPECT_PHASE')
 
     else:
         globals.ERROR_MSGBOX.setText(f"No phase path selected")
@@ -62,7 +65,7 @@ def save_phase():
         globals.ERROR_MSGBOX.exec()
 
 def convert_from_mc_h5():
-    switch_state('EXPLORER_ENTER')
+    states.switch_state('EXPLORER_ENTER')
     # ConvertFromMultichannelH5Dialog().exec()
 
 def convert_phase():
@@ -151,7 +154,7 @@ def clear_peaks_over_threshold():
 
 def peak_detection(peak_duration: float, refractary_time: float, n_devs: float):
     if globals.CURRENT_PHASE is not None:
-        switch_state('PEAK_DETECTION_DONE')
+        states.switch_state('PEAK_DETECTION_DONE')
         globals.CURRENT_PHASE.peak_detection(peak_duration, refractary_time, n_devs)
 
     else:
@@ -160,138 +163,6 @@ def peak_detection(peak_duration: float, refractary_time: float, n_devs: float):
 
 def create_interval():
     IntervalCreationDialog().exec()
-
-
-###############################################################################
-#
-#                                 GUI STATES
-#.states
-###############################################################################
-
-def state_started():
-    globals.ROOT.tree.setVisible(False)
-    globals.ROOT.controls.open_phase_button.setEnabled(False)
-    globals.ROOT.controls.compute_peak_trains_button.setEnabled(False)
-    globals.ROOT.controls.convert_phase_button.setEnabled(False)
-    globals.ROOT.controls.create_interval_button.setEnabled(False)
-    globals.ROOT.controls.plot_signal_button.setEnabled(False)
-    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    globals.ROOT.controls.plot_rasterplot_button.setEnabled(False)
-    globals.ROOT.controls.plot_with_intervals_cb.setEnabled(False)
-    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    globals.ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
-    viewer_widget = globals.ROOT.viewer.widgets['None']
-    globals.ROOT.viewer.setCurrentIndex(viewer_widget[0])
-
-def state_inspect_recordings_folder():
-    globals.ROOT.tree.setVisible(True)
-    globals.ROOT.controls.open_phase_button.setEnabled(False)
-    globals.ROOT.controls.compute_peak_trains_button.setEnabled(False)
-    globals.ROOT.controls.plot_rasterplot_button.setEnabled(False)
-    globals.ROOT.controls.plot_with_intervals_cb.setEnabled(False)
-    globals.ROOT.controls.convert_phase_button.setEnabled(False)
-    globals.ROOT.controls.create_interval_button.setEnabled(False)
-    globals.ROOT.controls.plot_signal_button.setEnabled(False)
-    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    globals.ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
-    viewer_widget = globals.ROOT.viewer.widgets[ 'PhaseInfo' ]
-    globals.ROOT.viewer.setCurrentIndex(viewer_widget[0])
-
-def state_inspect_recordings_folder_phase_selected():
-    # globals.ROOT.tree.setVisible(True)                # not managed here
-    globals.ROOT.controls.open_phase_button.setEnabled(True)
-    globals.ROOT.controls.convert_phase_button.setEnabled(False)
-    globals.ROOT.controls.plot_rasterplot_button.setEnabled(False)
-    globals.ROOT.controls.plot_with_intervals_cb.setEnabled(False)
-    globals.ROOT.controls.compute_peak_trains_button.setEnabled(False)
-    globals.ROOT.controls.plot_signal_button.setEnabled(False)
-    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    globals.ROOT.controls.create_interval_button.setEnabled(False)
-    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    globals.ROOT.controls.clear_peaks_over_threshold_button.setEnabled(False)
-
-def state_inspect_phase():
-    # globals.ROOT.tree.setVisible(True)                # not managed here
-    globals.ROOT.controls.open_phase_button.setEnabled(True)
-    globals.ROOT.controls.compute_peak_trains_button.setEnabled(True)
-    globals.ROOT.controls.convert_phase_button.setEnabled(True)
-    globals.ROOT.controls.create_interval_button.setEnabled(False)
-    globals.ROOT.controls.plot_signal_button.setEnabled(False)
-    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    globals.ROOT.controls.plot_rasterplot_button.setEnabled(True)
-    globals.ROOT.controls.plot_with_intervals_cb.setEnabled(True)
-    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    globals.ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
-    phase_info = globals.ROOT.viewer.widgets['PhaseView']
-    globals.ROOT.viewer.setCurrentIndex(phase_info[0])
-    phase_info[1].update_data()
-
-def state_update_peaks():
-    globals.ROOT.controls.open_phase_button.setEnabled(True)
-    globals.ROOT.controls.compute_peak_trains_button.setEnabled(False)
-    globals.ROOT.controls.convert_phase_button.setEnabled(True)
-    globals.ROOT.controls.plot_signal_button.setEnabled(False)
-    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    globals.ROOT.controls.clear_peaks_over_threshold_button.setEnabled(True)
-    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    phase_info = globals.ROOT.viewer.widgets['PhaseView']
-    globals.ROOT.viewer.setCurrentIndex(phase_info[0])
-    phase_info[1].update_peaks()
-
-def state_selected_signal():
-    globals.ROOT.controls.plot_signal_button.setEnabled(True)
-    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(True)
-    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    globals.ROOT.controls.create_interval_button.setEnabled(False)
-    if globals.CURRENT_SELECTED_SIGNAL is not None and globals.CURRENT_SELECTED_SIGNAL[0] == 'digital':
-        switch_state('SELECTED_DIGITAL')
-
-def state_selected_peak_train():
-    globals.ROOT.controls.plot_signal_button.setEnabled(False)
-    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(True)
-    globals.ROOT.controls.create_interval_button.setEnabled(False)
-
-def state_selected_digital():
-    globals.ROOT.controls.plot_signal_button.setEnabled(True)
-    globals.ROOT.controls.plot_with_peaks_cb.setEnabled(False)
-    globals.ROOT.controls.plot_peaks_histogram_button.setEnabled(False)
-    globals.ROOT.controls.create_interval_button.setEnabled(True)
-
-def state_peak_detection_done():
-    phase_info = globals.ROOT.viewer.widgets['PhaseView']
-    globals.ROOT.viewer.setCurrentIndex(phase_info[0])
-    phase_info[1].update_peaks()
-
-def state_explorer_enter():
-    explorer = globals.ROOT.viewer.widgets['Explorer']
-    globals.ROOT.viewer.setCurrentIndex(explorer[0])
-    pass
-
-GUI_STATES = {
-    'STARTED': state_started,
-    'INSPECT_RECORDINGS_FOLDER': state_inspect_recordings_folder,
-    'INSPECT_RECORDINGS_FOLDER_PHASE_SELECTED': state_inspect_recordings_folder_phase_selected,
-    'INSPECT_PHASE': state_inspect_phase,
-    'SELECTED_SIGNAL': state_selected_signal,
-    'SELECTED_DIGITAL': state_selected_digital,
-    'SELECTED_PEAK_TRAIN': state_selected_peak_train,
-    'UPDATE_PEAKS': state_update_peaks,
-    'PEAK_DETECTION_DONE': state_peak_detection_done,
-    'EXPLORER_ENTER': state_explorer_enter,
-}
-
-OLD_STATE = None
-CURRENT_STATE = None
-
-def switch_state(new_state: str):
-    global OLD_STATE
-    global CURRENT_STATE
-    if new_state in GUI_STATES:
-        OLD_STATE = CURRENT_STATE
-        CURRENT_STATE = new_state
-        GUI_STATES[CURRENT_STATE]()
 
 
 ###############################################################################
@@ -646,7 +517,7 @@ class FileTree(QTreeView):
                         ' MB', datetime.fromtimestamp(getctime(file))
                     .strftime('%Y-%m-%d %H:%M:%S'))
                 globals.ROOT.viewer.widgets['PhaseInfo'][1].set_h5_info(info_h5=info_h5)
-                switch_state('INSPECT_RECORDINGS_FOLDER_PHASE_SELECTED')
+                states.switch_state('INSPECT_RECORDINGS_FOLDER_PHASE_SELECTED')
 
         self.selectionChanged = file_selection_changed
 
@@ -685,7 +556,7 @@ class DigialView(QTreeWidget):
             globals.CURRENT_SELECTED_SIGNAL = ('digital', index)
             print(globals.CURRENT_PHASE.get_digital_intervals(int(index)))
 
-            switch_state('SELECTED_SIGNAL')
+            states.switch_state('SELECTED_SIGNAL')
 
 
 class RawDatasView(QTreeWidget):
@@ -702,7 +573,7 @@ class RawDatasView(QTreeWidget):
 
             globals.CURRENT_SELECTED_SIGNAL = ('raw_data', label)
 
-            switch_state('SELECTED_SIGNAL')
+            states.switch_state('SELECTED_SIGNAL')
 
 class PeakTrainsView(QTreeWidget):
     def __init__(self, *kargs, **kwargs):
@@ -716,7 +587,7 @@ class PeakTrainsView(QTreeWidget):
 
             globals.CURRENT_SELECTED_SIGNAL = ('peak_train', label)
 
-            switch_state('SELECTED_PEAK_TRAIN')
+            states.switch_state('SELECTED_PEAK_TRAIN')
 
 
 class PhaseView(QWidget):
@@ -884,6 +755,6 @@ if __name__ == "__main__":
     win.setWindowTitle("PyCode")
     globals.ROOT = win
     globals.ERROR_MSGBOX = QMessageBox(globals.ROOT)
-    switch_state('STARTED')
+    states.switch_state('STARTED')
     win.showMaximized()
     exit(app.exec())

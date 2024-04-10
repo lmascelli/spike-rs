@@ -3,6 +3,7 @@ mod h5recording;
 use h5recording::H5Recording;
 
 use hdf5_rs::types::{AttributeFillable, AttrOpener, File, Group, GroupOpener};
+use spike_rs::core::types::Phase;
 
 pub struct H5Content {
     recordings: Vec<H5Recording>,
@@ -44,6 +45,35 @@ impl H5Content {
             Err(format!("H5Content::get_recording: H5Content {} index {} out of bounds",
                         self.path, index))
         }
+    }
+
+    pub fn convert_phase(&self,
+                         recording_index: usize,
+                         raw_data_index: usize,
+                         digital_index: Option<usize>
+                         ) -> Result<Phase, String> {
+        let mut ret = Phase::default();
+        if self.recordings.len() >= recording_index {
+            return Err(format!("H5Content::convert_phase: recoding_index {} out of bounds",
+                               recording_index));
+        } else {
+            let recording = &self.recordings[recording_index];
+            let raw_data = recording.get_analog(raw_data_index)?;
+            for label in raw_data.get_labels() {
+                ret.raw_data.insert(label.clone(), raw_data.get_channel(&label)?);
+            }
+            if let Some(digital_index) = digital_index {
+                let digital = recording.get_analog(digital_index)?;
+                let digital_labels = digital.get_labels();
+                if digital_labels.len() != 1 {
+                    return Err(format!(r#"H5Content::convert_phase: digital stream {}
+                    has more than 1 channel"#, digital_index));
+                } else {
+                    ret.digitals.push(digital.get_channel(&digital_labels[0])?);
+                }
+            }
+        }
+        Ok(ret)
     }
 }
 
