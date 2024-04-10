@@ -1,8 +1,6 @@
 use crate::h5sys::*;
 use crate::utils::{str_to_cchar, get_group_names};
-use crate::types::{
-    group::{Group, GroupOpener},
-};
+use crate::types::group::{Group, GroupOpener};
 
 pub struct File {
     filename: String,

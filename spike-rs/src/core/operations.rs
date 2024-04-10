@@ -6,8 +6,7 @@ pub mod math {
         range.iter().for_each(|x| {
             sum += x;
         });
-        let ret = sum / (range.len() as f32);
-        ret
+        sum / (range.len() as f32)
     }
 
     pub fn stdev(range: &[f32]) -> f32 {
@@ -16,8 +15,7 @@ pub mod math {
         range.iter().for_each(|x| {
             sum += (x - _mean) * (x - _mean);
         });
-        let ret = (sum / (range.len() as f32 - 1.0f32)).sqrt();
-        ret
+        (sum / (range.len() as f32 - 1.0f32)).sqrt()
     }
 
     pub fn min(range: &[f32]) -> f32 {
@@ -27,7 +25,7 @@ pub mod math {
                 min = *value;
             }
         }
-        return min;
+        min
     }
     
     pub fn max(range: &[f32]) -> f32 {
@@ -37,7 +35,7 @@ pub mod math {
                 max = *value;
             }
         }
-        return max;
+        max
     }
 }
 
@@ -457,13 +455,13 @@ pub fn get_digital_intervals(digital: &[f32]) -> Vec<(usize, usize)> {
                 ret.push((start, i));
                 in_interval = false;
             }
-        } else {
-            if *value != 0f32 {
-                start = i;
-                in_interval = true;
-            }
+        } else if *value != 0f32 {
+            start = i;
+            in_interval = true;
         }
+
     }
+
     if in_interval {
         ret.push((start, digital.len()));
     }
@@ -507,7 +505,7 @@ pub fn subsample_range(peak_times: &[usize], starting_sample: usize, bin_size: u
             }
         }
     }
-    return ret;
+    ret
 }
 
 /// Check if a bin_size exactly divides an interval and suggest a near valid one if not.
@@ -537,5 +535,5 @@ pub fn check_valid_bin_size(interval: (usize, usize), bin_size: usize) -> usize 
     }
 
     // println!("bin_size: {}\ncurrent_increment:{}\nsign:{}", bin_size, current_increment, sign);
-    return bin_size + ( current_increment * sign ) as usize;
+    bin_size + ( current_increment * sign ) as usize
 }

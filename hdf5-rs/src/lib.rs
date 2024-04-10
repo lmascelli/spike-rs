@@ -13,7 +13,6 @@ mod test {
     fn open_file() {
         let file = crate::types::File::open(
             FILENAME,
-            None
         ).unwrap();
         println!("{file}");
     }
@@ -22,7 +21,6 @@ mod test {
     fn open_group() {
         let file = crate::types::File::open(
             FILENAME,
-            None
         ).unwrap();
         println!("{file}");
 
@@ -35,7 +33,6 @@ mod test {
     fn open_attribute() -> Result<(), String> {
         let file = File::open(
             FILENAME,
-            None
         ).unwrap();
         println!("{file}");
 
@@ -56,7 +53,6 @@ mod test {
     fn open_dataset() {
         let file = crate::types::File::open(
             FILENAME,
-            None
         ).unwrap();
         println!("{file}");
 
