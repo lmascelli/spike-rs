@@ -2,18 +2,24 @@ use hdf5_rs::types::{AttributeFillable, AttrOpener, Group, GroupOpener};
 #[path = "h5analog.rs"]
 mod h5analog;
 use h5analog::H5Analog;
+mod h5event;
+use h5event::H5Event;
+
+pub use h5analog::{CInfoChannel, info_channel_type};
 
 pub struct H5Recording {
     path: String,
     duration: i64, 
     _recording_group: Group,
     analogs: Vec<H5Analog>,
+    events: Vec<H5Event>,
 }
 
 impl H5Recording {
     pub fn open(group: Group) -> Result<Self, String> {
         let duration = group.open_attr("Duration")?;
         let mut analogs = vec![];
+        let mut events = vec![];
 
         if let Ok(group) = group.open_group("AnalogStream") {
             for analog in group.list_groups() {
@@ -23,11 +29,20 @@ impl H5Recording {
             }
         }
 
+        if let Ok(group) = group.open_group("EventStream") {
+            for event in group.list_groups() {
+                if event.starts_with("Stream_") {
+                    events.push(H5Event::open(group.open_group(&event)?)?);
+                }
+            }
+        }
+
         Ok(Self {
             path: group.get_path(),
             duration: i64::from_attribute(&duration)?,
             _recording_group: group,
             analogs,
+            events,
         })
     }
 
@@ -48,6 +63,15 @@ impl H5Recording {
             Ok(&self.analogs[index])
         } else {
             Err(format!("H5Recordig::get_analog: H5Recording {} index {} out of bounds",
+                        self.path, index))
+        }
+    }
+    
+    pub fn get_event(&self, index: usize) -> Result<&H5Event, String> {
+        if index < self.events.len() {
+            Ok(&self.events[index])
+        } else {
+            Err(format!("H5Recordig::get_event: H5Recording {} index {} out of bounds",
                         self.path, index))
         }
     }

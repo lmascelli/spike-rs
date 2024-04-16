@@ -10,9 +10,11 @@ def convert_mc_acquisition(source: Path,
                            wine_prefix: Optional[str] = None) -> bool:
     os.chdir(dest.parent)
     if wine_prefix is not None:
-        command = "WINEPREFIX=" + wine_prefix + " wine "+ mcdataconv_path + " -t hdf5 \"z:/" + source.absolute() + "\""
+        source_ = str(source.absolute())
+        command = f'WINEPREFIX={wine_prefix} wine {str(mcdataconv_path)} -t hdf5 "z:{source_}"'
     else:
-        command = mcdataconv_path + " -t hdf5 \"" + source.absolute() + "\""
+        command = f'{mcdataconv_path}  -t hdf5 "{source}"'
+
     subprocess.run(command, shell=True, capture_output=True, text=True)
 
 def convert_mc_h5_phase(source: Path, dest: Path) -> bool:
@@ -63,12 +65,9 @@ class PyPhase:
         raw_data_lenghts (Dict[str, int])   a map between the raw data labels and their data lenghts
         peak_train_lenghts (Dict[str, int]) a map between the peak train labels and their data lenghts
     """
-    def __init__(self, filepath: Path):
-        """
-        Load an HDF5 phase file and construct a PyPhase instance.
-        The private attribute `_valid` will be set to True if the load succeed, to False otherwise
-        """
-        self._phase = sp.load_phase(str(filepath.absolute()))
+
+    def __init__(self, phase: sp.Phase):
+        self._phase = phase
         if self._phase is not None:
             self.digitals_lengths = self._phase.digitals_lengths
             self.sampling_frequency = self._phase.sampling_frequency
@@ -78,6 +77,13 @@ class PyPhase:
             self._valid = True
         else:
             self._valid = False
+
+    def from_file(filepath: Path):
+        """
+        Load an HDF5 phase file and construct a PyPhase instance.
+        The private attribute `_valid` will be set to True if the load succeed, to False otherwise
+        """
+        return PyPhase(sp.load_phase(str(filepath.absolute())))
 
     def update(self):
         """

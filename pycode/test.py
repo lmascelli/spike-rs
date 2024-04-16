@@ -1,17 +1,19 @@
-from mc_explorer import MCExplorer
 import pycode as pc
+from mc_explorer import MCExplorer
+
 from pathlib import Path
-import matplotlib.pyplot as plt
-import numpy as np
 
-convert_filename = Path("/home/leonardo/Documents/unige/raw data/raw_test.h5")
+BASAL = 0
+DIGIAL = 1
+STIM = 2
 
-# TEST H5Content
-content = MCExplorer(convert_filename)
-print(content.list_recordings())
-print(content.list_analogs(0))
-print(content.list_analog_channels(0, 0))
-data = content.get_channel_data(0, 0, 'E-00155 83')
-
-plt.plot(data)
-plt.show()
+base_folder = Path("/home/leonardo/Documents/unige/raw data/12-04-2024/")
+batch_folder= "38936_DIV77/"  
+filename = "03_basal.h5"
+explorer = MCExplorer(base_folder.joinpath(batch_folder).joinpath(filename))
+print(explorer)
+convert = BASAL
+if convert == BASAL:
+    phase = explorer.convert_phase(0, 0, None, None)
+    # phase = explorer.convert_phase(0, 0, 1, None)
+    phase.save(base_folder.joinpath(batch_folder).joinpath('hdf5').joinpath(filename))

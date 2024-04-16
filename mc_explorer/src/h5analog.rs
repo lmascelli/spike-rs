@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 mod info_channel;
-use info_channel::{info_channel_type, CInfoChannel};
+pub use info_channel::{info_channel_type, CInfoChannel};
 
 #[derive(Default)]
 struct ChannelInfo {

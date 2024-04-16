@@ -1,3 +1,4 @@
+use crate::pyphase::PyPhase;
 use mc_explorer::H5Content;
 use pyo3::prelude::*;
 
@@ -20,6 +21,14 @@ impl PyMCExplorer {
         Self { content }
     }
 
+    pub fn __str__(&self) -> String {
+        if let Some(ref content) = self.content {
+            format!("{}", content)
+        } else {
+            "No content".to_string()
+        }
+    }
+
     pub fn list_recordings(&self) -> Vec<(usize, String)> {
         if let Some(ref content) = self.content {
             content.list_recordings()
@@ -31,9 +40,7 @@ impl PyMCExplorer {
     pub fn recording_info(&self, recording_index: usize) -> Option<String> {
         if let Some(ref content) = self.content {
             match content.get_recording(recording_index) {
-                Ok(recording) => {
-                    Some(format!("{}", recording))
-                },
+                Ok(recording) => Some(format!("{}", recording)),
                 Err(err) => {
                     eprintln!("{err}");
                     None
@@ -48,9 +55,7 @@ impl PyMCExplorer {
     pub fn list_analogs(&self, recording_index: usize) -> Option<Vec<(usize, String)>> {
         if let Some(ref content) = self.content {
             match content.get_recording(recording_index) {
-                Ok(recording) => {
-                    Some(recording.list_analogs())
-                },
+                Ok(recording) => Some(recording.list_analogs()),
                 Err(err) => {
                     eprintln!("{err}");
                     None
@@ -65,15 +70,11 @@ impl PyMCExplorer {
     pub fn analog_info(&self, recording_index: usize, analog_index: usize) -> Option<String> {
         if let Some(ref content) = self.content {
             match content.get_recording(recording_index) {
-                Ok(recording) => {
-                    match recording.get_analog(analog_index) {
-                        Ok(analog) => {
-                            Some(format!("{}", analog))
-                        },
-                        Err(err) => {
-                            eprintln!("{err}");
-                            None
-                        }
+                Ok(recording) => match recording.get_analog(analog_index) {
+                    Ok(analog) => Some(format!("{}", analog)),
+                    Err(err) => {
+                        eprintln!("{err}");
+                        None
                     }
                 },
                 Err(err) => {
@@ -87,19 +88,18 @@ impl PyMCExplorer {
         }
     }
 
-    pub fn list_analog_channels(&self, recording_index: usize, analog_index: usize
-                                ) -> Option<Vec<String>> {
+    pub fn list_analog_channels(
+        &self,
+        recording_index: usize,
+        analog_index: usize,
+    ) -> Option<Vec<String>> {
         if let Some(ref content) = self.content {
             match content.get_recording(recording_index) {
-                Ok(recording) => {
-                    match recording.get_analog(analog_index) {
-                        Ok(analog) => {
-                            Some(analog.get_labels())
-                        },
-                        Err(err) => {
-                            eprintln!("{err}");
-                            None
-                        }
+                Ok(recording) => match recording.get_analog(analog_index) {
+                    Ok(analog) => Some(analog.get_labels()),
+                    Err(err) => {
+                        eprintln!("{err}");
+                        None
                     }
                 },
                 Err(err) => {
@@ -112,31 +112,50 @@ impl PyMCExplorer {
         }
     }
 
-    pub fn get_channel_data(&self,
-                            recording_index: usize,
-                            analog_index: usize,
-                            channel_label: &str) -> Option<Vec<f32>> {
+    pub fn get_channel_data(
+        &self,
+        recording_index: usize,
+        analog_index: usize,
+        channel_label: &str,
+    ) -> Option<Vec<f32>> {
         if let Some(ref content) = self.content {
             match content.get_recording(recording_index) {
-                Ok(recording) => {
-                    match recording.get_analog(analog_index) {
-                        Ok(analog) => {
-                            match analog.get_channel(channel_label) {
-                                Ok(data) => Some(data.clone()),
-                                Err(err) => {
-                                    eprintln!("{err}");
-                                    None
-                        }
-                            }
-                        },
+                Ok(recording) => match recording.get_analog(analog_index) {
+                    Ok(analog) => match analog.get_channel(channel_label) {
+                        Ok(data) => Some(data.clone()),
                         Err(err) => {
                             eprintln!("{err}");
                             None
                         }
+                    },
+                    Err(err) => {
+                        eprintln!("{err}");
+                        None
                     }
                 },
                 Err(err) => {
                     eprintln!("{err}");
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn convert_phase(
+        &self,
+        recording_index: usize,
+        raw_data_index: usize,
+        digital_index: Option<usize>,
+        event_index: Option<usize>,
+    ) -> Option<PyPhase> {
+        if let Some(ref content) = self.content {
+            match content.convert_phase(recording_index, raw_data_index, digital_index, event_index)
+            {
+                Ok(phase) => Some(PyPhase::from(phase)),
+                Err(err) => {
+                    println!("{}", err);
                     None
                 }
             }

@@ -1,8 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
+use ::spike_rs::core::{operations, types::Phase};
+use pyo3::prelude::*;
 ///                                 PyPhase Class
 use std::collections::HashMap;
-use pyo3::prelude::*;
-use ::spike_rs::core::{operations, types::Phase};
 
 #[pyclass(name = "Phase")]
 pub struct PyPhase {
@@ -23,7 +23,7 @@ pub struct PyPhase {
 }
 
 impl PyPhase {
-    fn from(phase: Phase) -> Self {
+    pub fn from(phase: Phase) -> Self {
         let mut ret = PyPhase::new();
         ret.sampling_frequency = phase.sampling_frequency;
         ret.phase = phase;
@@ -34,7 +34,6 @@ impl PyPhase {
 
 #[pymethods]
 impl PyPhase {
-
     #[new]
     pub fn new() -> Self {
         PyPhase {
@@ -59,7 +58,7 @@ impl PyPhase {
             peak_train_lengths.insert(label.clone(), data.0.len());
         }
 
-        self.channel_labels =  self.phase.raw_data.keys().map(|x| x.clone()).collect();
+        self.channel_labels = self.phase.raw_data.keys().map(|x| x.clone()).collect();
         self.raw_data_lengths = raw_data_lengths;
         self.peak_train_lengths = peak_train_lengths;
         self.digitals_lengths = self.phase.digitals.iter().map(|x| x.len()).collect();
@@ -85,12 +84,11 @@ impl PyPhase {
         if self.phase.el_stim_intervals.len() == 0 {
             None
         } else {
-            Some( self.phase.el_stim_intervals.clone() )
+            Some(self.phase.el_stim_intervals.clone())
         }
     }
 
-    pub fn get_peaks_train(&self, label: &str) -> Option<(Vec<f32>,
-                                                          Vec<usize>)> {
+    pub fn get_peaks_train(&self, label: &str) -> Option<(Vec<f32>, Vec<usize>)> {
         if let Some(data) = self.phase.peaks_trains.get(label) {
             Some(data.clone())
         } else {
@@ -98,10 +96,14 @@ impl PyPhase {
         }
     }
 
-    pub fn compute_all_peak_trains(&mut self, peak_duration: f32,
-                                   refractary_time: f32, n_devs: f32) {
-        self.phase.compute_all_peak_trains(peak_duration, refractary_time,
-                                     n_devs);
+    pub fn compute_all_peak_trains(
+        &mut self,
+        peak_duration: f32,
+        refractary_time: f32,
+        n_devs: f32,
+    ) {
+        self.phase
+            .compute_all_peak_trains(peak_duration, refractary_time, n_devs);
         self.update();
     }
 
@@ -130,11 +132,16 @@ impl PyPhase {
         let mut ret = HashMap::new();
 
         for (label, (peaks_values, _peaks_times)) in &self.phase.peaks_trains {
-            ret.insert(label.clone(),
-                operations::get_peaks_bins(&peaks_values[..], n_bins)
-                    .unwrap_or((Vec::new(), 0f32, 0f32)));
+            ret.insert(
+                label.clone(),
+                operations::get_peaks_bins(&peaks_values[..], n_bins).unwrap_or((
+                    Vec::new(),
+                    0f32,
+                    0f32,
+                )),
+            );
         }
-        
+
         ret
     }
 
@@ -146,23 +153,33 @@ impl PyPhase {
         if index >= self.digitals_lengths.len() {
             None
         } else {
-            Some(operations::get_digital_intervals(&self.phase.digitals[index][..]))
+            Some(operations::get_digital_intervals(
+                &self.phase.digitals[index][..],
+            ))
         }
     }
 
-    pub fn get_peaks_in_consecutive_intervals(&self, intervals: Vec<(usize, usize)>) -> HashMap<String, (Vec<f32>, Vec<usize>)> {
+    pub fn get_peaks_in_consecutive_intervals(
+        &self,
+        intervals: Vec<(usize, usize)>,
+    ) -> HashMap<String, (Vec<f32>, Vec<usize>)> {
         self.phase.get_peaks_in_consecutive_intervals(&intervals)
     }
 
-    pub fn get_peaks_in_interval(&self, interval: (usize, usize)) -> HashMap::<String, (Vec<f32>, Vec<usize>)> {
+    pub fn get_peaks_in_interval(
+        &self,
+        interval: (usize, usize),
+    ) -> HashMap<String, (Vec<f32>, Vec<usize>)> {
         self.phase.get_peaks_in_interval(&interval)
     }
 
-    pub fn get_subsampled_pre_stim_post_from_intervals(&self,
-                                                       intervals: Vec<(usize, usize)>,
-                                                       bin_size: usize
-                        ) -> HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>  {
-        self.phase.get_subsampled_pre_stim_post_from_intervals(&intervals, bin_size)
+    pub fn get_subsampled_pre_stim_post_from_intervals(
+        &self,
+        intervals: Vec<(usize, usize)>,
+        bin_size: usize,
+    ) -> HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>> {
+        self.phase
+            .get_subsampled_pre_stim_post_from_intervals(&intervals, bin_size)
     }
 
     pub fn psth(&self, bin_size: usize, digital_index: usize) -> Option<Vec<Vec<usize>>> {
@@ -171,14 +188,13 @@ impl PyPhase {
             Err(_err) => None,
         }
     }
-
 }
 ////////////////////////////////////////////////////////////////////////////////
 ///                                 Global functions
 
 #[pyfunction]
 pub fn load_phase(filename: &str) -> Option<PyPhase> {
-    if let Ok(phase) = hdf5::io::load_phase(filename) {
+    if let Ok(phase) = mc_explorer::old::load_phase(filename) {
         Some(PyPhase::from(phase))
     } else {
         None
@@ -187,31 +203,31 @@ pub fn load_phase(filename: &str) -> Option<PyPhase> {
 
 #[pyfunction]
 pub fn save_phase(phase: &PyPhase, filename: &str) -> bool {
-    if let Ok(_) = hdf5::io::save_phase(&phase.phase, filename) {
+    if let Ok(_) = mc_explorer::old::save_phase(&phase.phase, filename) {
         true
     } else {
         false
     }
 }
 
-#[pyfunction]
-pub fn convert_mc_h5_file(source: &str, dest: &str) -> usize {
-    let phase_r;
-    {
-        phase_r = hdf5::converter::convert_mc_h5_file(source);
-    }
-    if let Ok(phase) = phase_r {
-        if let Ok(_) = hdf5::io::save_phase(&phase, dest) {
-            return 0usize;
-        } else {
-            return 1usize;
-        }
-    } else {
-        return 1usize;
-    }
-}
+// #[pyfunction]
+// pub fn convert_mc_h5_file(source: &str, dest: &str) -> usize {
+//     let phase_r;
+//     {
+//         phase_r = hdf5::converter::convert_mc_h5_file(source);
+//     }
+//     if let Ok(phase) = phase_r {
+//         if let Ok(_) = hdf5::io::save_phase(&phase, dest) {
+//             return 0usize;
+//         } else {
+//             return 1usize;
+//         }
+//     } else {
+//         return 1usize;
+//     }
+// }
 
 #[pyfunction]
 pub fn check_valid_bin_size(interval: (usize, usize), bin_size: usize) -> usize {
-   operations::check_valid_bin_size(interval, bin_size) 
+    operations::check_valid_bin_size(interval, bin_size)
 }

@@ -42,10 +42,10 @@ def open_recordings():
     states.switch_state('INSPECT_RECORDINGS_FOLDER')
 
 def open_phase():
-    if globals.globals.CURRENT_PHASE_PATH is not None:
-        globals.CURRENT_PHASE = pc.PyPhase(globals.globals.CURRENT_PHASE_PATH)
+    if globals.CURRENT_PHASE_PATH is not None:
+        globals.CURRENT_PHASE = pc.PyPhase.from_file(globals.CURRENT_PHASE_PATH)
         if globals.CURRENT_PHASE is None:
-            globals.ERROR_MSGBOX.setText(f"Failed to load {globals.globals.CURRENT_PHASE_PATH}")
+            globals.ERROR_MSGBOX.setText(f"Failed to load {globals.CURRENT_PHASE_PATH}")
             globals.ERROR_MSGBOX.exec()
         else:
             states.switch_state('INSPECT_PHASE')
@@ -510,8 +510,8 @@ class FileTree(QTreeView):
             if count > 0:
                 model_index = new_file.indexes()[0]
                 path = self.model.filePath(model_index)
-                globals.globals.CURRENT_PHASE_PATH = Path(path)
-                file = globals.globals.CURRENT_PHASE_PATH
+                globals.CURRENT_PHASE_PATH = Path(path)
+                file = globals.CURRENT_PHASE_PATH
                 info_h5 = self.InfoH5(
                     file.name, f'{"%.2f" % (getsize(file) / 1024 / 1024)}'
                         ' MB', datetime.fromtimestamp(getctime(file))

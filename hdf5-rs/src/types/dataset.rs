@@ -39,6 +39,7 @@ pub trait DatasetFillable<T> {
 
 pub trait DatasetOwner {
     fn get_dataset(&self, name: &str) -> Result<Dataset, String>;
+    fn list_datasets(&self) -> Vec<String>;
 }
 
 impl Dataset {
@@ -240,6 +241,134 @@ impl DatasetFillable<i32> for i32 {
             }
             DataTypeL::Signed64 => {
                 todo!()
+            }
+            DataTypeL::Unsigned64 => {
+                todo!()
+            }
+            _ => {
+                return Err(format!(
+                    "Dataset::from_dataset: cannot read i32 from dataset {}",
+                    dataset.get_path()
+                ));
+            }
+        };
+
+        Ok(ret)
+    }
+}
+
+impl DatasetFillable<i64> for i64 {
+    fn from_dataset_row(dataset: &Dataset, row: usize) -> Result<Vec<i64>, String> {
+        let mut ret = vec![];
+        match dataset
+            .get_datatype()
+            .ok_or(format!(
+                "Dataset::from_dataset_row: the dataset has no DataType associated {}",
+                dataset.get_path()
+            ))?
+            .get_dtype()
+        {
+            DataTypeL::Signed32 => {
+                todo!()
+            }
+            DataTypeL::Unsigned32 => {
+                todo!()
+            }
+            DataTypeL::Signed64 => {
+                if let Ok(dataspace) = dataset.get_dataspace() {
+                    let dims = dataspace.get_dims();
+
+                    // set subspace
+                    let memory_dataspace = dataspace.select_row(row)?;
+
+                    // create memory dataspace
+
+                    ret.resize(dims[1], 0);
+
+                    // read the data
+                    unsafe {
+                        H5Dread(
+                            dataset.get_did(),
+                            H5T_NATIVE_LLONG_g,
+                            memory_dataspace.get_did(),
+                            dataspace.get_did(),
+                            H5P_DEFAULT,
+                            ret.as_ptr() as _,
+                        )
+                    };
+
+                    // reset original space
+                    dataspace.reset_selection();
+                } else {
+                    return Err(format!(
+                        "Dataset::from_dataset_row: dataset {} has no associated dataspace",
+                        dataset.get_path()
+                    ));
+                }
+            }
+            DataTypeL::Unsigned64 => {
+                todo!()
+            }
+            _ => {
+                return Err(format!(
+                    "Dataset::from_dataset: cannot read i32 from dataset {}",
+                    dataset.get_path()
+                ));
+            }
+        };
+
+        Ok(ret)
+    }
+}
+
+impl DatasetFillable<u64> for u64 {
+    fn from_dataset_row(dataset: &Dataset, row: usize) -> Result<Vec<u64>, String> {
+        let mut ret = vec![];
+        match dataset
+            .get_datatype()
+            .ok_or(format!(
+                "Dataset::from_dataset_row: the dataset has no DataType associated {}",
+                dataset.get_path()
+            ))?
+            .get_dtype()
+        {
+            DataTypeL::Signed32 => {
+                todo!()
+            }
+            DataTypeL::Unsigned32 => {
+                todo!()
+            }
+            DataTypeL::Signed64 => {
+                if let Ok(dataspace) = dataset.get_dataspace() {
+                    let dims = dataspace.get_dims();
+
+                    // set subspace
+                    let memory_dataspace = dataspace.select_row(row)?;
+
+                    // create memory dataspace
+
+                    ret.resize(dims[1], 0);
+
+                    // read the data
+                    unsafe {
+                        H5Dread(
+                            dataset.get_did(),
+                            H5T_NATIVE_ULLONG_g,
+                            memory_dataspace.get_did(),
+                            dataspace.get_did(),
+                            H5P_DEFAULT,
+                            ret.as_ptr() as _,
+                        )
+                    };
+
+                    // reset original space
+                    dataspace.reset_selection();
+                } else {
+                    return Err(format!(
+                        "Dataset::from_dataset_row: dataset {} has no associated dataspace",
+                        dataset.get_path()
+                    ));
+                }
             }
             DataTypeL::Unsigned64 => {
                 todo!()

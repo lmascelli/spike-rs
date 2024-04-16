@@ -22,7 +22,7 @@ pub use sys::{
 
     H5Iget_name,
 
-    H5L_info2_t, H5Literate2,
+    H5L_info2_t, H5Lexists, H5Literate2,
 
     H5Pclose, H5Pcopy,
 

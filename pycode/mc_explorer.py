@@ -3,6 +3,8 @@ from typing import List, Optional, Tuple
 import pycode_rs as sp
 from pathlib import Path
 
+from pycode import PyPhase
+
 ################################################################################
 #                             MCExplorer
 ################################################################################
@@ -31,3 +33,18 @@ class MCExplorer:
                          analog_index: int,
                          channel_label: str) -> Optional[List[float]]:
         return self.explorer.get_channel_data(recording_index, analog_index, channel_label)
+
+    def convert_phase(self, recording_index: int,
+                      raw_data_index: int,
+                      digital_index: Optional[int],
+                      event_index: Optional[int]) -> Optional[PyPhase]:
+        return PyPhase(self.explorer.convert_phase(recording_index,
+                                                   raw_data_index,
+                                                   digital_index,
+                                                   event_index))
+
+    def __str__(self):
+        if self.explorer is not None:
+            return f"{self.explorer}"
+        else:
+            return "No content loaded"

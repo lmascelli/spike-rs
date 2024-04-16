@@ -1,6 +1,7 @@
 #[path = "h5recording.rs"]
 mod h5recording;
 use h5recording::H5Recording;
+pub use h5recording::{CInfoChannel, info_channel_type};
 
 use hdf5_rs::types::{AttributeFillable, AttrOpener, File, Group, GroupOpener};
 use spike_rs::core::types::Phase;
@@ -50,10 +51,11 @@ impl H5Content {
     pub fn convert_phase(&self,
                          recording_index: usize,
                          raw_data_index: usize,
-                         digital_index: Option<usize>
+                         digital_index: Option<usize>,
+                         event_index: Option<usize>,
                          ) -> Result<Phase, String> {
         let mut ret = Phase::default();
-        if self.recordings.len() >= recording_index {
+        if self.recordings.len() <= recording_index {
             return Err(format!("H5Content::convert_phase: recoding_index {} out of bounds",
                                recording_index));
         } else {
@@ -70,6 +72,12 @@ impl H5Content {
                     has more than 1 channel"#, digital_index));
                 } else {
                     ret.digitals.push(digital.get_channel(&digital_labels[0])?);
+                }
+            }
+            if let Some(event_index) = event_index {
+                let event = recording.get_event(event_index)?;
+                for intervals in event.samples.values() {
+                    ret.el_stim_intervals.push(intervals.to_vec());
                 }
             }
         }
