@@ -1,7 +1,7 @@
 #[path = "h5recording.rs"]
 mod h5recording;
 use h5recording::H5Recording;
-pub use h5recording::{CInfoChannel, info_channel_type};
+// pub use h5recording::{CInfoChannel, info_channel_type};
 
 use hdf5_rs::types::{AttributeFillable, AttrOpener, File, Group, GroupOpener};
 use spike_rs::core::types::Phase;
@@ -81,6 +81,7 @@ impl H5Content {
                 }
             }
         }
+        ret.sampling_frequency = 10000f32;
         Ok(ret)
     }
 }

@@ -5,7 +5,7 @@ use h5analog::H5Analog;
 mod h5event;
 use h5event::H5Event;
 
-pub use h5analog::{CInfoChannel, info_channel_type};
+// pub use h5analog::{CInfoChannel, info_channel_type};
 
 pub struct H5Recording {
     path: String,
@@ -86,6 +86,12 @@ impl std::fmt::Display for H5Recording {
         writeln!(f, "\n  ++++++++++++++++++++++++++++++")?;
         for analog in &self.analogs {
             writeln!(f, "    {analog}")?;
+        }
+        writeln!(f, "  ++++++++++++++++++++++++++++++\n")?;
+        writeln!(f)?;
+        writeln!(f, "\n  ++++++++++++++++++++++++++++++")?;
+        for event in &self.events {
+            writeln!(f, "    {event}")?;
         }
         writeln!(f, "  ++++++++++++++++++++++++++++++\n")?;
         Ok(())

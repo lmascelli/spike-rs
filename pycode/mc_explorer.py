@@ -25,6 +25,9 @@ class MCExplorer:
     def analog_info(self, recording_index: int, analog_index: int) -> Optional[str]:
         return self.explorer.analog_info(recording_index, analog_index)
 
+    def analog_dims(self, recording_index: int, analog_index: int) -> Optional[List[int]]:
+        return self.explorer.analog_dims(recording_index, analog_index)
+
     def list_analog_channels(self, recording_index: int, analog_index: int
                              ) -> Optional[List[str]]:
         return self.explorer.list_analog_channels(recording_index, analog_index)

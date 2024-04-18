@@ -58,6 +58,15 @@ impl H5Analog {
         })
     }
 
+    pub fn get_dims(&self) -> Result<Vec<usize>, String> {
+        Ok(self
+            .analog_group
+            .get_dataset("ChannelData")?
+            .get_dataspace()?
+            .get_dims()
+            .to_vec())
+    }
+
     pub fn get_path(&self) -> String {
         self.path.clone()
     }

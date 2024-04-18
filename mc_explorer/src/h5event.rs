@@ -5,7 +5,7 @@ use hdf5_rs::types::{
 };
 
 pub struct H5Event {
-    group: Group,
+    _event_group: Group,
     path: String,
     label: String,
     pub samples: HashMap<String, Vec<u64>>,
@@ -26,7 +26,7 @@ impl H5Event {
         }
 
         Ok(Self {
-            group,
+            _event_group: group,
             path,
             label: String::from_attribute(&label)?,
             samples,
@@ -35,5 +35,17 @@ impl H5Event {
 
     pub fn get_label(&self) -> String {
         self.label.clone()
+    }
+}
+
+impl std::fmt::Display for H5Event {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        writeln!(f, "H5Event")?;
+        writeln!(f, "Path: {}", self.path)?;
+        writeln!(f, "Label: {}", self.label)?;
+        for (label, events) in &self.samples {
+            writeln!(f, "  {} -> n°events: {}", label, events.len())?;
+        }
+        Ok(())
     }
 }

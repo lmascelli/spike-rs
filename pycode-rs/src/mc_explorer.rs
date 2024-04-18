@@ -88,6 +88,33 @@ impl PyMCExplorer {
         }
     }
 
+    pub fn analog_dims(&self, recording_index: usize, analog_index: usize) -> Option<Vec<usize>> {
+        if let Some(ref content) = self.content {
+            match content.get_recording(recording_index) {
+                Ok(recording) => match recording.get_analog(analog_index) {
+                    Ok(analog) => match analog.get_dims() {
+                        Ok(dims) => Some(dims),
+                        Err(err) => {
+                            println!("{err}");
+                            None
+                        }
+                    },
+                    Err(err) => {
+                        eprintln!("{err}");
+                        None
+                    }
+                },
+                Err(err) => {
+                    eprintln!("{err}");
+                    None
+                }
+            }
+        } else {
+            eprintln!("MCExplorer: no content set");
+            None
+        }
+    }
+
     pub fn list_analog_channels(
         &self,
         recording_index: usize,
