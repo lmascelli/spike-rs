@@ -1,14 +1,15 @@
-from typing import Dict, List, Optional, Tuple
-from pathlib import Path
-import pycode_rs as sp
 import os
 import subprocess
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import pycode_rs as sp
 from scipy.io import savemat
 
-def convert_mc_acquisition(source: Path,
-                           dest: Path,
-                           mcdataconv_path: Path,
-                           wine_prefix: Optional[str] = None) -> bool:
+
+def convert_mc_acquisition(
+    source: Path, dest: Path, mcdataconv_path: Path, wine_prefix: Optional[str] = None
+) -> bool:
     os.chdir(dest.parent)
     if wine_prefix is not None:
         source_ = str(source.absolute())
@@ -17,6 +18,7 @@ def convert_mc_acquisition(source: Path,
         command = f'{mcdataconv_path}  -t hdf5 "{source}"'
 
     subprocess.run(command, shell=True, capture_output=True, text=True)
+
 
 def convert_mc_h5_phase(source: Path, dest: Path) -> bool:
     """
@@ -36,6 +38,7 @@ def convert_mc_h5_phase(source: Path, dest: Path) -> bool:
     else:
         return False
 
+
 def check_valid_bin_size(interval: Tuple[int, int], bin_size: int) -> int:
     """
     Checks if a bin_size can divide the inteval without too much residue and,
@@ -54,6 +57,7 @@ def check_valid_bin_size(interval: Tuple[int, int], bin_size: int) -> int:
 ################################################################################
 #                                PyPhase
 ################################################################################
+
 
 class PyPhase:
     """
@@ -151,7 +155,9 @@ class PyPhase:
         """
         return self._phase.get_el_stim_intervals()
 
-    def get_peaks_bins(self, n_bins: int = 50) -> Dict[str, Tuple[List[int], float, float]]:
+    def get_peaks_bins(
+        self, n_bins: int = 50
+    ) -> Dict[str, Tuple[List[int], float, float]]:
         """
         Build an histogram of the peaks magnitude distribution for each channel
 
@@ -164,7 +170,9 @@ class PyPhase:
         """
         return self._phase.get_peaks_bins(n_bins)
 
-    def peak_detection(self, peak_duration: float, refractary_time: float, n_devs: float):
+    def peak_detection(
+        self, peak_duration: float, refractary_time: float, n_devs: float
+    ):
         """
         Computes the peak detection on this phase.
 
@@ -176,8 +184,9 @@ class PyPhase:
         if self._valid:
             self._phase.compute_all_peak_trains(peak_duration, refractary_time, n_devs)
 
-    def get_peaks_in_consecutive_intervals(self, intervals: List[Tuple[int, int]]
-                                           ) -> Dict[str, List[List[int]]]:
+    def get_peaks_in_consecutive_intervals(
+        self, intervals: List[Tuple[int, int]]
+    ) -> Dict[str, List[List[int]]]:
         """
         Extract the peaks in the queried intervals
 
@@ -213,12 +222,12 @@ class PyPhase:
         """
         self._phase.clear_peaks_over_threshold(threshold)
 
-    def get_subsampled_pre_stim_post_from_intervals(self, intervals: List[Tuple[int, int]],
-                                                    bin_size: int
-                                                    ) -> Dict[str, List[Tuple[List[int], List[int], List[int]]]]:
+    def get_subsampled_pre_stim_post_from_intervals(
+        self, intervals: List[Tuple[int, int]], bin_size: int
+    ) -> Dict[str, List[Tuple[List[int], List[int], List[int]]]]:
         """
         Divide the peak trains in a series of (pre, stimulation, post) around the stimulation `intervals`
-        provided as argument and subsample all the channels in bin of size `bin_size` containing the peak 
+        provided as argument and subsample all the channels in bin of size `bin_size` containing the peak
         count in that bin
 
         Args:
@@ -229,32 +238,38 @@ class PyPhase:
             a map between each channel and the list of peak counts in the bin of pre, stimulation and
             post intervals (Dict[str, List[Tuple[List[int], List[int], List[int]]]])
         """
-        return self._phase.get_subsampled_pre_stim_post_from_intervals(intervals, int(bin_size))
-    
+        return self._phase.get_subsampled_pre_stim_post_from_intervals(
+            intervals, int(bin_size)
+        )
+
     def psth(self, bin_size: int, digital_index: int) -> Optional[List[List[int]]]:
         return self._phase.psth(int(bin_size), digital_index)
 
-    def save_as_mat(self, matrice: str, cond: str, div: str, i: str, t: str, dest: Path):
+    def save_as_mat(
+        self, matrice: str, cond: str, div: str, i: str, t: str, dest: Path
+    ):
         try:
-            os.mkdir(dest.joinpath('raw_data'))
+            os.mkdir(dest.joinpath("raw_data"))
         except:
             pass
         for label in self.channel_labels:
-            filename = f"{dest}/raw_data/{matrice}_{cond}_DIV_{div}_{t}_00{i}_{label[-2:]}.mat"
+            filename = (
+                f"{dest}/raw_data/{matrice}_{cond}_DIV_{div}_{t}_00{i}_{label[-2:]}.mat"
+            )
             data = {
-                    "data": self.get_raw_data(label),
-                    }
+                "data": self.get_raw_data(label),
+            }
             savemat(filename, data)
 
         for i in range(len(self.digitals_lengths)):
             try:
-                os.mkdir(dest.joinpath('digital_{i}'))
+                os.mkdir(dest.joinpath("digital_{i}"))
             except:
                 pass
             filename = f"{dest}/digital_{i}.mat"
             data = {
-                    "data": self.get_digital(i),
-                    }
+                "data": self.get_digital(i),
+            }
             savemat(filename, data)
 
 

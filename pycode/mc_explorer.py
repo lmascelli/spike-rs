@@ -1,6 +1,6 @@
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
-import pycode_rs as sp
+import pycode_rs as sp  # type: ignore
 from pathlib import Path
 
 from pycode import PyPhase
@@ -9,8 +9,32 @@ from pycode import PyPhase
 #                             MCExplorer
 ################################################################################
 
+class ConvertingValues:
+    def __init__(self,
+                 matrice: str,
+                 cond: str,
+                 div: str,
+                 i: str,
+                 t: str):
+        self.matrice = matrice
+        self.cond = cond
+        self.div = div
+        self.i = i
+        self.t = t
+
+    def __str__(self) -> str:
+        return f"""{{
+        matrice: {self.matrice},
+        cond: {self.cond},
+        div: {self.div},
+        i: {self.i},
+        t: {self.t},
+}}"""
+
+
 class MCExplorer:
     def __init__(self, filename: Path):
+        self.filename = filename.absolute()
         self.explorer = sp.MCExplorer(str(filename.absolute()))
 
     def list_recordings(self) -> Optional[List[Tuple[int, str]]]:
@@ -45,6 +69,29 @@ class MCExplorer:
                                                    raw_data_index,
                                                    digital_index,
                                                    event_index))
+
+    def convert_with_rule(self,
+                          rule: Callable[[str], ConvertingValues],
+                          dest: str):
+        converting_values = rule(self.filename.name)
+        cond = "basal"
+        digital_index = None
+        event_index = None
+        if converting_values.cond.upper().find('STIMEL') >= 0:
+            cond = "stimel"
+            event_index = 0
+        elif converting_values.cond.upper().find('STIM') >= 0:
+            cond = "digital"
+            digital_index = 1
+
+        phase = self.convert_phase(0, 0, digital_index, event_index)
+
+        phase.save_as_mat(converting_values.matrice,
+                         converting_values.cond,
+                         converting_values.div,
+                         converting_values.i,
+                         converting_values.t,
+                         dest)
 
     def __str__(self):
         if self.explorer is not None:
