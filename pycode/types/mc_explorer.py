@@ -1,9 +1,9 @@
 from typing import Callable, List, Optional, Tuple
 
-import pycode_rs as sp  # type: ignore
+from .. import pycode_rs as sp  # type: ignore
 from pathlib import Path
 
-from pycode import PyPhase
+from ..types.pyphase import PyPhase
 
 ################################################################################
 #                             MCExplorer

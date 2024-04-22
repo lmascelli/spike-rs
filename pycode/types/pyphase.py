@@ -1,58 +1,7 @@
-import os
-import subprocess
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+from pathlib import Path
 
-import pycode_rs as sp
-from scipy.io import savemat
-
-
-def convert_mc_acquisition(
-    source: Path, dest: Path, mcdataconv_path: Path, wine_prefix: Optional[str] = None
-) -> bool:
-    os.chdir(dest.parent)
-    if wine_prefix is not None:
-        source_ = str(source.absolute())
-        command = f'WINEPREFIX={wine_prefix} wine {str(mcdataconv_path)} -t hdf5 "z:{source_}"'
-    else:
-        command = f'{mcdataconv_path}  -t hdf5 "{source}"'
-
-    subprocess.run(command, shell=True, capture_output=True, text=True)
-
-
-def convert_mc_h5_phase(source: Path, dest: Path) -> bool:
-    """
-    Convert an HDF5 file obtained from MultiChannel Data Manager into a PyClass
-    readable file
-
-    Args:
-        source (Path): path of the source file
-        dest (Path): path of the destination file
-
-    Returns:
-        None
-    """
-    result = sp.convert_mc_h5_file(str(source.absolute()), str(dest.absolute()))
-    if result == 0:
-        return True
-    else:
-        return False
-
-
-def check_valid_bin_size(interval: Tuple[int, int], bin_size: int) -> int:
-    """
-    Checks if a bin_size can divide the inteval without too much residue and,
-    if not, provide a near bin_size that does it
-
-    Args:
-        interval (Tuple[int, int])
-        bin_size (int)
-
-    Returns:
-        a valid bin size (int)
-    """
-    return sp.check_valid_bin_size(interval, bin_size)
-
+from .. import pycode_rs as sp
 
 ################################################################################
 #                                PyPhase
@@ -244,41 +193,3 @@ class PyPhase:
 
     def psth(self, bin_size: int, digital_index: int) -> Optional[List[List[int]]]:
         return self._phase.psth(int(bin_size), digital_index)
-
-    def save_as_mat(
-        self, matrice: str, cond: str, div: str, i: str, t: str, dest: Path
-    ):
-        try:
-            os.mkdir(dest.joinpath("raw_data"))
-        except:
-            pass
-        for label in self.channel_labels:
-            filename = (
-                f"{dest}/raw_data/{matrice}_{cond}_DIV_{div}_{t}_00{i}_{label[-2:]}.mat"
-            )
-            data = {
-                "data": self.get_raw_data(label),
-            }
-            savemat(filename, data)
-
-        for i in range(len(self.digitals_lengths)):
-            try:
-                os.mkdir(dest.joinpath("digital_{i}"))
-            except:
-                pass
-            filename = f"{dest}/digital_{i}.mat"
-            data = {
-                "data": self.get_digital(i),
-            }
-            savemat(filename, data)
-
-
-class H5Content:
-    def __init__(self, filename: Path):
-        self._content = sp.H5Content(str(filename.absolute()))
-
-    def __str__(self):
-        return f"{self._content}"
-
-    def test(self):
-        self._content.test()

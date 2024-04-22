@@ -1,4 +1,4 @@
-from mc_explorer import ConvertingValues  # type: ignore
+from ..types.mc_explorer import ConvertingValues  # type: ignore
 
 def rule1(name: str) -> ConvertingValues:
     """
