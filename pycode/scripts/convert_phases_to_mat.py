@@ -55,6 +55,17 @@ filesystem after conversion:
                 }
 """
 
+def _mkdir(path: Path) -> Optional[Path]:
+    try:
+        mkdir(path)
+        return path
+    except Exception as e:
+        if path.exists():
+            return path
+        else:
+            print(f"Error creating folder {path}: {e}")
+            return None
+
 
 def convert_recording_folder_to_mat(
     source: Path,
@@ -65,10 +76,70 @@ def convert_recording_folder_to_mat(
         dest = source
 
     for file in listdir(source):
-        converting_values = converting_rule(file)
-        if converting_values is not None:
+        if file.endswith(".h5"):
+            converting_values = converting_rule(file)
             file = source.joinpath(file)
-        else:
-            print(
-                f"convert_recording_folder_to_mat: failed to parse the converting values from file: {file}"
-            )
+            phase = PyPhase.from_file(file.absolute())
+
+            if converting_values is not None and phase is not None:
+
+                matrice = converting_values.matrice
+                cond = converting_values.cond
+                div = converting_values.div
+                t = converting_values.t
+                i = converting_values.i
+
+                base_folder = _mkdir(dest.joinpath(matrice))
+                if base_folder is not None:
+                    raw_files_root = _mkdir(base_folder.joinpath("Mat_files"))
+                    raw_files_folder = _mkdir(raw_files_root.joinpath(f"{matrice}_{cond}_DIV{div}_{t}_{i}"))
+                    _mkdir(raw_files_folder)
+
+                    # save all raw electrodes data
+                    for label in phase.channel_labels:
+                        raw_file_name = raw_files_folder.joinpath(f"{matrice}_{cond}_DIV{div}_{t}_{i}_{label}.mat")
+                        data = phase.get_raw_data(label)
+                        if data is not None:
+                            savemat(raw_file_name, {
+                                "data": data
+                                })
+
+                    peaks_files_root = _mkdir(base_folder.joinpath(f"{matrice}_PeakDetection"))
+                    peaks_files_folder = _mkdir(peaks_files_root.joinpath(f"ptrain_{matrice}_{cond}_DIV{div}_{t}_{i}"))
+                    _mkdir(peaks_files_folder)
+
+                    for label in phase.channel_labels:
+                        peak_file_name = peaks_files_folder.joinpath(f"ptrain_{matrice}_{cond}_DIV{div}_{t}_{i}_{label}.mat")
+                        peak_train = phase.get_peaks_train(label)
+                        if peak_train is not None:
+                            savemat(peak_file_name, {
+                                "peak_train": peak_train
+                                })
+
+                    digital_files_root = _mkdir(base_folder.joinpath(f"{matrice}_Digital"))
+                    _mkdir(digital_files_root)
+
+                    for i, _ in enumerate(phase.digitals_lengths):
+                        digital_file_name = digital_files_root.joinpath(f"{matrice}_{t}_{i}.mat")
+                        savemat(digital_file_name, {
+                            "digital": phase.get_digital(i)
+                            })
+
+                    events = phase.get_el_stim_intervals()
+                    if events is not None:
+                        stim_files_root = _mkdir(base_folder.joinpath(f"{matrice}_IstStim"))
+                        stim_file_name = stim_files_root.joinpath(f"{matrice}_{t}_{i}.mat")
+                        _mkdir(stim_files_root)
+                        savemat(stim_file_name, {
+                            "events": events
+                            })
+
+
+
+                        
+
+
+            else:
+                print(
+                    f"convert_recording_folder_to_mat: failed to parse the converting values from file: {file}"
+                )
