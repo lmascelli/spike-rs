@@ -1,8 +1,12 @@
 # change the following variables with the correct directories for your system
+# for example:
+#
+# $env:HDF5_LIB_DIR = "D:/msys64/mingw64/lib";
+# $env:HDF5_INCLUDE_DIR = "D:/msys64/mingw64/include";
+
+$env:PYCODE_PATH = $PSScriptRoot
 
 if ($IsWindows) {
-    $env:HDF5_LIB_DIR = "D:/msys64/mingw64/lib";
-    $env:HDF5_INCLUDE_DIR = "D:/msys64/mingw64/include";
     $Script:pycode_input = "pycode_rs.dll"
     $Script:pycode_output = "pycode_rs.pyd"
 } elseif ($IsLinux) {
@@ -23,14 +27,14 @@ switch ($args[0]) {
   "doc" {
     cargo doc --open
   }
-  "test" {
-    cargo test -- --test $args[1] --nocapture --test-threads=1
-  }
   "release" {
     cargo build --release;
     copy -Force ./target/release/$Script:pycode_input ./pycode/$Script:pycode_output
   }
+  "test" {
+    python ./test.py
+  }
   default {
-    python ./pycode/main.py
+    python ./gui.py
   }
 }

@@ -1,10 +1,9 @@
+from pathlib import Path
 from typing import Callable, List, Optional, Tuple
 
 from .. import pycode_rs as sp  # type: ignore
-from pathlib import Path
-
-from ..types.pyphase import PyPhase
 from ..scripts.converting_rules import ConvertingValues
+from ..types.pyphase import PyPhase
 
 ################################################################################
 #                             MCExplorer

@@ -1,7 +1,9 @@
 import os
 import subprocess
+from pathlib import Path
+from typing import Optional, Tuple
 
-import pycode_rs as sp
+import pycode.pycode_rs as sp
 
 
 def convert_mc_acquisition(

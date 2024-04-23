@@ -2,8 +2,8 @@ from PySide6.QtWidgets import (QGroupBox, QHBoxLayout, QLabel, QListWidget,
                                QListWidgetItem, QPushButton, QVBoxLayout,
                                QWidget)
 
-from mc_explorer import MCExplorer
-import globals
+from ..types.mc_explorer import MCExplorer
+from . import globals
 
 
 class Explorer(QWidget):

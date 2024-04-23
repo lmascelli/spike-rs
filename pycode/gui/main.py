@@ -19,12 +19,12 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog,
                                QTreeWidget, QTreeWidgetItem, QVBoxLayout,
                                QWidget)
 
-import pycode as pc
+from . import globals
+from . import states
 
-import globals
-import states
+from .explorer import Explorer
 
-from explorer import Explorer
+from ..types.mc_explorer import MCExplorer
 
 
 ###############################################################################
@@ -750,7 +750,7 @@ class Main(QMainWindow):
 #
 ###############################################################################
 
-if __name__ == "__main__":
+def main():
     app = QApplication(argv)
     win = Main()
     win.setWindowTitle("PyCode")
