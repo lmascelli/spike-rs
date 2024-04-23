@@ -4,33 +4,11 @@ from .. import pycode_rs as sp  # type: ignore
 from pathlib import Path
 
 from ..types.pyphase import PyPhase
+from ..scripts.converting_rules import ConvertingValues
 
 ################################################################################
 #                             MCExplorer
 ################################################################################
-
-class ConvertingValues:
-    def __init__(self,
-                 matrice: str,
-                 cond: str,
-                 div: str,
-                 i: str,
-                 t: str):
-        self.matrice = matrice
-        self.cond = cond
-        self.div = div
-        self.i = i
-        self.t = t
-
-    def __str__(self) -> str:
-        return f"""{{
-        matrice: {self.matrice},
-        cond: {self.cond},
-        div: {self.div},
-        i: {self.i},
-        t: {self.t},
-}}"""
-
 
 class MCExplorer:
     def __init__(self, filename: Path):
@@ -71,7 +49,7 @@ class MCExplorer:
                                                    event_index))
 
     def convert_with_rule(self,
-                          rule: Callable[[str], ConvertingValues],
+                          rule: Callable[[str], Optional[ConvertingValues]],
                           dest: str):
         converting_values = rule(self.filename.name)
         cond = "basal"

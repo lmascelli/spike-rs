@@ -1,6 +1,25 @@
-from ..types.mc_explorer import ConvertingValues  # type: ignore
+from typing import Optional
 
-def rule1(name: str) -> ConvertingValues:
+
+class ConvertingValues:
+    def __init__(self, matrice: str, cond: str, div: str, i: str, t: str):
+        self.matrice = matrice
+        self.cond = cond
+        self.div = div
+        self.i = i
+        self.t = t
+
+    def __str__(self) -> str:
+        return f"""{{
+        matrice: {self.matrice},
+        cond: {self.cond},
+        div: {self.div},
+        i: {self.i},
+        t: {self.t},
+}}"""
+
+
+def rule1(name: str) -> Optional[ConvertingValues]:
     """
     Example: 01_basal
     {
@@ -11,11 +30,15 @@ def rule1(name: str) -> ConvertingValues:
         t: basal,
     }
     """
-    i = name[:name.find('_')]
-    t = name[name.find('_')+1:-3]
-    return ConvertingValues("00000", "XXX", "00", i, t)
+    try:
+        i = name[: name.find("_")]
+        t = name[name.find("_") + 1 : -3]
+        return ConvertingValues("00000", "XXX", "00", i, t)
+    except:
+        return None
 
-def rule2(name: str) -> ConvertingValues:
+
+def rule2(name: str) -> Optional[ConvertingValues]:
     """
     Example: 2024-04-11T14-31-1938940_100E_DIV77_nbasal_0001_E-00155.h5
     {
@@ -26,14 +49,17 @@ def rule2(name: str) -> ConvertingValues:
         t: nbasal,
     }
     """
-    first_ = name.find('_') + 1
-    matrice = name[ first_-6: first_-1]
-    second_ = name.find('_', first_) + 1
-    cond = name[first_:second_-1]
-    third_ = name.find('_', second_) + 1
-    div = name[name.find('DIV')+3: third_ - 1]
-    fourth_ = name.find('_', third_) + 1
-    t = name[third_:fourth_-1]
-    fifth_ = name.find('_', fourth_) + 1
-    i = str(int(name[fourth_:fifth_-1]))
-    return ConvertingValues(matrice, cond, div, f"000{i}", t)
+    try:
+        first_ = name.find("_") + 1
+        matrice = name[first_ - 6 : first_ - 1]
+        second_ = name.find("_", first_) + 1
+        cond = name[first_ : second_ - 1]
+        third_ = name.find("_", second_) + 1
+        div = name[name.find("DIV") + 3 : third_ - 1]
+        fourth_ = name.find("_", third_) + 1
+        t = name[third_ : fourth_ - 1]
+        fifth_ = name.find("_", fourth_) + 1
+        i = str(int(name[fourth_ : fifth_ - 1]))
+        return ConvertingValues(matrice, cond, div, f"000{i}", t)
+    except:
+        return None

@@ -1,10 +1,11 @@
 from os import listdir, mkdir
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from scipy.io import savemat
 
-from pycode.types.pyphase import PyPhase
+from ..types.pyphase import PyPhase
+from ..scripts.converting_rules import ConvertingValues
 
 """
 Utility script for converting a folder containing the phase files of a recording
@@ -55,10 +56,19 @@ filesystem after conversion:
 """
 
 
-def convert_recording_folder_to_mat(source: Path, dest: Optional[Path]):
+def convert_recording_folder_to_mat(
+    source: Path,
+    dest: Optional[Path],
+    converting_rule: Callable[[str], Optional[ConvertingValues]],
+):
     if dest is None:
         dest = source
 
     for file in listdir(source):
-        phase = PyPhase.from_file(source.joinpath(file))
-        print(phase)
+        converting_values = converting_rule(file)
+        if converting_values is not None:
+            file = source.joinpath(file)
+        else:
+            print(
+                f"convert_recording_folder_to_mat: failed to parse the converting values from file: {file}"
+            )
