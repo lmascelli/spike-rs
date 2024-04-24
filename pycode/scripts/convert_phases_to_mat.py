@@ -119,10 +119,10 @@ def convert_recording_folder_to_mat(
                     digital_files_root = _mkdir(base_folder.joinpath(f"{matrice}_Digital"))
                     _mkdir(digital_files_root)
 
-                    for i, _ in enumerate(phase.digitals_lengths):
+                    for index, _ in enumerate(phase.digitals_lengths):
                         digital_file_name = digital_files_root.joinpath(f"{matrice}_{t}_{i}.mat")
                         savemat(digital_file_name, {
-                            "digital": phase.get_digital(i)
+                            "digital": phase.get_digital(index)
                             })
 
                     events = phase.get_el_stim_intervals()

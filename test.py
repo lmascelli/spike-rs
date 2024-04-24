@@ -1,4 +1,4 @@
-from os import getenv
+from os import getenv, listdir
 import sys
 
 sys.path.insert(0, getenv("PYCODE_PATH"))
@@ -9,8 +9,7 @@ from typing import Optional
 from pycode.scripts.convert_phases_to_mat import convert_recording_folder_to_mat
 from pycode.scripts.converting_rules import ConvertingValues
 
-base_path = Path("/home/leonardo/Documents/unige/raw data/12-04-2024/giorg/")
-# test_path = Path("/home/leonardo/Documents/unige/raw data/12-04-2024/38940_DIV77/test/")
+base_path = Path("/home/leonardo/Documents/unige/raw data/12-04-2024/38940_DIV77/hdf5/")
 
 def rule(name: str) -> Optional[ConvertingValues]:
     """
@@ -38,8 +37,14 @@ def rule(name: str) -> Optional[ConvertingValues]:
 
     return ConvertingValues(matrice, cond, div, i, t)
 
-convert_recording_folder_to_mat(base_path, None, rule)
 
+# convert_recording_folder_to_mat(base_path, None, rule)
+
+for file in listdir(base_path):
+    if file.endswith(".h5"):
+        print(file)
+        print(rule(file))
+        print('--------------------------------------------------------------------------------')
 
 """
 import pycode as pc
