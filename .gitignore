@@ -5,6 +5,7 @@
 **/__pycache__/
 Cargo.lock
 tags
+temp
 test.h5
 test.py
 .nvim.lua
