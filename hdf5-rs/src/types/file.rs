@@ -1,6 +1,11 @@
 use crate::h5sys::*;
-use crate::utils::{str_to_cchar, get_group_names};
 use crate::types::group::{Group, GroupOpener};
+use crate::utils::{get_group_names, str_to_cchar};
+
+pub enum FileOpenAccess {
+    ReadOnly,
+    ReadWrite,
+}
 
 pub struct File {
     filename: String,
@@ -8,11 +13,14 @@ pub struct File {
 }
 
 impl File {
-    pub fn open(filename: &str) -> Result<Self, String> {
-        let fid = unsafe { 
+    pub fn open(filename: &str, access: FileOpenAccess) -> Result<Self, String> {
+        let fid = unsafe {
             H5Fopen(
                 str_to_cchar!(filename),
-                H5F_ACC_RDONLY,
+                match access {
+                    FileOpenAccess::ReadOnly => H5F_ACC_RDONLY,
+                    FileOpenAccess::ReadWrite => H5F_ACC_RDWR,
+                },
                 H5P_DEFAULT,
             )
         };
@@ -30,10 +38,13 @@ impl File {
 impl Drop for File {
     fn drop(&mut self) {
         if self.fid > 0 {
-            #[cfg(debug_assertions)] {
+            #[cfg(debug_assertions)]
+            {
                 println!("Closing file: {}", self.filename);
             }
-            unsafe { H5Fclose(self.fid); }
+            unsafe {
+                H5Fclose(self.fid);
+            }
         }
     }
 }

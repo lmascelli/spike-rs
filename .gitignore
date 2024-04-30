@@ -6,5 +6,6 @@
 Cargo.lock
 tags
 test.h5
+test.py
 .nvim.lua
 /.nvim

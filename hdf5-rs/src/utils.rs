@@ -9,6 +9,8 @@ use crate::h5sys::*;
 ////////////////////////////////////////////////////////////////////////////////
 //                                 CONVERSION
 
+
+///  Convert a &str to a C null terminated string
 #[macro_export]
 macro_rules! str_to_cchar {
     ($s:expr) => {
@@ -17,6 +19,8 @@ macro_rules! str_to_cchar {
     }
 }
 
+
+/// Convert a C null terminated string to a rust String
 #[macro_export]
 macro_rules! cchar_to_string {
     ($s:expr) => (

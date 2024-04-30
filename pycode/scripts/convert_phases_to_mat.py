@@ -133,13 +133,7 @@ def convert_recording_folder_to_mat(
                         savemat(stim_file_name, {
                             "events": events
                             })
-
-
-
-                        
-
-
             else:
                 print(
-                    f"convert_recording_folder_to_mat: failed to parse the converting values from file: {file}"
-                )
+                        f"convert_recording_folder_to_mat: failed to parse the converting values from file: {file}"
+                        )
