@@ -183,7 +183,8 @@ impl PyPhase {
     }
 
     pub fn psth(&self, bin_size: usize, digital_index: usize) -> Option<Vec<Vec<usize>>> {
-        match self.phase.psth(bin_size, digital_index) {
+        let psth = spike_rs::core::operations::psth(&self.phase, bin_size, digital_index);
+        match psth {
             Ok(ret) => Some(ret),
             Err(_err) => None,
         }
@@ -210,24 +211,14 @@ pub fn save_phase(phase: &PyPhase, filename: &str) -> bool {
     }
 }
 
-// #[pyfunction]
-// pub fn convert_mc_h5_file(source: &str, dest: &str) -> usize {
-//     let phase_r;
-//     {
-//         phase_r = hdf5::converter::convert_mc_h5_file(source);
-//     }
-//     if let Ok(phase) = phase_r {
-//         if let Ok(_) = hdf5::io::save_phase(&phase, dest) {
-//             return 0usize;
-//         } else {
-//             return 1usize;
-//         }
-//     } else {
-//         return 1usize;
-//     }
-// }
-
 #[pyfunction]
-pub fn check_valid_bin_size(interval: (usize, usize), bin_size: usize) -> usize {
-    operations::check_valid_bin_size(interval, bin_size)
+pub fn psth(phase: &PyPhase, bin_size: usize, digital_index: usize
+            ) -> Option<Vec<Vec<usize>>> {
+    match spike_rs::core::operations::psth(&phase.phase, bin_size, digital_index) {
+        Ok(ret) => Some(ret),
+        Err(err) => {
+            println!("{err}");
+            None
+        }
+    }
 }

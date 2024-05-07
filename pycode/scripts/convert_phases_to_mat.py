@@ -75,8 +75,16 @@ def convert_recording_folder_to_mat(
     if dest is None:
         dest = source
 
+    num_files = 0
+    cur_file = 0
     for file in listdir(source):
         if file.endswith(".h5"):
+            num_files = num_files + 1
+
+    for file in listdir(source):
+        if file.endswith(".h5"):
+            cur_file = cur_file + 1
+            print(f"Converting ({cur_file}/{num_files}): {file}")
             converting_values = converting_rule(file)
             file = source.joinpath(file)
             phase = PyPhase.from_file(file.absolute())

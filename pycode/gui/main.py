@@ -23,8 +23,9 @@ from . import globals
 from . import states
 
 from .explorer import Explorer
-
 from ..types.mc_explorer import MCExplorer
+from ..types.pyphase import PyPhase
+from ..utils import convert_mc_h5_phase
 
 
 ###############################################################################
@@ -44,7 +45,7 @@ def open_recordings():
 
 def open_phase():
     if globals.CURRENT_PHASE_PATH is not None:
-        globals.CURRENT_PHASE = pc.PyPhase.from_file(globals.CURRENT_PHASE_PATH)
+        globals.CURRENT_PHASE = PyPhase.from_file(globals.CURRENT_PHASE_PATH)
         if globals.CURRENT_PHASE is None:
             globals.ERROR_MSGBOX.setText(f"Failed to load {globals.CURRENT_PHASE_PATH}")
             globals.ERROR_MSGBOX.exec()
@@ -398,7 +399,7 @@ class ConvertFromMultichannelH5Dialog(QDialog):
         try:
             source = Path(self.source_label.text())
             dest = Path(self.dest_label.text())
-            if pc.convert_mc_h5_phase(source, dest):
+            if convert_mc_h5_phase(source, dest):
                 return
             else:
                 globals.ERROR_MSGBOX.exec()
