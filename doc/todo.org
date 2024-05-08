@@ -1,4 +1,0 @@
-* PyCode Gui
-** mc hdf5 conversion
-  - store index of selected recording, raw data and digital
-   

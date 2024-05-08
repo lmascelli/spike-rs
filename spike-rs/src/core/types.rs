@@ -2,12 +2,6 @@ use crate::core::operations::{
     compute_threshold, spike_detection, subsample_range, get_digital_intervals
 };
 use std::collections::HashMap;
-use std::fmt::{self, Debug, Formatter};
-
-pub struct Mea {
-    pub name: String,
-    pub active_electrodes: Vec<String>,
-}
 
 #[derive(Default)]
 pub struct Phase {
@@ -236,10 +230,60 @@ impl Phase {
         }
         ret
     }
+
+    pub fn psth(&self, bin_size: usize,
+                       digital_index: usize) -> Result<Vec<Vec<usize>>, String> {
+        
+        if digital_index >= self.digitals.len() {
+            return Err("Phase.psth: digital_index out of bounds of digitals Vec".to_string());
+        }
+        let stim_intervals = get_digital_intervals(&self.digitals[digital_index][..]);
+        let channel_histos = self.get_subsampled_pre_stim_post_from_intervals(
+            &stim_intervals, bin_size);
+    
+        let mut n_intervals = 0;
+        let mut max_pre = 0;
+        let mut max_stim = 0;
+        let mut max_post = 0;
+    
+        for intervals in channel_histos.values() {
+            n_intervals = intervals.len();
+            for (pre, stim, post) in intervals {
+                if pre.len() > max_pre {
+                    max_pre = pre.len();
+                }
+                if stim.len() > max_stim {
+                    max_stim = stim.len();
+                }
+                if post.len() > max_post {
+                    max_post = post.len();
+                }
+            }
+        }
+    
+        let mut ret = vec![];
+        ret.resize(n_intervals, vec![0;max_pre+max_stim+max_post]);
+        for (i, (_, intervals)) in channel_histos.iter().enumerate() {
+            for (pre, stim, post) in intervals {
+    
+                for (j, val) in pre.iter().enumerate() {
+                    ret[i][j] += val;
+                }
+                for (j, val) in stim.iter().enumerate() {
+                    ret[i][j+max_pre] += val;
+                }
+                for (j, val) in post.iter().enumerate() {
+                    ret[i][j+max_pre+max_stim] += val;
+                }
+            }
+        }
+        Ok(ret)
+    }
+
 }
 
-impl Debug for Phase {
-    fn fmt(&self, formatter: &mut Formatter) -> Result<(), fmt::Error> {
+impl std::fmt::Display for Phase {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         writeln!(formatter, "{{")?;
         writeln!(formatter, "Sampling frequency: {}", self.sampling_frequency)?;
         writeln!(formatter, "Digitals:")?;

@@ -1,6 +1,7 @@
-////////////////////////////////////////////////////////////////////////////////
 use ::spike_rs::core::{operations, types::Phase};
 use pyo3::prelude::*;
+
+////////////////////////////////////////////////////////////////////////////////
 ///                                 PyPhase Class
 use std::collections::HashMap;
 
@@ -183,7 +184,7 @@ impl PyPhase {
     }
 
     pub fn psth(&self, bin_size: usize, digital_index: usize) -> Option<Vec<Vec<usize>>> {
-        let psth = spike_rs::core::operations::psth(&self.phase, bin_size, digital_index);
+        let psth = self.phase.psth(bin_size, digital_index);
         match psth {
             Ok(ret) => Some(ret),
             Err(_err) => None,
@@ -208,17 +209,5 @@ pub fn save_phase(phase: &PyPhase, filename: &str) -> bool {
         true
     } else {
         false
-    }
-}
-
-#[pyfunction]
-pub fn psth(phase: &PyPhase, bin_size: usize, digital_index: usize
-            ) -> Option<Vec<Vec<usize>>> {
-    match spike_rs::core::operations::psth(&phase.phase, bin_size, digital_index) {
-        Ok(ret) => Some(ret),
-        Err(err) => {
-            println!("{err}");
-            None
-        }
     }
 }

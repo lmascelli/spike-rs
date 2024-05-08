@@ -1,5 +1,4 @@
 use std::result::Result;
-use crate::core::types::Phase;
 
 pub mod math {
     pub fn mean(range: &[f32]) -> f32 {
@@ -39,7 +38,7 @@ pub mod math {
         max
     }
 
-    pub fn exp_fit(x: &[f32], y: &[f32]) -> (f32, f32) {
+    pub fn exp_fit(_x: &[f32], _y: &[f32]) -> (f32, f32) {
         todo!()
     }
 }
@@ -347,53 +346,4 @@ pub fn subsample_range(peak_times: &[usize],
         }
     }
     ret
-}
-
-pub fn psth(phase: &Phase, bin_size: usize,
-                   digital_index: usize) -> Result<Vec<Vec<usize>>, String> {
-    
-    if digital_index >= phase.digitals.len() {
-        return Err("Phase.psth: digital_index out of bounds of digitals Vec".to_string());
-    }
-    let stim_intervals = get_digital_intervals(&phase.digitals[digital_index][..]);
-    let channel_histos = phase.get_subsampled_pre_stim_post_from_intervals(
-        &stim_intervals, bin_size);
-
-    let mut n_intervals = 0;
-    let mut max_pre = 0;
-    let mut max_stim = 0;
-    let mut max_post = 0;
-
-    for intervals in channel_histos.values() {
-        n_intervals = intervals.len();
-        for (pre, stim, post) in intervals {
-            if pre.len() > max_pre {
-                max_pre = pre.len();
-            }
-            if stim.len() > max_stim {
-                max_stim = stim.len();
-            }
-            if post.len() > max_post {
-                max_post = post.len();
-            }
-        }
-    }
-
-    let mut ret = vec![];
-    ret.resize(n_intervals, vec![0;max_pre+max_stim+max_post]);
-    for (i, (_, intervals)) in channel_histos.iter().enumerate() {
-        for (pre, stim, post) in intervals {
-
-            for (j, val) in pre.iter().enumerate() {
-                ret[i][j] += val;
-            }
-            for (j, val) in stim.iter().enumerate() {
-                ret[i][j+max_pre] += val;
-            }
-            for (j, val) in post.iter().enumerate() {
-                ret[i][j+max_pre+max_stim] += val;
-            }
-        }
-    }
-    Ok(ret)
 }
