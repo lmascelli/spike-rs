@@ -11,36 +11,37 @@ struct Phase {
 }
 
 impl Phase {
-    fn new() -> Phase
+    fn new() -> Phase;
 
     fn compute_peak_train(&self,
             label: &str,
             peak_duration: f32,
             refractory_time: f32,
-            n_devs: f32) -> Option<()> // TODO
+            n_devs: f32) -> Option<()>; // TODO
+
     fn compute_all_peak_trains(&mut self,
             peak_duration: f32,
             refractory_time: f32,
             n_devs: f32,
-            ) -> Option<()>
+            ) -> Option<()>;
 
-    fn clear_peaks_over_threshold(&mut self, threshold: f32)
+    fn clear_peaks_over_threshold(&mut self, threshold: f32);
 
     fn get_peaks_in_interval(&self,
             interval: &(usize, usize)
-            ) -> HashMap<String, (Vec<f32>, Vec<usize>)>
+            ) -> HashMap<String, (Vec<f32>, Vec<usize>)>;
 
     fn get_peaks_in_consecutive_intervals(&self,
             intervals: &[(usize, usize)]
-            ) -> {String: (Vec<f32>, Vec<usize>)}
+            ) -> HashMap<String, (Vec<f32>, Vec<usize>)>;
 
     fn get_subsampled_pre_stim_post_from_intervals(&self,
             intervals: &[(usize, usize)],
             bin_size: usize
-            ) -> HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>
+            ) -> HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>;
 
     fn psth(&self, bin_size: usize, digital_index: usize
-           ) -> Result<Vec<Vec<usize>>, String>
+           ) -> Result<Vec<Vec<usize>>, String>;
 }
 ```
 
