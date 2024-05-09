@@ -70,7 +70,7 @@ class MCExplorer:
                          converting_values.t,
                          dest)
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.explorer is not None:
             return f"{self.explorer}"
         else:

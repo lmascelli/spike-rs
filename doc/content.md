@@ -70,9 +70,76 @@ class PyPhase:
         ...
 ```
 
+### MCExplorer
+
+```python
+class MCExplorer:
+
+    # fields
+    filename: str
+    explorer: sp.MCExplorer
+
+    # methods
+
+    def __init__(self, filename: Path):
+        ...
+
+    def list_recordings(self) -> Optional[List[Tuple[int, str]]]:
+        ...
+
+    def recording_info(self, recording_index: int) -> Optional[str]:
+        ...
+
+    def list_analogs(self, recording_index: int) -> Optional[List[Tuple[int, str]]]:
+        ...
+
+    def analog_info(self, recording_index: int, analog_index: int) -> Optional[str]:
+        ...
+
+    def analog_dims(self, recording_index: int, analog_index: int) -> Optional[List[int]]:
+        ...
+
+    def list_analog_channels(self, recording_index: int, analog_index: int
+                             ) -> Optional[List[str]]:
+        ...
+
+    def get_channel_data(self, recording_index: int,
+                         analog_index: int,
+                         channel_label: str) -> Optional[List[float]]:
+        ...
+
+    def convert_phase(self, recording_index: int,
+                      raw_data_index: int,
+                      digital_index: Optional[int],
+                      event_index: Optional[int]) -> Optional[PyPhase]:
+        ...
+
+    def convert_with_rule(self,
+                          rule: Callable[[str], Optional[ConvertingValues]],
+                          dest: str):
+        ...
+
+
+    def __str__(self) -> str:
+        ...
+```
+
 ## Operations
 
 ## Utils
+
+```python
+
+def convert_mc_acquisition(
+    source: Path,
+    mcdataconv_path: Path,
+    wine_prefix: Optional[str] = None
+    ) -> bool:
+    ...
+
+def convert_mc_h5_phase(source: Path, dest: Path) -> bool:
+    ...
+```
 
 ---
 
