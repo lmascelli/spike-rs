@@ -6,6 +6,16 @@
 
 ```python
 class PyPhase:
+
+    # fields
+    sampling_frequency: float
+    channel_labels: List[str]
+    digitals_lengths: List[int]
+    raw_data_lengths: Dict[str, int]
+    peak_train_lengths: Dict[str, int]
+    _valid: bool
+
+    # methods
     def __init__(self, phase: sp.Phase):
         ...
 
