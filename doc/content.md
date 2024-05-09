@@ -1,3 +1,71 @@
+# Pycode
+
+## Types
+
+### PyPhase
+
+```python
+class PyPhase:
+    def __init__(self, phase: sp.Phase):
+        ...
+
+    def from_file(filepath: Path) -> PyPhase:
+        ...
+
+    def save(self, filepath: Path):
+        ...
+
+    def update(self):
+        ...
+
+    def get_digital(self, index: int) -> Optional[List[floatl]]:
+        ...
+
+    def get_raw_data(self, label: str) -> Optional[List[float]]:
+        ...
+
+    def get_peaks_train(self, label: str) -> Optional[List[int]]:
+        ...
+
+    def get_el_stim_intervals(self) -> Optional[List[List[int]]]:
+        ...
+
+    def get_peaks_bins(
+        self, n_bins: int = 50
+    ) -> Dict[str, Tuple[List[int], float, float]]:
+        ...
+        
+    def peak_detection(
+            self, peak_duration: float, refractary_time: float, n_devs: float
+        ):
+        ...
+
+    def get_peaks_in_consecutive_intervals(
+        self, intervals: List[Tuple[int, int]]
+    ) -> Dict[str, List[List[int]]]:
+        ...
+
+    def get_digital_intervals(self, index) -> List[Tuple[int, int]]:
+        ...
+
+    def clear_peaks_over_threshold(self, threshold: float):
+        ...
+
+    def get_subsampled_pre_stim_post_from_intervals(
+        self, intervals: List[Tuple[int, int]], bin_size: int
+    ) -> Dict[str, List[Tuple[List[int], List[int], List[int]]]]:
+        ...
+
+    def psth(self, bin_size: int, digital_index: int) -> Optional[List[List[int]]]:
+        ...
+```
+
+## Operations
+
+## Utils
+
+---
+
 # Spike-rs
 ## Core
 ### Types
@@ -79,6 +147,8 @@ fn max(range: &[f32]) -> f32;
 
 fn exp_fit(x: &[f32], y: &[f32]) -> (f32, f32); // TODO
 ```
+
+---
 
 # Pycode-rs
 ## PyPhase
@@ -183,9 +253,4 @@ impl PyMCExplorer {
         event_index: Option<usize>,
     ) -> Option<PyPhase>;
 }
-```
-
-# Pycode
-
-```python
 ```
