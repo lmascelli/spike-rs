@@ -13,7 +13,7 @@ impl PList {
     pub fn create(class: i64) -> Result<Self, Error> {
         let pid = unsafe { H5Pcreate(class) };
         if pid <= 0 {
-            Err(Error::new(ErrorType::PListCreate, None))
+            Err(Error::plist_create())
         } else {
             Ok(Self { class, pid })
         }

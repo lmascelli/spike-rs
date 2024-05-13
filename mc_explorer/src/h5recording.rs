@@ -1,11 +1,10 @@
 use hdf5_rs::types::{AttributeFillable, AttrOpener, Group, GroupOpener};
+use hdf5_rs::error::{Error, ErrorType};
 #[path = "h5analog.rs"]
 mod h5analog;
 use h5analog::H5Analog;
 mod h5event;
 use h5event::H5Event;
-
-// pub use h5analog::{CInfoChannel, info_channel_type};
 
 pub struct H5Recording {
     path: String,
@@ -16,7 +15,7 @@ pub struct H5Recording {
 }
 
 impl H5Recording {
-    pub fn open(group: Group) -> Result<Self, String> {
+    pub fn open(group: Group) -> Result<Self, Error> {
         let duration = group.open_attr("Duration")?;
         let mut analogs = vec![];
         let mut events = vec![];

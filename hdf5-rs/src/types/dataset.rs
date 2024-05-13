@@ -1,5 +1,6 @@
 use crate::h5sys::*;
 use crate::types::{DataSpace, DataSpaceOwner, DataType, DataTypeL, DataTypeOwner};
+use crate::error::{Error, ErrorType};
 use crate::{cchar_to_string, str_to_cchar};
 use std::any::type_name;
 
@@ -11,7 +12,7 @@ pub struct Dataset {
 }
 
 pub trait DatasetFillable<T> {
-    fn from_dataset(_dataset: &Dataset) -> Result<Vec<T>, String> {
+    fn from_dataset(_dataset: &Dataset) -> Result<Vec<T>, Error> {
         Err(format!(
             "Dataset::from_dataset: cannot retrieve the whole dataset from type {}",
             type_name::<T>()
@@ -38,7 +39,7 @@ pub trait DatasetFillable<T> {
 }
 
 pub trait DatasetOwner {
-    fn get_dataset(&self, name: &str) -> Result<Dataset, String>;
+    fn get_dataset(&self, name: &str) -> Result<Dataset, Error>;
     fn list_datasets(&self) -> Vec<String>;
 }
 
@@ -71,7 +72,7 @@ impl Dataset {
     }
 
     #[allow(unused_unsafe)]
-    pub fn open(parent: i64, name: &str) -> Result<Self, String> {
+    pub fn open(parent: i64, name: &str) -> Result<Self, Error> {
         let did;
         let path;
         let dataspace;
@@ -79,7 +80,7 @@ impl Dataset {
         unsafe {
             did = H5Dopen2(parent, str_to_cchar!(name), H5P_DEFAULT);
             if did <= 0 {
-                return Err(format!("Failed to open the dataspace {}", name));
+                return Err(Error::new(ErrorType::DataSpaceOpenFail, Some(format!("Failed to open the dataspace {}", name))));
             }
 
             let path_len = H5Iget_name(did, null_mut(), 0) as usize;
@@ -166,13 +167,11 @@ impl Drop for Dataset {
 }
 
 impl DataSpaceOwner for Dataset {
-    fn get_space(&self) -> Result<DataSpace, String> {
+    fn get_space(&self) -> Result<DataSpace, Error> {
         let did = unsafe { H5Dget_space(self.did) };
         if did <= 0 {
-            Err(format!(
-                "Dataset::get_space: Failed to retrieve the DataSpace for {} dataset",
-                self.path
-            ))
+            Err(Error::new(ErrorType::DataSpaceGetSpaceFail, Some(
+                        format!("Dataset::get_space: Failed to retrieve the DataSpace for {} dataset", self.path))))
         } else {
             DataSpace::parse(did)
         }
@@ -180,13 +179,11 @@ impl DataSpaceOwner for Dataset {
 }
 
 impl DataTypeOwner for Dataset {
-    fn get_type(&self) -> Result<DataType, String> {
+    fn get_type(&self) -> Result<DataType, Error> {
         let did = unsafe { H5Dget_type(self.did) };
         if did <= 0 {
-            Err(format!(
-                "Dataset::get_space: Failed to retrieve the DataType for {} dataset",
-                self.path
-            ))
+            Err(Error::new(ErrorType::DataTypeGetTypeFail, Some(
+                        format!("Dataset::get_space: Failed to retrieve the DataType for {} dataset", self.path))))
         } else {
             Ok(DataType::parse(did))
         }
@@ -194,7 +191,7 @@ impl DataTypeOwner for Dataset {
 }
 
 impl DatasetFillable<i32> for i32 {
-    fn from_dataset_row(dataset: &Dataset, row: usize) -> Result<Vec<i32>, String> {
+    fn from_dataset_row(dataset: &Dataset, row: usize) -> Result<Vec<i32>, Error> {
         let mut ret = vec![];
         match dataset
             .get_datatype()
@@ -230,9 +227,9 @@ impl DatasetFillable<i32> for i32 {
                     // reset original space
                     dataspace.reset_selection();
                 } else {
-                    return Err(format!(
+                    return Err(Error::new(ErrorType::DataSetHasNoDataSpace, Some(format!(
                         "Dataset::from_dataset_row: dataset {} has no associated dataspace",
-                        dataset.get_path()
+                        dataset.get_path()))
                     ));
                 }
             }
@@ -246,10 +243,10 @@ impl DatasetFillable<i32> for i32 {
                 todo!()
             }
             _ => {
-                return Err(format!(
+                return Err(Error::new(ErrorType::DataSetUnvalidType, Some(format!(
                     "Dataset::from_dataset: cannot read i32 from dataset {}",
-                    dataset.get_path()
-                ));
+                    dataset.get_path())
+                )));
             }
         };
 

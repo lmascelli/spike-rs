@@ -1,4 +1,5 @@
 use crate::h5sys::*;
+use crate::error::{Error, ErrorType};
 
 #[derive(Clone, Copy)]
 pub enum DataTypeL {
@@ -187,5 +188,5 @@ impl std::fmt::Display for DataType {
 }
 
 pub trait DataTypeOwner {
-    fn get_type(&self) -> Result<DataType, String>;
+    fn get_type(&self) -> Result<DataType, Error>;
 }

@@ -22,7 +22,7 @@
 //!
 //! fn open_file(filename: &str) -> Result<(), Error> {
 //!     let file = File::open(filename, FileOpenAccess::ReadOnly)?;
-//!     let group = file.open_group("group_name").unwrap();
+//!     let group = file.open_group("group_name")?;
 //!     let dataset = group.get_dataset("dataset_name").unwrap();
 //!
 //!     // print information about the objects

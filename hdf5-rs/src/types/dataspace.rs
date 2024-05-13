@@ -1,4 +1,5 @@
 use crate::h5sys::*;
+use crate::error::{Error, ErrorType};
 
 pub enum DataSpaceType {
     Null,
@@ -29,16 +30,14 @@ impl DataSpace {
         }
     }
 
-    pub fn parse(dataspace_id: i64) -> Result<Self, String> {
+    pub fn parse(dataspace_id: i64) -> Result<Self, Error> {
         let n_dims;
         let mut dims = vec![];
         let space_type;
         unsafe {
             n_dims = H5Sget_simple_extent_ndims(dataspace_id);
             if n_dims < 0 {
-                return Err(
-                "DataSpace::parse: failed to retrieve the number of dimensions of the dataspace"
-                        .to_string());
+                return Err(Error::new(ErrorType::DataSpaceGetDimensionsFail, None));
             }
             dims.resize(n_dims as usize, 0usize);
             space_type = if n_dims == 0 {
@@ -64,15 +63,15 @@ impl DataSpace {
         &self.dims[..]
     }
 
-    pub fn select_slab(&self, start: &[u64], offset: &[u64]) -> Result<DataSpace, String> {
+    pub fn select_slab(&self, start: &[u64], offset: &[u64]) -> Result<DataSpace, Error> {
         if start.len() != self.dims.len() || start.len() != offset.len() {
-            Err(format!(
+            Err(Error::new(ErrorType::DataSpaceSelectSlabFail, Some(format!(
                 r#"DataSpace::select_slab: invalid selection from {:?} with offset {:?}
             have different rank than dataspace with dimension {}"#,
                 start,
                 offset,
                 self.dims.len()
-            ))
+            ))))
         } else {
             let mut valid = true;
             for dim in 0..start.len() {
@@ -101,20 +100,20 @@ impl DataSpace {
                     ))?)
                 }
             } else {
-                Err(format!(
+                Err(Error::new(ErrorType::DataSpaceSelectSlabOutOfBounds, Some(format!(
                     r#"DataSpace::select_slab: slab starting from {:?} with offset {:?}
                 is out of bounds of dataspace with dimension {:?}"#,
                     start, offset, self.dims
-                ))
+                ))))
             }
         }
     }
 
-    pub fn select_row(&self, row: usize) -> Result<DataSpace, String> {
+    pub fn select_row(&self, row: usize) -> Result<DataSpace, Error> {
         if self.dims.len() != 2 {
-            Err(
-                r#"DataSpace::select_row: select_row is valid only for bidimensional dataspaces"#
-                    .to_string(),
+            Err(Error::new(ErrorType::DataSpaceSelectRowNotBidimensional,
+                Some(r#"DataSpace::select_row: select_row is valid only for bidimensional dataspaces"#
+                    .to_string())),
             )
         } else {
             let start = [row as u64, 0];
@@ -164,5 +163,5 @@ impl std::fmt::Display for DataSpace {
 }
 
 pub trait DataSpaceOwner {
-    fn get_space(&self) -> Result<DataSpace, String>;
+    fn get_space(&self) -> Result<DataSpace, Error>;
 }

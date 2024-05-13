@@ -1,6 +1,7 @@
 use crate::h5sys::*;
 use crate::types::{Attr, AttrOpener, Dataset, DatasetOwner};
 use crate::utils::{get_group_names, str_to_cchar};
+use crate::error::{Error, ErrorType};
 
 pub struct Group {
     path: String,
@@ -8,22 +9,22 @@ pub struct Group {
 }
 
 impl Group {
-    pub fn open(parent: i64, name: &str) -> Result<Self, String> {
+    pub fn open(parent: i64, name: &str) -> Result<Self, Error> {
         let g_exists = unsafe { H5Lexists(parent, str_to_cchar!(name), H5P_DEFAULT) };
 
         match g_exists.cmp(&0i32) {
             std::cmp::Ordering::Equal => {
-                return Err(format!("Group::open: group {} does not exists", name));
-            }
+                return Err(Error::group_doesnt_exists(name));
+            },
             std::cmp::Ordering::Less => {
-                return Err(format!("Group::open: failed to check link {}", name));
-            }
+                return Err(Error::group_open(name));
+            },
             _ => (),
         }
 
         let gid = unsafe { H5Gopen2(parent, str_to_cchar!(name), H5P_DEFAULT) };
         if gid <= 0 {
-            Err(format!("Group::open: failed to opening group: {}", name))
+            Err(Error::group_open(name))
         } else {
             let path_len = unsafe { H5Iget_name(gid, null_mut(), 0) } as usize;
             let buffer = vec![0usize; path_len + 1];
@@ -46,7 +47,7 @@ impl Group {
 }
 
 pub trait GroupOpener {
-    fn open_group(&self, name: &str) -> Result<Group, String>;
+    fn open_group(&self, name: &str) -> Result<Group, Error>;
     fn list_groups(&self) -> Vec<String>;
 }
 
@@ -72,13 +73,13 @@ impl std::fmt::Display for Group {
 }
 
 impl AttrOpener for Group {
-    fn open_attr(&self, name: &str) -> Result<Attr, String> {
+    fn open_attr(&self, name: &str) -> Result<Attr, Error> {
         Attr::open(self.get_gid(), name)
     }
 }
 
 impl DatasetOwner for Group {
-    fn get_dataset(&self, name: &str) -> Result<Dataset, String> {
+    fn get_dataset(&self, name: &str) -> Result<Dataset, Error> {
         Dataset::open(self.gid, name)
     }
     fn list_datasets(&self) -> Vec<String> {
@@ -87,12 +88,8 @@ impl DatasetOwner for Group {
 }
 
 impl GroupOpener for Group {
-    fn open_group(&self, name: &str) -> Result<Group, String> {
-        if let Ok(group) = Group::open(self.get_gid(), name) {
-            Ok(group)
-        } else {
-            Err(format!("Failed opening group {}", name))
-        }
+    fn open_group(&self, name: &str) -> Result<Group, Error> {
+        Group::open(self.get_gid(), name)
     }
 
     fn list_groups(&self) -> Vec<String> {

@@ -32,7 +32,7 @@ impl File {
                 fid,
             })
         } else {
-            Err(Error::new(ErrorType::FileOpen, Some(filename.to_string())))
+            Err(Error::file_open(filename))
         }
     }
 
@@ -65,12 +65,8 @@ impl std::fmt::Display for File {
 }
 
 impl GroupOpener for File {
-    fn open_group(&self, name: &str) -> Result<Group, String> {
-        if let Ok(group) = Group::open(self.get_fid(), name) {
-            Ok(group)
-        } else {
-            Err(format!("Failed opening group {}", name))
-        }
+    fn open_group(&self, name: &str) -> Result<Group, Error> {
+        Group::open(self.get_fid(), name) 
     }
 
     fn list_groups(&self) -> Vec<String> {

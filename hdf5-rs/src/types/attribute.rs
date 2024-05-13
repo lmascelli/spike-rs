@@ -1,6 +1,7 @@
 use crate::h5sys::*;
 use crate::utils::*;
 use crate::types::{DataSpace, DataSpaceOwner, DataType, DataTypeL, DataTypeOwner};
+use crate::error::{Error, ErrorType};
 
 pub struct Attr {
     name: String,
@@ -9,21 +10,22 @@ pub struct Attr {
 }
 
 pub trait AttributeFillable<T> {
-    fn from_attribute(attribute: &Attr) -> Result<T, String>;
+    fn from_attribute(attribute: &Attr) -> Result<T, Error>;
 }
 
 impl Attr {
-    pub fn open(group: i64, name: &str) -> Result<Self, String> {
+    pub fn open(group: i64, name: &str) -> Result<Self, Error> {
         let aid;
         let atype_id;
         unsafe {
             aid = H5Aopen(group, str_to_cchar!(name), H5P_DEFAULT);
             if aid <=0 {
-                return Err(format!("Failed to open attribute {}", name));
+                return Err(Error::attribute_open(name));
             }
+
             atype_id = H5Aget_type(aid);
             if atype_id <= 0 {
-                return Err(format!("Failed to retrieve the type of the attribute {}", name));
+                return Err(Error::AttributeGetTypeFail(name));
             }
         }
         
@@ -74,14 +76,15 @@ impl std::fmt::Display for Attr {
 }
 
 pub trait AttrOpener {
-    fn open_attr(&self, name: &str) -> Result<Attr, String>;
+    fn open_attr(&self, name: &str) -> Result<Attr, Error>;
 }
 
 impl DataTypeOwner for Attr {
-    fn get_type(&self) -> Result<DataType, String> {
+    fn get_type(&self) -> Result<DataType, Error> {
         let dtype_id = unsafe { H5Aget_type(self.aid) };
         if dtype_id <= 0 {
-            Err(format!("Dataset::get_space: Failed to retrieve the DataType for {} attribute", self.name))
+            Err(Error::new(ErrorType::AttributeGetTypeFail,
+                                      Some(format!("Dataset::get_space: Failed to retrieve the DataType for {} attribute", self.name))))
         } else {
             Ok(DataType::parse(dtype_id))
         }
@@ -89,17 +92,18 @@ impl DataTypeOwner for Attr {
 }
 
 impl DataSpaceOwner for Attr {
-    fn get_space(&self) -> Result<DataSpace, String> {
+    fn get_space(&self) -> Result<DataSpace, Error> {
         let did = unsafe { H5Aget_space(self.get_aid()) };
         if did <= 0 {
-            return Err("Attr::get_space: failed to retrieve the attribute dataspace".to_string());
+            Err(Error::new(ErrorType::AttributeGetDataSpaceFail, None))
+        } else {
+            DataSpace::parse(did)
         }
-        DataSpace::parse(did)
     }
 }
 
 impl AttributeFillable<String> for String {
-    fn from_attribute(attribute: &Attr) -> Result<String, String> {
+    fn from_attribute(attribute: &Attr) -> Result<String, Error> {
         let data_type = attribute.get_datatype();
         match data_type.get_dtype() {
             DataTypeL::StringStatic => {
@@ -115,9 +119,8 @@ impl AttributeFillable<String> for String {
                     return if let Ok(s) = CStr::from_ptr(data.as_ptr().cast()).to_str() {
                         Ok(s.to_string())
                     } else {
-                        Err("Failed to convert the attribute data".to_string())
+                        Err(Error::new(ErrorType::AttributeFillFail, None))
                     }
-
                 }
             },
             DataTypeL::StringDynamic => {
@@ -129,19 +132,19 @@ impl AttributeFillable<String> for String {
                     if let Ok(string) = CStr::from_ptr(str_ptr as *const i8).to_str() {
                             Ok(string.to_string())
                     } else {
-                        Err("Attribute::AttributeFillable: failed to retrieve string attribute".to_string())
+                        Err(Error::new(ErrorType::AttributeFillFail, None))
                     }
                 }
             },
             _ => {
-                Err("Attribute::from_attribute: cannot extract a string from this attribute".to_string())
+                        Err(Error::new(ErrorType::AttributeFillNotAvailable, None))
             }
         }
     }
 }
 
 impl AttributeFillable<i64> for i64 {
-    fn from_attribute(attribute: &Attr) -> Result<i64, String> {
+    fn from_attribute(attribute: &Attr) -> Result<i64, Error> {
         let data_type = attribute.get_datatype();
         match data_type.get_dtype() {
             DataTypeL::Signed64 => {
@@ -156,7 +159,7 @@ impl AttributeFillable<i64> for i64 {
                 }
             },
             _ => {
-                Err("Attribute::from_attribute: cannot extract a string from this attribute".to_string())
+                Err(Error::new(ErrorType::AttributeFillNotAvailable, None))
             }
         }
     }
