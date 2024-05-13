@@ -13,28 +13,25 @@ pub struct Dataset {
 
 pub trait DatasetFillable<T> {
     fn from_dataset(_dataset: &Dataset) -> Result<Vec<T>, Error> {
-        Err(format!(
-            "Dataset::from_dataset: cannot retrieve the whole dataset from type {}",
-            type_name::<T>()
-        ))
+        Err(Error::not_yet_implemented(Some(&format!(
+                        "Dataset::from_dataset: cannot retrieve the whole dataset from type {}",
+                        type_name::<T>()))))
     }
 
     fn from_dataset_subspace(
         _dataset: &Dataset,
         _start: &[usize],
         _offset: &[usize],
-    ) -> Result<Vec<Vec<T>>, String> {
-        Err(format!(
-            "Dataset::from_dataset_subspace: cannot retrieve a subspace from type {}",
-            type_name::<T>()
-        ))
+        ) -> Result<Vec<Vec<T>>, String> {
+        Err(Error::not_yet_implemented(Some(&format!(
+                        "Dataset::from_dataset_subspace: cannot retrieve the whole dataset from type {}",
+                        type_name::<T>()))))
     }
 
     fn from_dataset_row(_dataset: &Dataset, _row: usize) -> Result<Vec<T>, String> {
-        Err(format!(
-            "Dataset::from_dataset_row: cannot retrieve a subspace from type {}",
-            type_name::<T>()
-        ))
+        Err(Error::not_yet_implemented(Some(&format!(
+                        "Dataset::from_dataset_row: cannot retrieve the whole dataset from type {}",
+                        type_name::<T>()))))
     }
 }
 
@@ -52,22 +49,19 @@ impl Dataset {
         self.did
     }
 
-    pub fn get_dataspace(&self) -> Result<&DataSpace, String> {
+    pub fn get_dataspace(&self) -> Result<&DataSpace, Error> {
         if let Some(ref dataspace) = self.dataspace {
             Ok(dataspace)
         } else {
-            Err(format!(
-                "Dataset::get_dataspace: {} dataset does not contain a dataspace",
-                self.get_path()
-            ))
+            Err(Error::dataset_has_no_dataspace(&self.path))
         }
     }
 
-    pub fn get_datatype(&self) -> Option<&DataType> {
+    pub fn get_datatype(&self) -> Result<&DataType, Error> {
         if let Some(ref datatype) = self.datatype {
-            Some(datatype)
+            Ok(datatype)
         } else {
-            None
+            Err(Error::dataset_has_no_datatype(&self.path))
         }
     }
 
