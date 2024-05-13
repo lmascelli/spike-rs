@@ -1,3 +1,4 @@
+use crate::error::{Error, ErrorType};
 use crate::h5sys::*;
 use crate::types::group::{Group, GroupOpener};
 use crate::utils::{get_group_names, str_to_cchar};
@@ -13,7 +14,7 @@ pub struct File {
 }
 
 impl File {
-    pub fn open(filename: &str, access: FileOpenAccess) -> Result<Self, String> {
+    pub fn open(filename: &str, access: FileOpenAccess) -> Result<Self, Error> {
         let fid = unsafe {
             H5Fopen(
                 str_to_cchar!(filename),
@@ -24,10 +25,15 @@ impl File {
                 H5P_DEFAULT,
             )
         };
-        Ok(File {
-            filename: filename.to_string(),
-            fid,
-        })
+
+        if fid > 0 {
+            Ok(File {
+                filename: filename.to_string(),
+                fid,
+            })
+        } else {
+            Err(Error::new(ErrorType::FileOpen, Some(filename.to_string())))
+        }
     }
 
     pub fn get_fid(&self) -> i64 {

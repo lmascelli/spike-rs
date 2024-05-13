@@ -15,7 +15,7 @@ pub struct H5Content {
 
 impl H5Content {
     pub fn open(filename: &str) -> Result<Self, String> {
-        let data_group = File::open(filename, FileOpenAccess::ReadOnly)?.open_group("Data")?;
+        let data_group = File::open(filename, FileOpenAccess::ReadOnly).unwrap().open_group("Data")?;
         let date = String::from_attribute(&data_group.open_attr("Date")?)?;
         let mut recordings = vec![];
         for recording in data_group.list_groups() {

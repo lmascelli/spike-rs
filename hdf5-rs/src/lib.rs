@@ -15,12 +15,15 @@
 //! accessing a dataset in a group in it:
 //!
 //! ```
-//! use hdf5_rs::types::{File, FileOpenAccess};
+//! use hdf5_rs::{
+//!     types::{File, FileOpenAccess, GroupOpener, DatasetOwner},
+//!     error::{Error},
+//! };
 //!
-//! fn open_file(filename: &str) -> Result<(), String> {
+//! fn open_file(filename: &str) -> Result<(), Error> {
 //!     let file = File::open(filename, FileOpenAccess::ReadOnly)?;
-//!     let group = file.open_group("group_name")?;
-//!     let dataset = group.get_dataset("dataset_name")?;
+//!     let group = file.open_group("group_name").unwrap();
+//!     let dataset = group.get_dataset("dataset_name").unwrap();
 //!
 //!     // print information about the objects
 //!     println!("{file}");
@@ -34,3 +37,20 @@
 pub mod h5sys;
 pub mod types;
 pub mod utils;
+pub mod error;
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        types::{File, FileOpenAccess, GroupOpener, DatasetOwner},
+        error::Error,
+    };
+
+    const FILENAME: &str = "/home/leonardo/Documents/unige/data/12-04-2024/38886_DIV77/raw/01_basal.h5";
+
+    #[test]
+    fn open() -> Result<(), Error> {
+        let file = File::open(FILENAME, FileOpenAccess::ReadOnly)?;
+        Ok(())
+    }
+}
