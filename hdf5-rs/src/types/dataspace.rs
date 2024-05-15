@@ -1,5 +1,5 @@
 use crate::h5sys::*;
-use crate::error::{Error, ErrorType};
+use crate::error::Error;
 
 pub enum DataSpaceType {
     Null,
@@ -14,7 +14,7 @@ pub struct DataSpace {
 }
 
 impl DataSpace {
-    pub fn new_simple(dims: &[u64]) -> Result<DataSpace, String> {
+    pub fn new_simple(dims: &[u64]) -> Result<DataSpace, Error> {
         let did = unsafe { H5Screate_simple(dims.len() as i32, dims.as_ptr(), null()) };
         if did > 0 {
             Ok(DataSpace {
@@ -23,10 +23,7 @@ impl DataSpace {
                 dims: dims.iter().map(|x| *x as usize).collect(),
             })
         } else {
-            Err(format!(
-                "Failed to create a Simple DataSpace with dims {:?}",
-                dims
-            ))
+            Err(Error::dataspace_simple_new(dims))
         }
     }
 
@@ -37,7 +34,7 @@ impl DataSpace {
         unsafe {
             n_dims = H5Sget_simple_extent_ndims(dataspace_id);
             if n_dims < 0 {
-                return Err(Error::new(ErrorType::DataSpaceGetDimensionsFail, None));
+                return Err(Error::dataspace_get_dimensions_fail());
             }
             dims.resize(n_dims as usize, 0usize);
             space_type = if n_dims == 0 {
@@ -65,13 +62,7 @@ impl DataSpace {
 
     pub fn select_slab(&self, start: &[u64], offset: &[u64]) -> Result<DataSpace, Error> {
         if start.len() != self.dims.len() || start.len() != offset.len() {
-            Err(Error::new(ErrorType::DataSpaceSelectSlabFail, Some(format!(
-                r#"DataSpace::select_slab: invalid selection from {:?} with offset {:?}
-            have different rank than dataspace with dimension {}"#,
-                start,
-                offset,
-                self.dims.len()
-            ))))
+            Err(Error::dataspace_select_slab_fail(start, offset, &self.dims[..].iter().map(|x| *x as u64).collect::<Vec<u64>>()))
         } else {
             let mut valid = true;
             for dim in 0..start.len() {
@@ -100,21 +91,14 @@ impl DataSpace {
                     ))?)
                 }
             } else {
-                Err(Error::new(ErrorType::DataSpaceSelectSlabOutOfBounds, Some(format!(
-                    r#"DataSpace::select_slab: slab starting from {:?} with offset {:?}
-                is out of bounds of dataspace with dimension {:?}"#,
-                    start, offset, self.dims
-                ))))
+                Err(Error::dataspace_select_slab_out_of_boulds(start, offset, &self.dims[..].iter().map(|x| *x as u64).collect::<Vec<u64>>()))
             }
         }
     }
 
     pub fn select_row(&self, row: usize) -> Result<DataSpace, Error> {
         if self.dims.len() != 2 {
-            Err(Error::new(ErrorType::DataSpaceSelectRowNotBidimensional,
-                Some(r#"DataSpace::select_row: select_row is valid only for bidimensional dataspaces"#
-                    .to_string())),
-            )
+            Err(Error::dataspace_select_row_not_bidimensional(&self.dims[..].iter().map(|x| *x as u64).collect::<Vec<u64>>()))
         } else {
             let start = [row as u64, 0];
             let offset = [1, (self.dims[1]) as u64];

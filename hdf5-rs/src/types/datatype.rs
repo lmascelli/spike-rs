@@ -1,5 +1,5 @@
 use crate::h5sys::*;
-use crate::error::{Error, ErrorType};
+use crate::error::Error;
 
 #[derive(Clone, Copy)]
 pub enum DataTypeL {
@@ -26,7 +26,10 @@ impl DataType {
     }
     
     #[allow(non_upper_case_globals)]
-    pub fn parse(dtype_id: i64) -> Self {
+    pub fn parse(dtype_id: i64) -> Result<Self, Error> {
+        if dtype_id <= 0 {
+            return Err(Error::datatype_get_type_fail());
+        }
         unsafe {
             match H5Tget_class(dtype_id) {
                 H5T_class_t_H5T_INTEGER => {
@@ -34,70 +37,70 @@ impl DataType {
                         H5T_sign_t_H5T_SGN_2 => true,
                         H5T_sign_t_H5T_SGN_NONE => false,
                         _ => {
-                            return DataType {
+                            return Ok(DataType {
                                 tid: dtype_id,
                                 dtype: DataTypeL::Unimplemented,
-                            };
+                            });
                         }
                     };
                     let size = H5Tget_size(dtype_id);
                     if sign {
                         if size == 4 {
-                            return DataType {
+                            return Ok(DataType {
                                 tid: dtype_id,
                                 dtype: DataTypeL::Signed32,
-                            };
+                            });
                         }
                         else if size == 8 {
-                            return DataType {
+                            return Ok(DataType {
                                 tid: dtype_id,
                                 dtype: DataTypeL::Signed64,
-                            };
+                            });
                         } else {
-                            return DataType {
+                            return Ok(DataType {
                                 tid: dtype_id,
                                 dtype: DataTypeL::Unimplemented,
-                            };
+                            });
                         }
                     }
                     if size == 4 {
-                        DataType {
+                        Ok(DataType {
                             tid: dtype_id,
                             dtype: DataTypeL::Unsigned32,
-                        }
+                        })
                     }
                     else if size == 8 {
-                        DataType {
+                        Ok(DataType {
                             tid: dtype_id,
                             dtype: DataTypeL::Unsigned64,
-                        }
+                        })
                     } else {
-                        DataType {
+                        Ok(DataType {
                             tid: dtype_id,
                             dtype: DataTypeL::Unimplemented,
-                        }
+                        })
                     }
                 },
 
                 H5T_class_t_H5T_FLOAT => {
                     match H5Tget_size(dtype_id) {
                         4 => {
-                            DataType {
+                            Ok(DataType {
                                 tid: dtype_id,
                                 dtype: DataTypeL::Float32,
-                            }
+                            })
                         },
                         8 => {
-                            DataType {
+                            Ok(DataType {
                                 tid: dtype_id,
                                 dtype: DataTypeL::Float64,
-                            }
+                            })
                         },
                         _ => {
-                            DataType {
+                            Ok(DataType {
                                 tid: dtype_id,
                                 dtype: DataTypeL::Unimplemented,
-                            }
+                            })
                         },
                     }
                 },
@@ -111,36 +114,36 @@ impl DataType {
                             0   => false,
                             _ if r > 0 => true,
                             _   => {
-                                panic!("DataType::parse: Failed to retrieve if the string type is variable");
+                                return Err(Error::datatype_parse_string_is_variable());
                             },
                         }
                     };
 
                     if padding == H5T_str_t_H5T_STR_NULLTERM && cset == H5T_cset_t_H5T_CSET_ASCII {
-                        DataType {
+                        Ok(DataType {
                             tid: dtype_id,
                             dtype: if is_variable {
                                 DataTypeL::StringDynamic
                             } else {
                                 DataTypeL::StringStatic
                             },
-                        }
+                        })
                     } else {
-                        panic!("DataType::parse: only ascii c null terminated string are supported");
+                        Err(Error::datatype_parse_string_type_not_supported())
                     }
                 },
 
                 H5T_class_t_H5T_COMPOUND => {
-                        DataType {
+                        Ok(DataType {
                             tid: dtype_id,
                             dtype: DataTypeL::Compound,
-                        }
+                        })
                 },
                 _ => {
-                    DataType {
+                    Ok(DataType {
                         tid: dtype_id,
                         dtype: DataTypeL::Unimplemented,
-                    }
+                    })
                 }
             }
         }

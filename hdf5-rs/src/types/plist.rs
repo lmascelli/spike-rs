@@ -1,5 +1,5 @@
 use crate::h5sys::*;
-use crate::error::{Error, ErrorType};
+use crate::error::Error;
 pub use crate::h5sys::{
     H5P_LST_FILE_ACCESS_ID_g as H5P_FILE_ACCESS, H5P_LST_FILE_CREATE_ID_g as H5P_FILE_CREATE,
 };
