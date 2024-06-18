@@ -1,6 +1,9 @@
 use crate::error::Error;
 use crate::h5sys::*;
-use crate::types::group::{Group, GroupOpener};
+use crate::types::{
+    group::{Group, GroupOpener},
+    plist::PList,
+};
 use crate::utils::{get_group_names, str_to_cchar};
 
 pub enum FileOpenAccess {
@@ -14,6 +17,25 @@ pub struct File {
 }
 
 impl File {
+    pub fn create(filename: &str, overwrite: bool) -> Result<Self, Error> {
+        let fid = unsafe { 
+            H5Fcreate(
+                str_to_cchar!(filename),
+                if overwrite { H5F_ACC_TRUNC } else { 0 },
+                H5P_DEFAULT,
+                H5P_DEFAULT,
+                ) };
+
+        if fid <= 0 {
+            Err(Error::file_create(filename))
+        } else { 
+            Ok(Self {
+                filename: filename.to_string(),
+                fid,
+            })
+        }
+    }
+    
     pub fn open(filename: &str, access: FileOpenAccess) -> Result<Self, Error> {
         let fid = unsafe {
             H5Fopen(
@@ -38,6 +60,15 @@ impl File {
 
     pub fn get_fid(&self) -> i64 {
         self.fid
+    }
+
+    pub fn is_accessible(filename: &str, plist: &PList) -> bool {
+        let res = unsafe { H5Fis_accessible(str_to_cchar!(filename), plist.get_pid()) };
+        if res <= 0 {
+            false
+        } else {
+            true
+        }
     }
 }
 

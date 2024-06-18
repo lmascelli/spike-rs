@@ -45,6 +45,9 @@ class PyPhase:
         """
         self._phase.update()
 
+    def extract_range(self, start: int, end: int):
+        return self._phase.extract_range(start, end)
+
     def save(self, filepath: Path):
         """
         Save this instance of PyPhase to the given filepath

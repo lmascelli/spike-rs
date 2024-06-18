@@ -65,6 +65,17 @@ impl PyPhase {
         self.digitals_lengths = self.phase.digitals.iter().map(|x| x.len()).collect();
     }
 
+    pub fn extract_range(&mut self, start: usize, end: usize) -> Option<Self> {
+        if let Some(new_phase) = self.phase.extract_range(start, end) {
+            let mut ret = PyPhase::new(); 
+            ret.phase = new_phase;
+            ret.update();
+            Some( ret )
+        } else {
+            None
+        }
+    }
+
     pub fn get_digital(&self, index: usize) -> Option<Vec<f32>> {
         if index >= self.phase.digitals.len() {
             None

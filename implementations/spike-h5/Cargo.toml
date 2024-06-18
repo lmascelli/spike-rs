@@ -1,0 +1,8 @@
+[package]
+name = "spike-h5"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hdf5-rs = { path = "../../hdf5-rs" }
+spike-rs = { path = "../../spike-rs" }

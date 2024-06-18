@@ -1,6 +1,7 @@
 use hdf5_rs::cchar_to_string;
 use hdf5_rs::h5sys::CStr;
 use hdf5_rs::types::{AttrOpener, AttributeFillable, DatasetFillable, DatasetOwner, Group};
+use hdf5_rs::error::Error;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -25,7 +26,7 @@ pub struct H5Analog {
 }
 
 impl H5Analog {
-    pub fn open(group: Group) -> Result<Self, String> {
+    pub fn open(group: Group) -> Result<Self, Error> {
         let label = group.open_attr("Label")?;
         let infochannel_ds = group.get_dataset("InfoChannel")?;
         let dims = infochannel_ds.get_dataspace()?.get_dims();
@@ -58,7 +59,7 @@ impl H5Analog {
         })
     }
 
-    pub fn get_dims(&self) -> Result<Vec<usize>, String> {
+    pub fn get_dims(&self) -> Result<Vec<usize>, Error> {
         Ok(self
             .analog_group
             .get_dataset("ChannelData")?
@@ -71,7 +72,7 @@ impl H5Analog {
         self.path.clone()
     }
 
-    pub fn get_channel(&self, label: &str) -> Result<Vec<f32>, String> {
+    pub fn get_channel(&self, label: &str) -> Result<Vec<f32>, Error> {
         if self.channels_info.contains_key(label) {
             let mut ret = vec![];
             let channel_data = self.channels_data.get(label).unwrap().borrow_mut();
@@ -91,11 +92,7 @@ impl H5Analog {
             }
             Ok(ret)
         } else {
-            Err(format!(
-                r#"H5Analog::get_channel: this stream does not contain
-                        a channel named {}"#,
-                label
-            ))
+            Err(Error::group_doesnt_exists(label))
         }
     }
 

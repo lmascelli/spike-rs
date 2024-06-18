@@ -24,7 +24,7 @@ pub use sys::{
 
     H5Dclose, H5Dcreate2, H5Dget_space, H5Dget_type, H5Dopen2, H5Dread, H5Dwrite,
 
-    H5Fclose, H5Fcreate, H5Fopen,
+    H5Fclose, H5Fcreate, H5Fis_accessible, H5Fopen,
 
     H5Gclose, H5Gcreate2, H5Gopen2,
 

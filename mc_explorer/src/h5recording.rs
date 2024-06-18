@@ -1,5 +1,5 @@
 use hdf5_rs::types::{AttributeFillable, AttrOpener, Group, GroupOpener};
-use hdf5_rs::error::{Error, ErrorType};
+use hdf5_rs::error::Error;
 #[path = "h5analog.rs"]
 mod h5analog;
 use h5analog::H5Analog;
@@ -57,21 +57,21 @@ impl H5Recording {
         ret
     }
 
-    pub fn get_analog(&self, index: usize) -> Result<&H5Analog, String> {
+    pub fn get_analog(&self, index: usize) -> Result<&H5Analog, Error> {
         if index < self.analogs.len() {
             Ok(&self.analogs[index])
         } else {
-            Err(format!("H5Recordig::get_analog: H5Recording {} index {} out of bounds",
-                        self.path, index))
+            Err(Error::other_with_string(&format!("H5Recordig::get_analog: H5Recording {} index {} out of bounds",
+                     self.path, index)))
         }
     }
     
-    pub fn get_event(&self, index: usize) -> Result<&H5Event, String> {
+    pub fn get_event(&self, index: usize) -> Result<&H5Event, Error> {
         if index < self.events.len() {
             Ok(&self.events[index])
         } else {
-            Err(format!("H5Recordig::get_event: H5Recording {} index {} out of bounds",
-                        self.path, index))
+            Err(Error::other_with_string(&format!("H5Recordig::get_event: H5Recording {} index {} out of bounds",
+                        self.path, index)))
         }
     }
 }

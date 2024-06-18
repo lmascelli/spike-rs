@@ -3,4 +3,8 @@
 /// Organization: University of Genoa
 
 /// import basic types and operations
-pub mod core;
+
+pub mod error;
+pub mod types;
+pub mod operations;
+pub mod analisys;

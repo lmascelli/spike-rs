@@ -1,9 +1,9 @@
 #[path = "h5recording.rs"]
 mod h5recording;
 use h5recording::H5Recording;
-// pub use h5recording::{CInfoChannel, info_channel_type};
 
 use hdf5_rs::types::{AttributeFillable, AttrOpener, File, FileOpenAccess, Group, GroupOpener};
+use hdf5_rs::error::Error;
 use spike_rs::core::types::Phase;
 
 pub struct H5Content {
@@ -14,7 +14,7 @@ pub struct H5Content {
 }
 
 impl H5Content {
-    pub fn open(filename: &str) -> Result<Self, String> {
+    pub fn open(filename: &str) -> Result<Self, Error> {
         let data_group = File::open(filename, FileOpenAccess::ReadOnly).unwrap().open_group("Data")?;
         let date = String::from_attribute(&data_group.open_attr("Date")?)?;
         let mut recordings = vec![];
@@ -39,12 +39,12 @@ impl H5Content {
         ret
     }
 
-    pub fn get_recording(&self, index: usize) -> Result<&H5Recording, String> {
+    pub fn get_recording(&self, index: usize) -> Result<&H5Recording, Error> {
         if index < self.recordings.len() {
             Ok(&self.recordings[index])
         } else {
-            Err(format!("H5Content::get_recording: H5Content {} index {} out of bounds",
-                        self.path, index))
+            Err(Error::other_with_string(&format!("H5Content::get_recording: H5Content {} index {} out of bounds",
+                        self.path, index)))
         }
     }
 
@@ -53,11 +53,11 @@ impl H5Content {
                          raw_data_index: usize,
                          digital_index: Option<usize>,
                          event_index: Option<usize>,
-                         ) -> Result<Phase, String> {
+                         ) -> Result<Phase, Error> {
         let mut ret = Phase::default();
         if self.recordings.len() <= recording_index {
-            return Err(format!("H5Content::convert_phase: recoding_index {} out of bounds",
-                               recording_index));
+            return Err(Error::other_with_string(&format!("H5Content::convert_phase: recoding_index {} out of bounds",
+                               recording_index)));
         } else {
             let recording = &self.recordings[recording_index];
             let raw_data = recording.get_analog(raw_data_index)?;
@@ -68,8 +68,8 @@ impl H5Content {
                 let digital = recording.get_analog(digital_index)?;
                 let digital_labels = digital.get_labels();
                 if digital_labels.len() != 1 {
-                    return Err(format!(r#"H5Content::convert_phase: digital stream {}
-                    has more than 1 channel"#, digital_index));
+                    return Err(Error::other_with_string(&format!(r#"H5Content::convert_phase: digital stream {}
+                    has more than 1 channel"#, digital_index)));
                 } else {
                     ret.digitals.push(digital.get_channel(&digital_labels[0])?);
                 }

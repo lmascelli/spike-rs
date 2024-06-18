@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use hdf5_rs::types::{
     AttrOpener, AttributeFillable, DatasetFillable, DatasetOwner, Group,
 };
+use hdf5_rs::error::Error;
 
 pub struct H5Event {
     _event_group: Group,
@@ -12,7 +13,7 @@ pub struct H5Event {
 }
 
 impl H5Event {
-    pub fn open(group: Group) -> Result<Self, String> {
+    pub fn open(group: Group) -> Result<Self, Error> {
         let label = group.open_attr("Label")?;
         let path = group.get_path();
         let mut samples = HashMap::new();

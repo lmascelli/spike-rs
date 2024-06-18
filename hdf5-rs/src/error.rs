@@ -4,25 +4,34 @@ pub enum ErrorType {
     AttributeGetTypeFail(String),
     AttributeFillFail(String, String),
     AttributeFillNotAvailable(String),
+
     DataSpaceSimpleNew(Vec<u64>),
     DataSpaceGetDimensionsFail,
     DataSpaceSelectSlabFail(Vec<u64>, Vec<u64>, Vec<u64>),
     DataSpaceSelectSlabOutOfBounds(Vec<u64>, Vec<u64>, Vec<u64>),
     DataSpaceSelectRowNotBidimensional(Vec<u64>),
+
     DataTypeGetTypeFail,
     DataTypeParseStringIsVariableFail,
     DataTypeParseStringTypeNotSupported,
+
     DataSetOpenFail(String),
     DataSetHasNoDataSpace(String),
     DataSetHasNoDataType(String),
     DataSetUnvalidType(String, String),
     DataSetFillMemoryFail(String),
+
+    FileCreate(String),
     FileOpen(String),
+
     GroupDoesntExist(String),
     GroupOpenFail(String),
+
     PListCreate,
     // PListCopy,
+    
     NotYetImplemented(Option<String>),
+    OtherWithString(String),
     Other,
 }
 
@@ -38,6 +47,12 @@ impl Error {
         }
     }
 
+    pub fn other_with_string(s: &str) -> Self {
+        Self {
+            etype: ErrorType::OtherWithString(s.to_string())
+        }
+    }
+
     pub fn not_yet_implemented(data: Option<&str>) -> Self {
         Self {
             etype: ErrorType::NotYetImplemented(
@@ -48,6 +63,13 @@ impl Error {
     }
 
     // FILE ERRORS
+    
+    pub fn file_create(filename: &str) -> Self {
+        Self {
+            etype: ErrorType::FileCreate(filename.to_string()),
+        }
+    }
+    
     pub fn file_open(filename: &str) -> Self {
         Self {
             etype: ErrorType::FileOpen(filename.to_string()),
@@ -196,6 +218,10 @@ impl Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &'_ mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self.etype {
+            ErrorType::FileCreate(ref filename) => {
+                writeln!(f, "Error::FileCreate: failed to create file {}", filename)?;
+            },
+
             ErrorType::FileOpen(ref filename) => {
                 writeln!(f, "Error::FileOpen: failed to open file {}", filename)?;
             },
@@ -295,6 +321,10 @@ impl std::fmt::Display for Error {
             ErrorType::NotYetImplemented(ref data) => {
                 writeln!(f, "This feature has not yet been implemented{}", 
                          if let Some(data) = data {format!(": {}", data )} else {"".to_string()})?;
+            },
+
+            ErrorType::OtherWithString(ref data) => {
+                writeln!(f, "Error::OtherWithString: {}", data)?;
             },
 
             _ => {
