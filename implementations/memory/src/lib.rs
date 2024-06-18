@@ -234,8 +234,19 @@ impl PhaseHandler for PhaseMemory {
             }
             // end check
 
-            let data = &self.peaks_trains[channel];
-            todo!()
+            let (vals, samples) = &self.peaks_trains[channel];
+            let array_start = *(*samples)
+                .iter()
+                .find(|x| **x >= _start)
+                .unwrap_or(&self.datalen);
+            let array_end = *(*samples)
+                .iter()
+                .find(|x| **x <= _end)
+                .unwrap_or(&self.datalen);
+            Ok((
+                vals[array_start..array_end].into(),
+                samples[array_start..array_end].into(),
+            ))
         } else {
             return Err(SpikeError::LabelNotFound);
         }
@@ -274,9 +285,29 @@ impl PhaseHandler for PhaseMemory {
             }
             // end check
 
-            let (original_vals, original_samples) = self.peaks_trains.get_mut(channel).unwrap();
+            let (vals, samples) = self.peaks_trains.get(channel).unwrap();
+            let array_start = *(*samples)
+                .iter()
+                .find(|x| **x >= _start)
+                .unwrap_or(&self.datalen);
+            let array_end = *(*samples)
+                .iter()
+                .find(|x| **x <= _end)
+                .unwrap_or(&self.datalen);
 
-            todo!();
+            let mut new_vals = vec![];
+            let mut new_samples = vec![];
+
+            new_vals.extend_from_slice(&vals[0..array_start]);
+            new_samples.extend_from_slice(&samples[0..array_start]);
+            new_vals.extend_from_slice(&data.0);
+            new_samples.extend_from_slice(&data.1);
+            new_vals.extend_from_slice(&vals[array_end..self.datalen]);
+            new_samples.extend_from_slice(&samples[array_end..self.datalen]);
+
+            self.peaks_trains
+                .insert(channel.to_string(), (new_vals, new_samples));
+
             Ok(())
         } else {
             return Err(SpikeError::LabelNotFound);
