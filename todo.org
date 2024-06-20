@@ -1,2 +1,0 @@
-* Poter esportare un intervallo di una intera fase
-* Poter scalare un segnale

@@ -8,3 +8,4 @@ pub mod error;
 pub mod types;
 pub mod operations;
 pub mod analisys;
+pub mod plot;

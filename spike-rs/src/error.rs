@@ -3,6 +3,8 @@ pub enum SpikeError {
     LabelNotFound,
     IndexOutOfRange,
     ReplaceRangeError,
+    ComputeThresholdTooFewSamples(usize, usize),
+    SpikeDetectionTooFewSamples,
 }
 
 impl std::fmt::Display for SpikeError {
