@@ -53,7 +53,7 @@ pub mod math {
         } else {
             (s2, s1)
         };
-        let filter: Vec<f32> = filter.iter().rev().map(|x| *x).collect();
+        // let filter: Vec<f32> = filter.iter().rev().map(|x| *x).collect();
         let slen = signal.len();
         let flen = filter.len();
 
@@ -61,20 +61,22 @@ pub mod math {
 
         // head
         for i in 0..flen {
-            for j in 0..i {
-                ret[i] += signal[j] * filter[j];
+            for j in (0..i).rev() {
+                ret[i] += signal[i - j] * filter[j];
             }
         }
+
         // body
         for i in flen..(slen - flen) {
             for j in 0..flen {
-                ret[i] += signal[i + j] * filter[j];
+                ret[i] += signal[i - j] * filter[j];
             }
         }
+
         // tail
         for i in (slen - flen)..slen {
-            for j in flen..0 {
-                ret[i] += signal[i + j] * filter[j];
+            for j in (slen-i..=0) {
+                ret[i] += signal[i - j] * filter[j];
             }
         }
 

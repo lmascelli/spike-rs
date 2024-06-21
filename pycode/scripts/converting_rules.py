@@ -63,3 +63,4 @@ def rule2(name: str) -> Optional[ConvertingValues]:
         return ConvertingValues(matrice, cond, div, f"000{i}", t)
     except:
         return None
+

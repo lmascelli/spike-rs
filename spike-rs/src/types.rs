@@ -7,7 +7,7 @@ use crate::error::SpikeError;
 /// it's responsible of reading and writing data
 pub trait PhaseHandler {
     //--------------------------------------------------------------------------
-    // general info
+    // GENERAL INFO
 
     /// Returns the sampling frequency of the recorded data
     fn sampling_frequency(&self) -> f32;
@@ -19,7 +19,7 @@ pub trait PhaseHandler {
     fn labels(&self) -> Vec<String>;
 
     //--------------------------------------------------------------------------
-    // raw data
+    // RAW DATA
 
     /// Returns a slice of the raw data of the selected channel, if exists.
     /// The `start` and `end` of the slice are optional and if omitted the
@@ -44,7 +44,7 @@ pub trait PhaseHandler {
     ) -> Result<(), SpikeError>;
 
     //--------------------------------------------------------------------------
-    // digital channels
+    // DIGITAL CHANNELS
 
     /// Returns the number of digital channels stored in the recording.
     fn n_digitals(&self) -> usize;
@@ -72,7 +72,7 @@ pub trait PhaseHandler {
     ) -> Result<(), SpikeError>;
 
     //--------------------------------------------------------------------------
-    // event channels
+    // EVENT CHANNELS
 
     /// Returns the number of events arrays contained in the recording
     fn n_events(&self) -> usize;
@@ -81,7 +81,7 @@ pub trait PhaseHandler {
     fn events(&self, index: usize) -> Result<Vec<u64>, SpikeError>;
 
     //--------------------------------------------------------------------------
-    // peak trains
+    // PEAK TRAINS
 
     /// Returns a slice of the peak trains of the selected channel, if exists.
     /// The `start` and `end` of the slice are optional and if omitted the
