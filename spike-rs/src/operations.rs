@@ -75,7 +75,7 @@ pub mod math {
 
         // tail
         for i in (slen - flen)..slen {
-            for j in (slen-i..=0) {
+            for j in slen-i..=0 {
                 ret[i] += signal[i - j] * filter[j];
             }
         }

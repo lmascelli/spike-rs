@@ -1,7 +1,9 @@
 use hdf5_rs::cchar_to_string;
-use hdf5_rs::h5sys::CStr;
-use hdf5_rs::types::{AttrOpener, AttributeFillable, DatasetFillable, DatasetOwner, Group};
 use hdf5_rs::error::Error;
+use hdf5_rs::h5sys::CStr;
+use hdf5_rs::types::{
+    AttrOpener, AttributeFillable, DatasetFillable, DatasetOwner, Group,
+};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
@@ -47,7 +49,10 @@ impl H5Analog {
                     exponent: info_channel.exponent as f32,
                 },
             );
-            channels_data.insert(cchar_to_string!(info_channel.label), RefCell::new(None));
+            channels_data.insert(
+                cchar_to_string!(info_channel.label),
+                RefCell::new(None),
+            );
         }
 
         Ok(Self {
@@ -75,16 +80,21 @@ impl H5Analog {
     pub fn get_channel(&self, label: &str) -> Result<Vec<f32>, Error> {
         if self.channels_info.contains_key(label) {
             let mut ret = vec![];
-            let channel_data = self.channels_data.get(label).unwrap().borrow_mut();
+            let channel_data =
+                self.channels_data.get(label).unwrap().borrow_mut();
             if let Some(data) = channel_data.as_ref() {
                 ret.extend_from_slice(&data[..]);
             } else {
                 let channel_info = self.channels_info.get(label).unwrap();
-                let channel_data_ds = self.analog_group.get_dataset("ChannelData")?;
-                let data = i32::from_dataset_row(&channel_data_ds, channel_info.index)?;
+                let channel_data_ds =
+                    self.analog_group.get_dataset("ChannelData")?;
+                let data = i32::from_dataset_row(
+                    &channel_data_ds,
+                    channel_info.index,
+                )?;
                 let offset = channel_info.offset;
-                let conversion_factor =
-                    channel_info.conversion_factor * 10f32.powf(channel_info.exponent);
+                let conversion_factor = channel_info.conversion_factor
+                    * 10f32.powf(channel_info.exponent);
                 ret.resize(data.len(), 0f32);
                 for (i, val) in data.iter().enumerate() {
                     ret[i] = (*val as f32 - offset) * conversion_factor;

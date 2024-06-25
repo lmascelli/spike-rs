@@ -3,10 +3,10 @@ resolver = "2"
 
 members = [
   "hdf5-rs",
-  # "mc_explorer",
   "spike-rs",
-  # "pycode-rs",
-  "implementations/spike-h5",
   "implementations/memory",
+  "implementations/spike-h5",
   "tests",
+  # "pycode-rs",
+  # "mc_explorer",
 ]

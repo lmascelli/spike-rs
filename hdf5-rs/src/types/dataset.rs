@@ -1,6 +1,8 @@
-use crate::h5sys::*;
-use crate::types::{DataSpace, DataSpaceOwner, DataType, DataTypeL, DataTypeOwner};
+use super::{
+    DataSpace, DataSpaceOwner, DataType, DataTypeL, DataTypeOwner, PList,
+};
 use crate::error::Error;
+use crate::h5sys::*;
 use crate::{cchar_to_string, str_to_cchar};
 use std::any::type_name;
 
@@ -12,7 +14,10 @@ pub struct Dataset {
 }
 
 pub trait DatasetFillable<T> {
-    fn from_dataset(_dataset: &Dataset) -> Result<Vec<T>, Error> {
+    fn from_dataset(
+        _dataset: &Dataset,
+        _plist: Option<PList>,
+    ) -> Result<Vec<T>, Error> {
         Err(Error::not_yet_implemented(Some(&format!(
                         "Dataset::from_dataset: cannot retrieve the whole dataset from type {}",
                         type_name::<T>()))))
@@ -22,13 +27,18 @@ pub trait DatasetFillable<T> {
         _dataset: &Dataset,
         _start: &[usize],
         _offset: &[usize],
-        ) -> Result<Vec<Vec<T>>, Error> {
+        _plist: Option<PList>,
+    ) -> Result<Vec<Vec<T>>, Error> {
         Err(Error::not_yet_implemented(Some(&format!(
                         "Dataset::from_dataset_subspace: cannot retrieve the whole dataset from type {}",
                         type_name::<T>()))))
     }
 
-    fn from_dataset_row(_dataset: &Dataset, _row: usize) -> Result<Vec<T>, Error> {
+    fn from_dataset_row(
+        _dataset: &Dataset,
+        _row: usize,
+        _plist: Option<PList>,
+    ) -> Result<Vec<T>, Error> {
         Err(Error::not_yet_implemented(Some(&format!(
                         "Dataset::from_dataset_row: cannot retrieve the whole dataset from type {}",
                         type_name::<T>()))))
@@ -96,7 +106,11 @@ impl Dataset {
         Ok(ret)
     }
 
-    pub fn fill_memory<T>(&self, memory_datatype: i64, data: &mut [T]) -> Result<(), Error> {
+    pub fn fill_memory<T>(
+        &self,
+        memory_datatype: i64,
+        data: &mut [T],
+    ) -> Result<(), Error> {
         let res;
         unsafe {
             res = H5Dread(
@@ -170,12 +184,13 @@ impl DataTypeOwner for Dataset {
 }
 
 impl DatasetFillable<i32> for i32 {
-    fn from_dataset_row(dataset: &Dataset, row: usize) -> Result<Vec<i32>, Error> {
+    fn from_dataset_row(
+        dataset: &Dataset,
+        row: usize,
+        plist: Option<PList>,
+    ) -> Result<Vec<i32>, Error> {
         let mut ret = vec![];
-        match dataset
-            .get_datatype()?
-            .get_dtype()
-        {
+        match dataset.get_datatype()?.get_dtype() {
             DataTypeL::Signed32 => {
                 let dataspace = dataset.get_dataspace()?;
                 let dims = dataspace.get_dims();
@@ -194,25 +209,31 @@ impl DatasetFillable<i32> for i32 {
                         H5T_NATIVE_INT_g,
                         memory_dataspace.get_did(),
                         dataspace.get_did(),
-                        H5P_DEFAULT,
+                        match plist {
+                            Some(plist) => plist.get_pid(),
+                            None => H5P_DEFAULT,
+                        },
                         ret.as_ptr() as _,
-                        )
+                    )
                 };
 
                 // reset original space
                 dataspace.reset_selection();
-            },
+            }
             DataTypeL::Unsigned32 => {
                 todo!()
-            },
+            }
             DataTypeL::Signed64 => {
                 todo!()
-            },
+            }
             DataTypeL::Unsigned64 => {
                 todo!()
-            },
+            }
             _ => {
-                return Err(Error::dataset_unvalid_type(&dataset.get_path(), "i32"));
+                return Err(Error::dataset_unvalid_type(
+                    &dataset.get_path(),
+                    "i32",
+                ));
             }
         };
 
@@ -221,12 +242,13 @@ impl DatasetFillable<i32> for i32 {
 }
 
 impl DatasetFillable<i64> for i64 {
-    fn from_dataset_row(dataset: &Dataset, row: usize) -> Result<Vec<i64>, Error> {
+    fn from_dataset_row(
+        dataset: &Dataset,
+        row: usize,
+        plist: Option<PList>,
+    ) -> Result<Vec<i64>, Error> {
         let mut ret = vec![];
-        match dataset
-            .get_datatype()?
-            .get_dtype()
-        {
+        match dataset.get_datatype()?.get_dtype() {
             DataTypeL::Signed32 => {
                 todo!()
             }
@@ -251,9 +273,12 @@ impl DatasetFillable<i64> for i64 {
                         H5T_NATIVE_LLONG_g,
                         memory_dataspace.get_did(),
                         dataspace.get_did(),
-                        H5P_DEFAULT,
+                        match plist {
+                            Some(plist) => plist.get_pid(),
+                            None => H5P_DEFAULT,
+                        },
                         ret.as_ptr() as _,
-                        )
+                    )
                 };
 
                 // reset original space
@@ -263,7 +288,10 @@ impl DatasetFillable<i64> for i64 {
                 todo!()
             }
             _ => {
-                return Err(Error::dataset_unvalid_type(&dataset.get_path(), "i64"));
+                return Err(Error::dataset_unvalid_type(
+                    &dataset.get_path(),
+                    "i64",
+                ));
             }
         };
 
@@ -272,12 +300,13 @@ impl DatasetFillable<i64> for i64 {
 }
 
 impl DatasetFillable<u64> for u64 {
-    fn from_dataset_row(dataset: &Dataset, row: usize) -> Result<Vec<u64>, Error> {
+    fn from_dataset_row(
+        dataset: &Dataset,
+        row: usize,
+        plist: Option<PList>,
+    ) -> Result<Vec<u64>, Error> {
         let mut ret = vec![];
-        match dataset
-            .get_datatype()?
-            .get_dtype()
-        {
+        match dataset.get_datatype()?.get_dtype() {
             DataTypeL::Signed32 => {
                 todo!()
             }
@@ -302,9 +331,12 @@ impl DatasetFillable<u64> for u64 {
                         H5T_NATIVE_ULLONG_g,
                         memory_dataspace.get_did(),
                         dataspace.get_did(),
-                        H5P_DEFAULT,
+                        match plist {
+                            Some(plist) => plist.get_pid(),
+                            None => H5P_DEFAULT,
+                        },
                         ret.as_ptr() as _,
-                        )
+                    )
                 };
 
                 // reset original space
@@ -314,7 +346,10 @@ impl DatasetFillable<u64> for u64 {
                 todo!()
             }
             _ => {
-                return Err(Error::dataset_unvalid_type(&dataset.get_path(), "u64"));
+                return Err(Error::dataset_unvalid_type(
+                    &dataset.get_path(),
+                    "u64",
+                ));
             }
         };
 

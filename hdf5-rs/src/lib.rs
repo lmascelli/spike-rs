@@ -11,7 +11,7 @@
 //!
 //! # Examples
 //!
-//! here it is an example of opening a file with `ReadOnly` permissions and 
+//! here it is an example of opening a file with `ReadOnly` permissions and
 //! accessing a dataset in a group in it:
 //!
 //! ```
@@ -34,23 +34,52 @@
 //! }
 //! ```
 
+pub mod error;
 pub mod h5sys;
 pub mod types;
 pub mod utils;
-pub mod error;
 
-#[cfg(test)]
-mod tests {
-    use crate::{
-        types::{File, FileOpenAccess, GroupOpener, DatasetOwner},
-        error::Error,
-    };
+use error::Error;
+use h5sys::{H5close, H5get_libversion, H5open};
 
-    const FILENAME: &str = "/home/leonardo/Documents/unige/data/12-04-2024/38886_DIV77/raw/01_basal.h5";
+pub struct H5LibRuntime {}
 
-    #[test]
-    fn open() -> Result<(), Error> {
-        let file = File::open(FILENAME, FileOpenAccess::ReadOnly)?;
-        Ok(())
+impl H5LibRuntime {
+    pub fn new() -> Result<Self, Error> {
+        let open_success;
+        let version_success;
+        let mut version_maior: u32 = 0;
+        let mut version_minor: u32 = 0;
+        let mut version_number: u32 = 0;
+        unsafe {
+            open_success = H5open();
+        }
+        if open_success < 0 {
+            Err(Error::library_init_fail())
+        } else {
+            unsafe {
+                version_success = H5get_libversion(
+                    &mut version_maior as *mut u32,
+                    &mut version_minor as *mut u32,
+                    &mut version_number as *mut u32,
+                );
+
+                #[cfg(debug_assertions)]
+                if version_success < 0 {
+                    eprintln!("WARNING: FAILED TO RETRIEVE HDF5 VERSION");
+                } else {
+                    println!("HDF5 version: {}.{}.{}", version_maior, version_minor, version_number);
+                }
+            }
+            Ok(Self {})
+        }
+    }
+}
+
+impl Drop for H5LibRuntime {
+    fn drop(&mut self) {
+        unsafe {
+            H5close();
+        }
     }
 }

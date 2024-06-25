@@ -5,7 +5,6 @@
 //! re export the ones needed by this crate. You can find the complete wrapper
 //! on the [`crate::h5sys::sys`] crate.
 
-
 pub mod sys {
     #![allow(unused)]
     #![allow(non_upper_case_globals)]
@@ -18,7 +17,12 @@ pub mod sys {
 pub use std::ffi::{c_char, c_void, CStr, CString};
 pub use std::ptr::{null, null_mut};
 
+#[rustfmt::skip]
 pub use sys::{
+    H5open, H5close, H5is_library_threadsafe, H5get_libversion, H5atclose,
+
+    H5_index_t_H5_INDEX_NAME, H5_iter_order_t_H5_ITER_INC,
+
     H5A_info_t, H5Aclose, H5Aget_space, H5Aget_type, H5Aiterate2, H5Aopen,
     H5Aread,
 
@@ -32,11 +36,12 @@ pub use sys::{
 
     H5L_info2_t, H5Lexists, H5Literate2,
 
-    H5Pclose, H5Pcopy, H5Pcreate, H5P_LST_FILE_CREATE_ID_g, H5P_LST_FILE_ACCESS_ID_g,
+    H5Pclose, H5Pcopy, H5Pcreate, H5Pset_filter,
+    H5P_LST_FILE_CREATE_ID_g, H5P_LST_FILE_ACCESS_ID_g, H5P_LST_DATASET_ACCESS_ID_g,
 
-    H5Sclose, H5Screate_simple, H5Sget_simple_extent_dims,
-    H5Sget_simple_extent_ndims, H5Sselect_all, H5Sselect_hyperslab, H5S_class_t_H5S_SCALAR,
-    H5Screate, H5S_seloper_t_H5S_SELECT_SET,
+    H5Sclose, H5Screate_simple, H5Sget_simple_extent_dims, H5Sget_simple_extent_ndims,
+    H5Sselect_all, H5Sselect_hyperslab, H5Screate,
+    H5S_class_t_H5S_SCALAR, H5S_seloper_t_H5S_SELECT_SET,
 
     H5T_class_t_H5T_STRING, H5T_class_t_H5T_INTEGER, H5T_class_t_H5T_COMPOUND,
     H5T_class_t_H5T_FLOAT,
@@ -50,8 +55,6 @@ pub use sys::{
 
     H5Tclose, H5Tcopy, H5Tcreate, H5Tget_class, H5Tget_cset, H5Tget_sign, H5Tget_size,
     H5Tget_strpad, H5Tinsert, H5Tset_cset, H5Tis_variable_str, H5Tset_size, H5Tset_strpad,
-
-    H5_index_t_H5_INDEX_NAME, H5_iter_order_t_H5_ITER_INC, H5open,
 };
 
 pub const H5F_ACC_RDONLY: u32 = 0;

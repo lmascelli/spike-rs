@@ -5,38 +5,51 @@ use crate::types::{
     plist::PList,
 };
 use crate::utils::{get_group_names, str_to_cchar};
+use crate::H5LibRuntime;
 
 pub enum FileOpenAccess {
     ReadOnly,
     ReadWrite,
 }
 
-pub struct File {
+#[allow(unused)]
+pub struct File<'runtime> {
+    runtime: &'runtime H5LibRuntime,
     filename: String,
     fid: i64,
 }
 
-impl File {
-    pub fn create(filename: &str, overwrite: bool) -> Result<Self, Error> {
-        let fid = unsafe { 
+impl<'runtime> File<'runtime> {
+    pub fn create(
+        runtime: &'runtime H5LibRuntime,
+        filename: &str,
+        overwrite: bool,
+    ) -> Result<Self, Error> {
+        let fid = unsafe {
             H5Fcreate(
                 str_to_cchar!(filename),
                 if overwrite { H5F_ACC_TRUNC } else { 0 },
                 H5P_DEFAULT,
                 H5P_DEFAULT,
-                ) };
+            )
+        };
 
         if fid <= 0 {
             Err(Error::file_create(filename))
-        } else { 
+        } else {
             Ok(Self {
+                runtime,
                 filename: filename.to_string(),
                 fid,
             })
         }
     }
-    
-    pub fn open(filename: &str, access: FileOpenAccess) -> Result<Self, Error> {
+
+    pub fn open(
+        runtime: &'runtime H5LibRuntime,
+        filename: &str,
+        access: FileOpenAccess,
+    ) -> Result<Self, Error> {
         let fid = unsafe {
             H5Fopen(
                 str_to_cchar!(filename),
@@ -50,6 +63,7 @@ impl File {
 
         if fid > 0 {
             Ok(File {
+                runtime,
                 filename: filename.to_string(),
                 fid,
             })
@@ -63,7 +77,9 @@ impl File {
     }
 
     pub fn is_accessible(filename: &str, plist: &PList) -> bool {
-        let res = unsafe { H5Fis_accessible(str_to_cchar!(filename), plist.get_pid()) };
+        let res = unsafe {
+            H5Fis_accessible(str_to_cchar!(filename), plist.get_pid())
+        };
         if res <= 0 {
             false
         } else {
@@ -72,7 +88,7 @@ impl File {
     }
 }
 
-impl Drop for File {
+impl<'runtime> Drop for File<'runtime> {
     fn drop(&mut self) {
         if self.fid > 0 {
             #[cfg(debug_assertions)]
@@ -86,7 +102,7 @@ impl Drop for File {
     }
 }
 
-impl std::fmt::Display for File {
+impl<'runtime> std::fmt::Display for File<'runtime> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         writeln!(f, "H5File")?;
         writeln!(f, "  filename: {}", self.filename)?;
@@ -95,9 +111,9 @@ impl std::fmt::Display for File {
     }
 }
 
-impl GroupOpener for File {
+impl<'runtime> GroupOpener for File<'runtime> {
     fn open_group(&self, name: &str) -> Result<Group, Error> {
-        Group::open(self.get_fid(), name) 
+        Group::open(self.get_fid(), name)
     }
 
     fn list_groups(&self) -> Vec<String> {

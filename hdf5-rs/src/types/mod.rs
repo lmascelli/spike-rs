@@ -1,15 +1,17 @@
-mod plist;
-mod file;
-mod group;
 mod attribute;
-mod datatype;
-mod dataspace;
 mod dataset;
+mod dataspace;
+mod datatype;
+mod file;
+mod filter;
+mod group;
+mod plist;
 
-pub use plist::*;
-pub use file::*;
-pub use group::*;
 pub use attribute::*;
-pub use datatype::*;
-pub use dataspace::*;
 pub use dataset::*;
+pub use dataspace::*;
+pub use datatype::*;
+pub use file::*;
+pub use filter::*;
+pub use group::*;
+pub use plist::*;

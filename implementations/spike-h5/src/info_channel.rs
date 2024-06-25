@@ -26,24 +26,24 @@ pub struct CInfoChannel {
 impl Default for CInfoChannel {
     fn default() -> Self {
         CInfoChannel {
-	    channel_id:                         0i32,
-	    row_index:                          0i32,
-	    group_id:                           0i32,
-	    electrode_group:                    0i32,
-	    label:                              null(),
-	    raw_data_type:                      null(),
-	    unit:                               null(),
-	    exponent:                           0i32,
-	    ad_zero:                            0i32,
-	    tick:                               0i64,
-	    conversion_factor:                  0i64,
-	    adc_bits:                           0i32,
-	    high_pass_filter_type:              null(),
-	    high_pass_filter_cutoff:            null(),
-	    high_pass_filter_order:             0i32,
-	    low_pass_filter_type:               null(),
-	    low_pass_filter_cutoff:             null(),
-	    low_pass_filter_order:              0i32,
+            channel_id: 0i32,
+            row_index: 0i32,
+            group_id: 0i32,
+            electrode_group: 0i32,
+            label: null(),
+            raw_data_type: null(),
+            unit: null(),
+            exponent: 0i32,
+            ad_zero: 0i32,
+            tick: 0i64,
+            conversion_factor: 0i64,
+            adc_bits: 0i32,
+            high_pass_filter_type: null(),
+            high_pass_filter_cutoff: null(),
+            high_pass_filter_order: 0i32,
+            low_pass_filter_type: null(),
+            low_pass_filter_cutoff: null(),
+            low_pass_filter_order: 0i32,
         }
     }
 }
@@ -60,89 +60,162 @@ pub fn info_channel_type() -> i64 {
     let info_type_id;
     unsafe {
         string_type_id = H5Tcopy({
-	    H5open();
-	    H5T_C_S1_g
+            H5open();
+            H5T_C_S1_g
         });
         H5Tset_size(string_type_id, usize::MAX);
         H5Tset_strpad(string_type_id, H5T_str_t_H5T_STR_NULLPAD);
         H5Tset_cset(string_type_id, H5T_cset_t_H5T_CSET_ASCII);
 
-        info_type_id = H5Tcreate(H5T_class_t_H5T_COMPOUND,
-                                 std::mem::size_of::<CInfoChannel>(),
+        info_type_id = H5Tcreate(
+            H5T_class_t_H5T_COMPOUND,
+            std::mem::size_of::<CInfoChannel>(),
         );
 
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("ChannelID\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, channel_id),
-                  H5T_NATIVE_INT_g);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("RowIndex\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, row_index),
-                  H5T_NATIVE_INT_g);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("GroupId\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, group_id),
-                  H5T_NATIVE_INT_g);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("ElectrodeGroup\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, electrode_group),
-                  H5T_NATIVE_INT_g);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("Label\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, label),
-                  string_type_id);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("RawDataType\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, raw_data_type),
-                  string_type_id);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("Unit\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, unit),
-                  string_type_id);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("Exponent\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, exponent),
-                  H5T_NATIVE_INT_g);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("AdZero\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, ad_zero),
-                  H5T_NATIVE_INT_g);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("Tick\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, tick),
-                  H5T_NATIVE_LLONG_g);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("ConversionFactor\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, conversion_factor),
-                  H5T_NATIVE_LLONG_g);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("ADCBits\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, adc_bits),
-                  H5T_NATIVE_INT_g);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("HighPassFilterType\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, high_pass_filter_type),
-                  string_type_id);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("HighPassFilterCutOff\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, high_pass_filter_cutoff),
-                  string_type_id);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("HighPassFilterOrder\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, high_pass_filter_order),
-                  H5T_NATIVE_INT_g);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("LowPassFilterType\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, low_pass_filter_type),
-                  string_type_id);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("LowPassFilterCutOff\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, low_pass_filter_cutoff),
-                  string_type_id);
-        H5Tinsert(info_type_id,
-                  CStr::from_bytes_with_nul("LowPassFilterOrder\0".as_bytes()).unwrap().as_ptr(),
-                  offset_of!(CInfoChannel, low_pass_filter_order),
-                  H5T_NATIVE_INT_g);
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("ChannelID\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, channel_id),
+            H5T_NATIVE_INT_g,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("RowIndex\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, row_index),
+            H5T_NATIVE_INT_g,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("GroupId\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, group_id),
+            H5T_NATIVE_INT_g,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("ElectrodeGroup\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, electrode_group),
+            H5T_NATIVE_INT_g,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("Label\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, label),
+            string_type_id,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("RawDataType\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, raw_data_type),
+            string_type_id,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("Unit\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, unit),
+            string_type_id,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("Exponent\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, exponent),
+            H5T_NATIVE_INT_g,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("AdZero\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, ad_zero),
+            H5T_NATIVE_INT_g,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("Tick\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, tick),
+            H5T_NATIVE_LLONG_g,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("ConversionFactor\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, conversion_factor),
+            H5T_NATIVE_LLONG_g,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("ADCBits\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, adc_bits),
+            H5T_NATIVE_INT_g,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("HighPassFilterType\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, high_pass_filter_type),
+            string_type_id,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("HighPassFilterCutOff\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, high_pass_filter_cutoff),
+            string_type_id,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("HighPassFilterOrder\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, high_pass_filter_order),
+            H5T_NATIVE_INT_g,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("LowPassFilterType\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, low_pass_filter_type),
+            string_type_id,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("LowPassFilterCutOff\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, low_pass_filter_cutoff),
+            string_type_id,
+        );
+        H5Tinsert(
+            info_type_id,
+            CStr::from_bytes_with_nul("LowPassFilterOrder\0".as_bytes())
+                .unwrap()
+                .as_ptr(),
+            offset_of!(CInfoChannel, low_pass_filter_order),
+            H5T_NATIVE_INT_g,
+        );
         H5Tclose(string_type_id);
     }
     info_type_id

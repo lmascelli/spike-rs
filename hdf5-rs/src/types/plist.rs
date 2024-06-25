@@ -4,10 +4,12 @@
 //!
 //! # Examples
 
-use crate::h5sys::*;
+use super::Filter;
 use crate::error::Error;
 use crate::h5sys::{
-    H5P_LST_FILE_ACCESS_ID_g as H5P_FILE_ACCESS, H5P_LST_FILE_CREATE_ID_g as H5P_FILE_CREATE,
+    H5P_LST_DATASET_ACCESS_ID_g as H5P_DATASET_ACCESS,
+    H5P_LST_FILE_ACCESS_ID_g as H5P_FILE_ACCESS,
+    H5P_LST_FILE_CREATE_ID_g as H5P_FILE_CREATE, *,
 };
 
 // Enum of the various classes available for property lists. Different
@@ -26,16 +28,41 @@ pub enum PListClass {
     LinkAccess,
     LinkCreate,
     StringCreate,
+    None,
+}
+
+impl PListClass {
+    pub fn get_id(&self) -> i64 {
+        unsafe {
+            H5open();
+        }
+
+        match self {
+            PListClass::DataSetAccess => unsafe { H5P_DATASET_ACCESS },
+            PListClass::FileAccess => unsafe { H5P_FILE_ACCESS },
+            PListClass::FileCreate => unsafe { H5P_FILE_CREATE },
+            _ => todo!(),
+        }
+    }
 }
 
 pub struct PList {
-    class: i64,
+    pub class: PListClass,
     pid: i64,
 }
 
+impl Default for PList {
+    fn default() -> Self {
+        Self {
+            class: PListClass::None,
+            pid: H5P_DEFAULT,
+        }
+    }
+}
+
 impl PList {
-    pub fn create(class: i64) -> Result<Self, Error> {
-        let pid = unsafe { H5Pcreate(class) };
+    pub fn create(class: PListClass) -> Result<Self, Error> {
+        let pid = unsafe { H5Pcreate(class.get_id()) };
         if pid <= 0 {
             Err(Error::plist_create())
         } else {
@@ -43,12 +70,34 @@ impl PList {
         }
     }
 
-    pub fn copy(pid: i64) -> Result<Self, String> {
+    pub fn copy(_pid: i64) -> Result<Self, String> {
         todo!()
     }
 
     pub fn get_pid(&self) -> i64 {
         self.pid
+    }
+
+    pub fn set_filter(
+        &mut self,
+        filter: &Filter,
+        params: &[u32],
+    ) -> Result<(), Error> {
+        if filter.n_params != params.len() {
+            Err(Error::plist_set_filter_wrong_number_of_parameters())
+        } else {
+            unsafe {
+                H5Pset_filter(
+                    self.get_pid(),
+                    filter.get_fid(),
+                    filter.flags,
+                    filter.n_params,
+                    params.as_ptr(),
+                );
+            }
+
+            Ok(())
+        }
     }
 }
 
