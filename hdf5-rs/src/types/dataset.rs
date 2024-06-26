@@ -1,16 +1,15 @@
 use super::{
     DataSpace, DataSpaceOwner, DataType, DataTypeL, DataTypeOwner, PList,
 };
-use crate::error::Error;
-use crate::h5sys::*;
-use crate::{cchar_to_string, str_to_cchar};
+use crate::{error::Error, h5sys::*, Hdf5};
 use std::any::type_name;
 
-pub struct Dataset {
-    did: i64,
-    path: String,
-    dataspace: Option<DataSpace>,
-    datatype: Option<DataType>,
+pub struct Dataset<'lib> {
+    pub lib: &'lib Hdf5,
+    pub did: i64,
+    pub path: String,
+    pub dataspace: Option<DataSpace<'lib>>,
+    pub datatype: Option<DataType<'lib>>,
 }
 
 pub trait DatasetFillable<T> {
@@ -50,7 +49,7 @@ pub trait DatasetOwner {
     fn list_datasets(&self) -> Vec<String>;
 }
 
-impl Dataset {
+impl<'lib> Dataset<'lib> {
     pub fn get_path(&self) -> String {
         self.path.clone()
     }
@@ -73,37 +72,6 @@ impl Dataset {
         } else {
             Err(Error::dataset_has_no_datatype(&self.path))
         }
-    }
-
-    #[allow(unused_unsafe)]
-    pub fn open(parent: i64, name: &str) -> Result<Self, Error> {
-        let did;
-        let path;
-        let dataspace;
-        let datatype;
-        unsafe {
-            did = H5Dopen2(parent, str_to_cchar!(name), H5P_DEFAULT);
-            if did <= 0 {
-                return Err(Error::dataset_open_fail(name));
-            }
-
-            let path_len = H5Iget_name(did, null_mut(), 0) as usize;
-            let buffer = vec![0usize; path_len + 1];
-            H5Iget_name(did, buffer.as_ptr() as _, buffer.len());
-            path = cchar_to_string!(buffer.as_ptr().cast());
-        }
-        let mut ret = Dataset {
-            did,
-            path,
-            dataspace: None,
-            datatype: None,
-        };
-        dataspace = ret.get_space()?;
-        datatype = ret.get_type()?;
-        ret.dataspace = Some(dataspace);
-        ret.datatype = Some(datatype);
-
-        Ok(ret)
     }
 
     pub fn fill_memory<T>(
@@ -130,7 +98,7 @@ impl Dataset {
     }
 }
 
-impl std::fmt::Display for Dataset {
+impl<'lib> std::fmt::Display for Dataset<'lib> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         writeln!(f, "H5Dataset")?;
         writeln!(f, "  path: {}", self.path)?;
@@ -157,7 +125,7 @@ impl std::fmt::Display for Dataset {
     }
 }
 
-impl Drop for Dataset {
+impl<'lib> Drop for Dataset<'lib> {
     fn drop(&mut self) {
         if self.did > 0 {
             #[cfg(debug_assertions)]
@@ -171,15 +139,15 @@ impl Drop for Dataset {
     }
 }
 
-impl DataSpaceOwner for Dataset {
+impl<'lib> DataSpaceOwner for Dataset<'lib> {
     fn get_space(&self) -> Result<DataSpace, Error> {
-        DataSpace::parse(unsafe { H5Dget_space(self.did) })
+        self.lib.open_dataspace(unsafe { H5Dget_space(self.did) })
     }
 }
 
-impl DataTypeOwner for Dataset {
+impl<'lib> DataTypeOwner for Dataset<'lib> {
     fn get_type(&self) -> Result<DataType, Error> {
-        DataType::parse(unsafe { H5Dget_type(self.did) })
+        self.lib.open_type(unsafe { H5Dget_type(self.did) })
     }
 }
 

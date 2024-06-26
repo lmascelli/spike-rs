@@ -1,5 +1,4 @@
-use crate::h5sys::*;
-use crate::error::Error;
+use crate::{error::Error, h5sys::*, Hdf5};
 
 #[derive(Clone, Copy)]
 pub enum DataTypeL {
@@ -15,18 +14,19 @@ pub enum DataTypeL {
     Compound,
 }
 
-pub struct DataType {
-    tid: i64,
-    dtype: DataTypeL,
+pub struct DataType<'lib> {
+    pub lib: &'lib Hdf5,
+    pub tid: i64,
+    pub dtype: DataTypeL,
 }
 
-impl DataType {
+impl<'lib> DataType<'lib> {
     pub fn get_dtype(&self) -> DataTypeL {
         self.dtype
     }
-    
+
     #[allow(non_upper_case_globals)]
-    pub fn parse(dtype_id: i64) -> Result<Self, Error> {
+    pub fn parse_type(dtype_id: i64) -> Result<DataTypeL, Error> {
         if dtype_id <= 0 {
             return Err(Error::datatype_get_type_fail());
         }
@@ -37,72 +37,32 @@ impl DataType {
                         H5T_sign_t_H5T_SGN_2 => true,
                         H5T_sign_t_H5T_SGN_NONE => false,
                         _ => {
-                            return Ok(DataType {
-                                tid: dtype_id,
-                                dtype: DataTypeL::Unimplemented,
-                            });
+                            return Ok(DataTypeL::Unimplemented);
                         }
                     };
                     let size = H5Tget_size(dtype_id);
                     if sign {
                         if size == 4 {
-                            return Ok(DataType {
-                                tid: dtype_id,
-                                dtype: DataTypeL::Signed32,
-                            });
-                        }
-                        else if size == 8 {
-                            return Ok(DataType {
-                                tid: dtype_id,
-                                dtype: DataTypeL::Signed64,
-                            });
+                            return Ok(DataTypeL::Signed32);
+                        } else if size == 8 {
+                            return Ok(DataTypeL::Signed64);
                         } else {
-                            return Ok(DataType {
-                                tid: dtype_id,
-                                dtype: DataTypeL::Unimplemented,
-                            });
+                            return Ok(DataTypeL::Unimplemented);
                         }
                     }
                     if size == 4 {
-                        Ok(DataType {
-                            tid: dtype_id,
-                            dtype: DataTypeL::Unsigned32,
-                        })
-                    }
-                    else if size == 8 {
-                        Ok(DataType {
-                            tid: dtype_id,
-                            dtype: DataTypeL::Unsigned64,
-                        })
+                        Ok(DataTypeL::Unsigned32)
+                    } else if size == 8 {
+                        Ok(DataTypeL::Unsigned64)
                     } else {
-                        Ok(DataType {
-                            tid: dtype_id,
-                            dtype: DataTypeL::Unimplemented,
-                        })
+                        Ok(DataTypeL::Unimplemented)
                     }
-                },
+                }
 
-                H5T_class_t_H5T_FLOAT => {
-                    match H5Tget_size(dtype_id) {
-                        4 => {
-                            Ok(DataType {
-                                tid: dtype_id,
-                                dtype: DataTypeL::Float32,
-                            })
-                        },
-                        8 => {
-                            Ok(DataType {
-                                tid: dtype_id,
-                                dtype: DataTypeL::Float64,
-                            })
-                        },
-                        _ => {
-                            Ok(DataType {
-                                tid: dtype_id,
-                                dtype: DataTypeL::Unimplemented,
-                            })
-                        },
-                    }
+                H5T_class_t_H5T_FLOAT => match H5Tget_size(dtype_id) {
+                    4 => Ok(DataTypeL::Float32),
+                    8 => Ok(DataTypeL::Float64),
+                    _ => Ok(DataTypeL::Unimplemented),
                 },
 
                 H5T_class_t_H5T_STRING => {
@@ -111,40 +71,31 @@ impl DataType {
                     let is_variable = {
                         let r = H5Tis_variable_str(dtype_id);
                         match r {
-                            0   => false,
+                            0 => false,
                             _ if r > 0 => true,
-                            _   => {
-                                return Err(Error::datatype_parse_string_is_variable());
-                            },
+                            _ => {
+                                return Err(
+                                    Error::datatype_parse_string_is_variable(),
+                                );
+                            }
                         }
                     };
 
-                    if padding == H5T_str_t_H5T_STR_NULLTERM && cset == H5T_cset_t_H5T_CSET_ASCII {
-                        Ok(DataType {
-                            tid: dtype_id,
-                            dtype: if is_variable {
-                                DataTypeL::StringDynamic
-                            } else {
-                                DataTypeL::StringStatic
-                            },
+                    if padding == H5T_str_t_H5T_STR_NULLTERM
+                        && cset == H5T_cset_t_H5T_CSET_ASCII
+                    {
+                        Ok(if is_variable {
+                            DataTypeL::StringDynamic
+                        } else {
+                            DataTypeL::StringStatic
                         })
                     } else {
                         Err(Error::datatype_parse_string_type_not_supported())
                     }
-                },
-
-                H5T_class_t_H5T_COMPOUND => {
-                        Ok(DataType {
-                            tid: dtype_id,
-                            dtype: DataTypeL::Compound,
-                        })
-                },
-                _ => {
-                    Ok(DataType {
-                        tid: dtype_id,
-                        dtype: DataTypeL::Unimplemented,
-                    })
                 }
+
+                H5T_class_t_H5T_COMPOUND => Ok(DataTypeL::Compound),
+                _ => Ok(DataTypeL::Unimplemented),
             }
         }
     }
@@ -158,10 +109,11 @@ impl DataType {
     }
 }
 
-impl Drop for DataType {
+impl<'lib> Drop for DataType<'lib> {
     fn drop(&mut self) {
         if self.tid > 0 {
-            #[cfg(debug_assertions)] {
+            #[cfg(debug_assertions)]
+            {
                 println!("Closing type: {}", self.tid);
             }
             unsafe { H5Tclose(self.tid) };
@@ -169,21 +121,25 @@ impl Drop for DataType {
     }
 }
 
-impl std::fmt::Display for DataType {
+impl<'lib> std::fmt::Display for DataType<'lib> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         writeln!(f, "H5Type")?;
-        writeln!(f, "  type: {}", match self.dtype {
-            DataTypeL::Signed32 => "Signed32",
-            DataTypeL::Signed64 => "Signed64",
-            DataTypeL::Unsigned32 => "Unsigned32",
-            DataTypeL::Unsigned64 => "Unsigned64",
-            DataTypeL::Float32 => "Float32",
-            DataTypeL::Float64 => "Float64",
-            DataTypeL::StringStatic => "String static",
-            DataTypeL::StringDynamic => "String dynamic",
-            DataTypeL::Compound => "Compound datatype",
-            DataTypeL::Unimplemented => "Unimplemented type conversion",
-        })?;
+        writeln!(
+            f,
+            "  type: {}",
+            match self.dtype {
+                DataTypeL::Signed32 => "Signed32",
+                DataTypeL::Signed64 => "Signed64",
+                DataTypeL::Unsigned32 => "Unsigned32",
+                DataTypeL::Unsigned64 => "Unsigned64",
+                DataTypeL::Float32 => "Float32",
+                DataTypeL::Float64 => "Float64",
+                DataTypeL::StringStatic => "String static",
+                DataTypeL::StringDynamic => "String dynamic",
+                DataTypeL::Compound => "Compound datatype",
+                DataTypeL::Unimplemented => "Unimplemented type conversion",
+            }
+        )?;
         writeln!(f, "  tid: {}", self.tid)?;
         writeln!(f, "  size: {}", self.size())?;
         Ok(())

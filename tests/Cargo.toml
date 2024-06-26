@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 spike-rs = { path = "../spike-rs" }
-spike-h5 = { path = "../implementations/spike-h5" }
+# spike-h5 = { path = "../implementations/spike-h5" }
 hdf5-rs = { path = "../hdf5-rs" }

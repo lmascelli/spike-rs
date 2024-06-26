@@ -1,10 +1,13 @@
-use crate::error::Error;
-use crate::h5sys::*;
-use crate::types::{
-    group::{Group, GroupOpener},
-    plist::PList,
+use crate::{
+    error::Error,
+    h5sys::*,
+    types::{
+        group::{Group, GroupOpener},
+        plist::PList,
+    },
+    utils::{get_group_names, str_to_cchar},
+    Hdf5,
 };
-use crate::utils::{get_group_names, str_to_cchar};
 
 pub enum FileOpenAccess {
     ReadOnly,
@@ -12,13 +15,15 @@ pub enum FileOpenAccess {
 }
 
 #[allow(unused)]
-pub struct File {
-    filename: String,
-    fid: i64,
+pub struct File<'lib> {
+    pub lib: &'lib Hdf5,
+    pub filename: String,
+    pub fid: i64,
 }
 
-impl File {
+impl<'lib> File<'lib> {
     pub fn create(
+        lib: &'lib Hdf5,
         filename: &str,
         overwrite: bool,
     ) -> Result<Self, Error> {
@@ -35,16 +40,14 @@ impl File {
             Err(Error::file_create(filename))
         } else {
             Ok(Self {
+                lib,
                 filename: filename.to_string(),
                 fid,
             })
         }
     }
 
-    pub fn open(
-        filename: &str,
-        access: FileOpenAccess,
-    ) -> Result<Self, Error> {
+    pub fn open(lib: &'lib Hdf5, filename: &str, access: FileOpenAccess) -> Result<Self, Error> {
         let fid = unsafe {
             H5Fopen(
                 str_to_cchar!(filename),
@@ -58,6 +61,7 @@ impl File {
 
         if fid > 0 {
             Ok(File {
+                lib,
                 filename: filename.to_string(),
                 fid,
             })
@@ -82,7 +86,7 @@ impl File {
     }
 }
 
-impl Drop for File {
+impl<'lib> Drop for File<'lib> {
     fn drop(&mut self) {
         if self.fid > 0 {
             #[cfg(debug_assertions)]
@@ -96,7 +100,7 @@ impl Drop for File {
     }
 }
 
-impl std::fmt::Display for File {
+impl<'lib> std::fmt::Display for File<'lib> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         writeln!(f, "H5File")?;
         writeln!(f, "  filename: {}", self.filename)?;
@@ -105,12 +109,9 @@ impl std::fmt::Display for File {
     }
 }
 
-impl GroupOpener for File {
-    fn open_group(
-        &self,
-        name: &str,
-    ) -> Result<Group, Error> {
-        Group::open(self.get_fid(), name)
+impl<'lib> GroupOpener for File<'lib> {
+    fn open_group(&self, name: &str) -> Result<Group, Error> {
+        self.lib.open_group(self.get_fid(), name)
     }
 
     fn list_groups(&self) -> Vec<String> {

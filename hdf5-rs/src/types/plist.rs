@@ -4,12 +4,15 @@
 //!
 //! # Examples
 
-use super::Filter;
-use crate::error::Error;
-use crate::h5sys::{
-    H5P_LST_DATASET_ACCESS_ID_g as H5P_DATASET_ACCESS,
-    H5P_LST_FILE_ACCESS_ID_g as H5P_FILE_ACCESS,
-    H5P_LST_FILE_CREATE_ID_g as H5P_FILE_CREATE, *,
+use crate::{
+    error::Error,
+    h5sys::{
+        H5P_LST_DATASET_ACCESS_ID_g as H5P_DATASET_ACCESS,
+        H5P_LST_FILE_ACCESS_ID_g as H5P_FILE_ACCESS,
+        H5P_LST_FILE_CREATE_ID_g as H5P_FILE_CREATE, *,
+    },
+    types::Filter,
+    Hdf5,
 };
 
 // Enum of the various classes available for property lists. Different
@@ -46,30 +49,13 @@ impl PListClass {
     }
 }
 
-pub struct PList {
+pub struct PList<'lib> {
+    pub lib: &'lib Hdf5,
     pub class: PListClass,
-    pid: i64,
+    pub pid: i64,
 }
 
-impl Default for PList {
-    fn default() -> Self {
-        Self {
-            class: PListClass::None,
-            pid: H5P_DEFAULT,
-        }
-    }
-}
-
-impl PList {
-    pub fn create(class: PListClass) -> Result<Self, Error> {
-        let pid = unsafe { H5Pcreate(class.get_id()) };
-        if pid <= 0 {
-            Err(Error::plist_create())
-        } else {
-            Ok(Self { class, pid })
-        }
-    }
-
+impl<'lib> PList<'lib> {
     pub fn copy(_pid: i64) -> Result<Self, String> {
         todo!()
     }
@@ -101,7 +87,7 @@ impl PList {
     }
 }
 
-impl Drop for PList {
+impl<'lib> Drop for PList<'lib> {
     fn drop(&mut self) {
         if self.pid > 0 {
             unsafe {

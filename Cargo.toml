@@ -5,7 +5,7 @@ members = [
   "hdf5-rs",
   "spike-rs",
   "implementations/memory",
-  "implementations/spike-h5",
+  # "implementations/spike-h5",
   "tests",
   # "pycode-rs",
   # "mc_explorer",
