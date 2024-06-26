@@ -1,5 +1,4 @@
 use hdf5_rs::{
-    H5LibRuntime,
     cchar_to_string,
     error::Error as H5Error,
     h5sys::CStr,
@@ -72,7 +71,8 @@ impl AnalogStream {
             match sampling_frequency {
                 Some(sf) => {
                     if sf != ic.tick as f32 {
-                        return Err(PhaseH5Error::FileError(FileErrorType::AnalogChannelsHaveDifferentSamplingFrequencies));
+                        return Err(PhaseH5Error::FileError(
+                                FileErrorType::AnalogChannelsHaveDifferentSamplingFrequencies));
                     }
                 }
                 None => {
@@ -126,8 +126,8 @@ impl EventStream {
     }
 }
 
-pub struct PhaseH5<'runtime> {
-    file: File<'runtime>,
+pub struct PhaseH5 {
+    file: File,
     date: String,
     raw_data: AnalogStream,
     sampling_frequency: f32,
@@ -136,11 +136,14 @@ pub struct PhaseH5<'runtime> {
     datalen: usize,
 }
 
-impl<'runtime> PhaseH5<'runtime> {
-    pub fn open(runtime: &'runtime H5LibRuntime, filename: &str) -> Result<Self, PhaseH5Error> {
-        let file = File::open(runtime, filename, FileOpenAccess::ReadWrite)?;
+impl PhaseH5 {
+    pub fn open(
+        filename: &str,
+    ) -> Result<Self, PhaseH5Error> {
+        let file = File::open(filename, FileOpenAccess::ReadWrite)?;
         let data_group = file.open_group("Data")?;
-        let analog_group = data_group.open_group("Recording_0/AnalogStream")?;
+        let analog_group =
+            data_group.open_group("Recording_0/AnalogStream")?;
 
         let date = String::from_attribute(&data_group.open_attr("Date")?)?;
 
@@ -154,10 +157,10 @@ impl<'runtime> PhaseH5<'runtime> {
                 AnalogStream::new(analog_group.open_group(&analog)?)?;
             if is_raw {
                 if raw_data.is_none() {
-
                     if let Some(sf) = sampling_frequency {
                         if analog.sampling_frequency != sf {
-                            return Err(PhaseH5Error::FileError(FileErrorType::AnalogChannelsHaveDifferentSamplingFrequencies));
+                            return Err(PhaseH5Error::FileError(
+                                    FileErrorType::AnalogChannelsHaveDifferentSamplingFrequencies));
                         }
                     } else {
                         sampling_frequency = Some(analog.sampling_frequency);
@@ -165,7 +168,8 @@ impl<'runtime> PhaseH5<'runtime> {
 
                     if let Some(dl) = datalen {
                         if analog.datalen != dl {
-                            return Err(PhaseH5Error::FileError(FileErrorType::DigitalSamplesDoesNotMatchRawDataSamples));
+                            return Err(PhaseH5Error::FileError(
+                                    FileErrorType::DigitalSamplesDoesNotMatchRawDataSamples));
                         }
                     } else {
                         datalen = Some(analog.datalen);
@@ -179,10 +183,10 @@ impl<'runtime> PhaseH5<'runtime> {
                 }
             } else {
                 if digital.is_none() {
-
                     if let Some(sf) = sampling_frequency {
                         if analog.sampling_frequency != sf {
-                            return Err(PhaseH5Error::FileError(FileErrorType::AnalogChannelsHaveDifferentSamplingFrequencies));
+                            return Err(PhaseH5Error::FileError(
+                                    FileErrorType::AnalogChannelsHaveDifferentSamplingFrequencies));
                         }
                     } else {
                         sampling_frequency = Some(analog.sampling_frequency);
@@ -190,7 +194,8 @@ impl<'runtime> PhaseH5<'runtime> {
 
                     if let Some(dl) = datalen {
                         if analog.datalen != dl {
-                            return Err(PhaseH5Error::FileError(FileErrorType::DigitalSamplesDoesNotMatchRawDataSamples));
+                            return Err(PhaseH5Error::FileError(
+                                    FileErrorType::DigitalSamplesDoesNotMatchRawDataSamples));
                         }
                     } else {
                         datalen = Some(analog.datalen);
@@ -234,7 +239,7 @@ impl<'runtime> PhaseH5<'runtime> {
     }
 }
 
-impl<'runtime> PhaseHandler for PhaseH5<'runtime> {
+impl PhaseHandler for PhaseH5 {
     fn sampling_frequency(&self) -> f32 {
         self.sampling_frequency
     }
@@ -279,7 +284,7 @@ impl<'runtime> PhaseHandler for PhaseH5<'runtime> {
 
     fn digital(
         &self,
-        index: usize, 
+        index: usize,
         start: Option<usize>,
         end: Option<usize>,
     ) -> Result<Vec<f32>, SpikeError> {
@@ -324,11 +329,15 @@ impl<'runtime> PhaseHandler for PhaseH5<'runtime> {
     }
 }
 
-impl<'runtime> std::fmt::Display for PhaseH5<'runtime> {
+impl std::fmt::Display for PhaseH5 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "PhaseH5:")?;
         writeln!(f, "  Recording date: {}", self.date)?;
-        writeln!(f, "  Raw data channels: {}", self.raw_data.info_channels.len())?;
+        writeln!(
+            f,
+            "  Raw data channels: {}",
+            self.raw_data.info_channels.len()
+        )?;
         writeln!(f, "  Datalen: {}", self.datalen)?;
         writeln!(f, "  Sampling Frequency: {}", self.sampling_frequency)?;
         writeln!(f, "  Digital present: {}", self.digital.is_some())?;

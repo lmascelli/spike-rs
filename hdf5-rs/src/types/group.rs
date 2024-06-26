@@ -1,7 +1,6 @@
 use crate::h5sys::*;
 use crate::types::{Attr, AttrOpener, Dataset, DatasetOwner};
-use crate::utils::{get_group_names, str_to_cchar};
-use crate::error::Error;
+use crate::{error::Error, utils::{get_group_names, str_to_cchar}};
 
 pub struct Group {
     path: String,

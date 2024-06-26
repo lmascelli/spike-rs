@@ -5,7 +5,6 @@ use crate::types::{
     plist::PList,
 };
 use crate::utils::{get_group_names, str_to_cchar};
-use crate::H5LibRuntime;
 
 pub enum FileOpenAccess {
     ReadOnly,
@@ -13,15 +12,13 @@ pub enum FileOpenAccess {
 }
 
 #[allow(unused)]
-pub struct File<'runtime> {
-    runtime: &'runtime H5LibRuntime,
+pub struct File {
     filename: String,
     fid: i64,
 }
 
-impl<'runtime> File<'runtime> {
+impl File {
     pub fn create(
-        runtime: &'runtime H5LibRuntime,
         filename: &str,
         overwrite: bool,
     ) -> Result<Self, Error> {
@@ -38,7 +35,6 @@ impl<'runtime> File<'runtime> {
             Err(Error::file_create(filename))
         } else {
             Ok(Self {
-                runtime,
                 filename: filename.to_string(),
                 fid,
             })
@@ -46,7 +42,6 @@ impl<'runtime> File<'runtime> {
     }
 
     pub fn open(
-        runtime: &'runtime H5LibRuntime,
         filename: &str,
         access: FileOpenAccess,
     ) -> Result<Self, Error> {
@@ -63,7 +58,6 @@ impl<'runtime> File<'runtime> {
 
         if fid > 0 {
             Ok(File {
-                runtime,
                 filename: filename.to_string(),
                 fid,
             })
@@ -88,7 +82,7 @@ impl<'runtime> File<'runtime> {
     }
 }
 
-impl<'runtime> Drop for File<'runtime> {
+impl Drop for File {
     fn drop(&mut self) {
         if self.fid > 0 {
             #[cfg(debug_assertions)]
@@ -102,7 +96,7 @@ impl<'runtime> Drop for File<'runtime> {
     }
 }
 
-impl<'runtime> std::fmt::Display for File<'runtime> {
+impl std::fmt::Display for File {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         writeln!(f, "H5File")?;
         writeln!(f, "  filename: {}", self.filename)?;
@@ -111,8 +105,11 @@ impl<'runtime> std::fmt::Display for File<'runtime> {
     }
 }
 
-impl<'runtime> GroupOpener for File<'runtime> {
-    fn open_group(&self, name: &str) -> Result<Group, Error> {
+impl GroupOpener for File {
+    fn open_group(
+        &self,
+        name: &str,
+    ) -> Result<Group, Error> {
         Group::open(self.get_fid(), name)
     }
 

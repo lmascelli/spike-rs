@@ -2,7 +2,7 @@ use spike_h5::{PhaseH5, PhaseH5Error};
 use spike_rs::operations::math::{convolve, train};
 use spike_rs::plot::ToPyList;
 use std::collections::HashMap;
-use hdf5_rs::{H5LibRuntime, error::Error};
+use hdf5_rs::{error::Error};
 
 fn filter_test() {
     let n = 10;
@@ -22,13 +22,11 @@ fn filter_test() {
 
 fn phaseh5_test() -> Result<(), PhaseH5Error> {
     let filename = "/home/leonardo/Documents/unige/data/12-04-2024/38936_DIV77/raw/04_StimEl.h5";
-    let runtime = H5LibRuntime::new()?;
-    println!("{}", PhaseH5::open(&runtime, filename)?);
+    println!("{}", PhaseH5::open(filename)?);
     Ok(())
 }
 
 fn hdf5_test() -> Result<(), Error> {
-    H5LibRuntime::new()?;
     Ok(())
 }
 
