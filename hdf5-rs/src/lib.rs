@@ -38,6 +38,7 @@ pub mod error;
 pub mod h5sys;
 pub mod types;
 pub mod utils;
+pub mod identifiers;
 
 use crate::{
     error::Error as H5Error,
@@ -102,11 +103,7 @@ impl Hdf5 {
         if fid <= 0 {
             Err(H5Error::file_create(filename))
         } else {
-            Ok(File {
-                lib: self,
-                filename: filename.to_string(),
-                fid,
-            })
+            Ok(File { lib: self, filename: filename.to_string(), fid })
         }
     }
 
@@ -127,11 +124,7 @@ impl Hdf5 {
         };
 
         if fid > 0 {
-            Ok(File {
-                lib: self,
-                filename: filename.to_string(),
-                fid,
-            })
+            Ok(File { lib: self, filename: filename.to_string(), fid })
         } else {
             Err(H5Error::file_open(filename))
         }
@@ -167,11 +160,7 @@ impl Hdf5 {
             let path = unsafe {
                 CStr::from_ptr(buffer.as_ptr().cast()).to_str().unwrap()
             };
-            Ok(Group {
-                lib: self,
-                path: path.to_string(),
-                gid,
-            })
+            Ok(Group { lib: self, path: path.to_string(), gid })
         }
     }
 
@@ -211,12 +200,7 @@ impl Hdf5 {
             );
         }
 
-        Ok(DataSpace {
-            lib: self,
-            did: dataspace_id,
-            space_type,
-            dims,
-        })
+        Ok(DataSpace { lib: self, did: dataspace_id, space_type, dims })
     }
 
     pub fn create_dataspace(
@@ -254,24 +238,34 @@ impl Hdf5 {
     ) -> Result<Dataset, H5Error> {
         let did;
         let path;
+        let dataspace_id;
+        let datatype_id;
         unsafe {
             did = H5Dopen2(parent, str_to_cchar!(name), H5P_DEFAULT);
             if did <= 0 {
                 return Err(H5Error::dataset_open_fail(name));
             }
-
             let path_len = H5Iget_name(did, null_mut(), 0) as usize;
             let buffer = vec![0usize; path_len + 1];
             H5Iget_name(did, buffer.as_ptr() as _, buffer.len());
             path = cchar_to_string!(buffer.as_ptr().cast());
+
+            dataspace_id = H5Dget_space(did);
+            if dataspace_id <= 0 {
+                return Err(H5Error::dataset_has_no_dataspace(&path));
+            }
+            datatype_id = H5Dget_type(did);
+            if datatype_id <= 0 {
+                return Err(H5Error::dataset_has_no_datatype(&path));
+            }
         }
 
         Ok(Dataset {
             lib: self,
             did,
             path,
-            dataspace: Some(self.open_dataspace(did)?),
-            datatype: Some(self.open_type(did)?),
+            dataspace: Some(self.open_dataspace(dataspace_id)?),
+            datatype: Some(self.open_type(datatype_id)?),
         })
     }
 
@@ -289,11 +283,7 @@ impl Hdf5 {
             }
         }
 
-        Ok(Attr {
-            lib: self,
-            name: name.to_string(),
-            aid,
-        })
+        Ok(Attr { lib: self, name: name.to_string(), aid })
     }
 
     // FILTER OPENING
@@ -309,6 +299,17 @@ impl Hdf5 {
         function: CFilter,
         desc: Option<&str>,
     ) -> Result<Filter, H5Error> {
+        let cls = H5Z_class2_t {
+            version: todo!(),
+            id: todo!(),
+            encoder_present: todo!(),
+            decoder_present: todo!(),
+            name: todo!(),
+            can_apply: todo!(),
+            set_local: todo!(),
+            filter: todo!(),
+        };
+
         Ok(Filter {
             lib: self,
             fid: self.get_next_filter_id(),
@@ -316,6 +317,7 @@ impl Hdf5 {
             desc: desc.unwrap_or("").to_string(),
             n_params: 0,
             flags: 0,
+            cls,
         })
     }
 
@@ -325,12 +327,12 @@ impl Hdf5 {
         if pid <= 0 {
             Err(H5Error::plist_create())
         } else {
-            Ok(PList {
-                lib: self,
-                class,
-                pid,
-            })
+            Ok(PList { lib: self, class, pid })
         }
+    }
+
+    pub fn plist_from_id(&self, id: i64) -> Result<PList, H5Error> {
+        todo!()
     }
 }
 

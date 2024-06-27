@@ -27,11 +27,16 @@ pub enum ErrorType {
     GroupDoesntExist(String),
     GroupOpenFail(String),
 
+    IdUnvalid,
+
     LibraryInitFail,
 
     PListCreate,
+    PListClassesDoNotMatch(String, String),
     PListSetFilterWrongNumberOfParameter,
-    // PListCopy,
+    PListGetChunkFail,
+    PListNotDatasetAccess,
+
     NotYetImplemented(Option<String>),
     OtherWithString(String),
     Other,
@@ -44,15 +49,11 @@ pub struct Error {
 
 impl Error {
     pub fn other() -> Self {
-        Self {
-            etype: ErrorType::Other,
-        }
+        Self { etype: ErrorType::Other }
     }
 
     pub fn other_with_string(s: &str) -> Self {
-        Self {
-            etype: ErrorType::OtherWithString(s.to_string()),
-        }
+        Self { etype: ErrorType::OtherWithString(s.to_string()) }
     }
 
     pub fn not_yet_implemented(data: Option<&str>) -> Self {
@@ -68,36 +69,32 @@ impl Error {
     // LIBRARY GENERAL
 
     pub fn library_init_fail() -> Self {
-        Self {
-            etype: ErrorType::LibraryInitFail,
-        }
+        Self { etype: ErrorType::LibraryInitFail }
+    }
+
+    // ID
+
+    pub fn id_unvalid() -> Self {
+        Self { etype: ErrorType::IdUnvalid }
     }
 
     // FILE ERRORS
 
     pub fn file_create(filename: &str) -> Self {
-        Self {
-            etype: ErrorType::FileCreate(filename.to_string()),
-        }
+        Self { etype: ErrorType::FileCreate(filename.to_string()) }
     }
 
     pub fn file_open(filename: &str) -> Self {
-        Self {
-            etype: ErrorType::FileOpen(filename.to_string()),
-        }
+        Self { etype: ErrorType::FileOpen(filename.to_string()) }
     }
 
     // GROUP ERRORS
     pub fn group_open(name: &str) -> Self {
-        Self {
-            etype: ErrorType::GroupOpenFail(name.to_string()),
-        }
+        Self { etype: ErrorType::GroupOpenFail(name.to_string()) }
     }
 
     pub fn group_doesnt_exists(name: &str) -> Self {
-        Self {
-            etype: ErrorType::GroupDoesntExist(name.to_string()),
-        }
+        Self { etype: ErrorType::GroupDoesntExist(name.to_string()) }
     }
 
     // DATASPACE ERRORS
@@ -147,55 +144,39 @@ impl Error {
     }
 
     pub fn dataspace_get_dimensions_fail() -> Self {
-        Self {
-            etype: ErrorType::DataSpaceGetDimensionsFail,
-        }
+        Self { etype: ErrorType::DataSpaceGetDimensionsFail }
     }
 
     pub fn dataset_fill_memory_fail(path: &str) -> Self {
-        Self {
-            etype: ErrorType::DataSetFillMemoryFail(path.to_string()),
-        }
+        Self { etype: ErrorType::DataSetFillMemoryFail(path.to_string()) }
     }
 
     // DATATYPE ERRORS
 
     pub fn datatype_get_type_fail() -> Self {
-        Self {
-            etype: ErrorType::DataTypeGetTypeFail,
-        }
+        Self { etype: ErrorType::DataTypeGetTypeFail }
     }
 
     pub fn datatype_parse_string_is_variable() -> Self {
-        Self {
-            etype: ErrorType::DataTypeParseStringIsVariableFail,
-        }
+        Self { etype: ErrorType::DataTypeParseStringIsVariableFail }
     }
 
     pub fn datatype_parse_string_type_not_supported() -> Self {
-        Self {
-            etype: ErrorType::DataTypeParseStringTypeNotSupported,
-        }
+        Self { etype: ErrorType::DataTypeParseStringTypeNotSupported }
     }
 
     // DATASET ERRORS
 
     pub fn dataset_open_fail(path: &str) -> Self {
-        Self {
-            etype: ErrorType::DataSetOpenFail(path.to_string()),
-        }
+        Self { etype: ErrorType::DataSetOpenFail(path.to_string()) }
     }
 
     pub fn dataset_has_no_dataspace(path: &str) -> Self {
-        Self {
-            etype: ErrorType::DataSetHasNoDataSpace(path.to_string()),
-        }
+        Self { etype: ErrorType::DataSetHasNoDataSpace(path.to_string()) }
     }
 
     pub fn dataset_has_no_datatype(path: &str) -> Self {
-        Self {
-            etype: ErrorType::DataSetHasNoDataType(path.to_string()),
-        }
+        Self { etype: ErrorType::DataSetHasNoDataType(path.to_string()) }
     }
 
     pub fn dataset_unvalid_type(path: &str, typename: &str) -> Self {
@@ -210,15 +191,11 @@ impl Error {
     // ATTRIBUTE ERRORS
 
     pub fn attribute_open(name: &str) -> Self {
-        Self {
-            etype: ErrorType::AttributeOpenFail(name.to_string()),
-        }
+        Self { etype: ErrorType::AttributeOpenFail(name.to_string()) }
     }
 
     pub fn attribute_get_type(name: &str) -> Self {
-        Self {
-            etype: ErrorType::AttributeGetTypeFail(name.to_string()),
-        }
+        Self { etype: ErrorType::AttributeGetTypeFail(name.to_string()) }
     }
 
     pub fn attribute_fill_fail(from: &str, to: &str) -> Self {
@@ -231,22 +208,36 @@ impl Error {
     }
 
     pub fn attribute_fill_not_available(to: &str) -> Self {
-        Self {
-            etype: ErrorType::AttributeFillNotAvailable(to.to_string()),
-        }
+        Self { etype: ErrorType::AttributeFillNotAvailable(to.to_string()) }
     }
 
     // PLIST ERRORS
     pub fn plist_create() -> Self {
+        Self { etype: ErrorType::PListCreate }
+    }
+
+    pub fn plist_classes_do_not_match(
+        expected_class: &str,
+        actual_class: &str,
+    ) -> Self {
         Self {
-            etype: ErrorType::PListCreate,
+            etype: ErrorType::PListClassesDoNotMatch(
+                expected_class.to_string(),
+                actual_class.to_string(),
+            ),
         }
     }
 
+    pub fn plist_not_dataset_access() -> Self {
+        Self { etype: ErrorType::PListNotDatasetAccess }
+    }
+
     pub fn plist_set_filter_wrong_number_of_parameters() -> Self {
-        Self {
-            etype: ErrorType::PListSetFilterWrongNumberOfParameter,
-        }
+        Self { etype: ErrorType::PListSetFilterWrongNumberOfParameter }
+    }
+
+    pub fn plist_get_chunk_fail() -> Self {
+        Self { etype: ErrorType::PListGetChunkFail }
     }
 }
 
@@ -258,6 +249,10 @@ impl std::fmt::Display for Error {
         match self.etype {
             ErrorType::LibraryInitFail => {
                 writeln!(f, "ErrorType::LibraryInitFail: failed to initialize the library")?;
+            }
+
+            ErrorType::IdUnvalid => {
+                writeln!(f, "ErrorType::IdUnvalid")?;
             }
 
             ErrorType::FileCreate(ref filename) => {
@@ -399,8 +394,25 @@ impl std::fmt::Display for Error {
                 )?;
             }
 
+            ErrorType::PListClassesDoNotMatch(
+                ref expected_class,
+                ref actual_class,
+            ) => {
+                writeln!(f,
+                    "Error::PListClassesDoNotMatch: expected_class: {} --- actual_class: {}",
+                        expected_class, actual_class)?;
+            }
+
+            ErrorType::PListNotDatasetAccess => {
+                writeln!(f, "Error::PListNotDatasetAccess")?;
+            }
+
             ErrorType::PListSetFilterWrongNumberOfParameter => {
                 writeln!(f, "Error::PListSetFilterWrongNumberOfParameter: the number of parameter passed to the filter does not match the filter required parameters")?;
+            }
+
+            ErrorType::PListGetChunkFail => {
+                writeln!(f, "Error::PListGetChunkFail")?;
             }
 
             ErrorType::NotYetImplemented(ref data) => {

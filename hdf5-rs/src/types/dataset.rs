@@ -1,7 +1,8 @@
 use super::{
     DataSpace, DataSpaceOwner, DataType, DataTypeL, DataTypeOwner, PList,
+    PListClass,
 };
-use crate::{error::Error, h5sys::*, Hdf5};
+use crate::{error::Error, h5sys::*, identifiers::check_id, Hdf5};
 use std::any::type_name;
 
 pub struct Dataset<'lib> {
@@ -71,6 +72,35 @@ impl<'lib> Dataset<'lib> {
             Ok(datatype)
         } else {
             Err(Error::dataset_has_no_datatype(&self.path))
+        }
+    }
+
+    pub fn get_create_plist(&self) -> Result<PList, Error> {
+        unsafe {
+            let pid = H5Dget_create_plist(self.did);
+            check_id(pid)?;
+            let class = PListClass::from_id(pid);
+            let ret = PList { lib: self.lib, pid, class };
+            ret.check_class(PListClass::DataSetCreate)?;
+            Ok(ret)
+        }
+    }
+
+    pub fn get_chunk(&self) -> Result<Option<Vec<usize>>, Error> {
+        let cplist = self.get_create_plist()?;
+        let dims = self.get_dataspace()?.get_dims().len();
+        let chunk_sizes = vec![0; dims];
+        if unsafe {
+            H5Pget_chunk(
+                cplist.pid,
+                dims as i32,
+                chunk_sizes.as_ptr().cast_mut(),
+            )
+        } >= 0
+        {
+            Ok(Some(chunk_sizes.iter().map(|x| *x as usize).collect()))
+        } else {
+            Ok(None)
         }
     }
 

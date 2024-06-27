@@ -17,6 +17,8 @@ pub mod sys {
 pub use std::ffi::{c_char, c_void, CStr, CString};
 pub use std::ptr::{null, null_mut};
 
+pub type Hid = i64;
+
 #[rustfmt::skip]
 pub use sys::{
     H5open, H5close, H5is_library_threadsafe, H5get_libversion, H5atclose,
@@ -27,17 +29,20 @@ pub use sys::{
     H5Aread,
 
     H5Dclose, H5Dcreate2, H5Dget_space, H5Dget_type, H5Dopen2, H5Dread, H5Dwrite,
+    H5Dget_create_plist,
 
     H5Fclose, H5Fcreate, H5Fis_accessible, H5Fopen,
 
     H5Gclose, H5Gcreate2, H5Gopen2,
 
-    H5Iget_name,
+    H5Iget_name, H5Iis_valid,
 
     H5L_info2_t, H5Lexists, H5Literate2,
 
-    H5Pclose, H5Pcopy, H5Pcreate, H5Pset_filter,
-    H5P_LST_FILE_CREATE_ID_g, H5P_LST_FILE_ACCESS_ID_g, H5P_LST_DATASET_ACCESS_ID_g,
+    H5Pclose, H5Pcopy, H5Pcreate, H5Pset_filter, H5Pget_chunk, H5Pget_class, H5Pequal,
+    H5Pget_class_name,
+    H5P_CLS_FILE_CREATE_ID_g, H5P_CLS_FILE_ACCESS_ID_g, H5P_CLS_DATASET_ACCESS_ID_g,
+    H5P_CLS_DATASET_CREATE_ID_g,
 
     H5Sclose, H5Screate_simple, H5Sget_simple_extent_dims, H5Sget_simple_extent_ndims,
     H5Sselect_all, H5Sselect_hyperslab, H5Screate,
@@ -55,6 +60,8 @@ pub use sys::{
 
     H5Tclose, H5Tcopy, H5Tcreate, H5Tget_class, H5Tget_cset, H5Tget_sign, H5Tget_size,
     H5Tget_strpad, H5Tinsert, H5Tset_cset, H5Tis_variable_str, H5Tset_size, H5Tset_strpad,
+
+    H5Zregister, H5Z_class2_t,
 };
 
 pub const H5F_ACC_RDONLY: u32 = 0;

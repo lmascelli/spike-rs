@@ -4,60 +4,83 @@
 //!
 //! # Examples
 
-use crate::{
-    error::Error,
-    h5sys::{
-        H5P_LST_DATASET_ACCESS_ID_g as H5P_DATASET_ACCESS,
-        H5P_LST_FILE_ACCESS_ID_g as H5P_FILE_ACCESS,
-        H5P_LST_FILE_CREATE_ID_g as H5P_FILE_CREATE, *,
-    },
-    types::Filter,
-    Hdf5,
-};
+use crate::{cchar_to_string, error::Error, h5sys::*, types::Filter, Hdf5};
 
 // Enum of the various classes available for property lists. Different
 // operations require different classes of property lists
+#[derive(Debug)]
 pub enum PListClass {
     AttributeCreate,
     DataSetAccess,
     DataSetCreate,
-    DataSetTrasnfer,
+    DataSetTransfer,
     DataTypeAccess,
     DataTypeCreate,
     FileAccess,
     FileCreate,
+    FileMount,
     GroupAccess,
     GroupCreate,
     LinkAccess,
     LinkCreate,
+    ObjectCopy,
+    ObjectCreate,
     StringCreate,
     None,
 }
 
 impl PListClass {
     pub fn get_id(&self) -> i64 {
-        unsafe {
-            H5open();
-        }
-
         match self {
-            PListClass::DataSetAccess => unsafe { H5P_DATASET_ACCESS },
-            PListClass::FileAccess => unsafe { H5P_FILE_ACCESS },
-            PListClass::FileCreate => unsafe { H5P_FILE_CREATE },
+            PListClass::DataSetCreate => unsafe { H5P_CLS_DATASET_CREATE_ID_g },
+            PListClass::DataSetAccess => unsafe { H5P_CLS_DATASET_ACCESS_ID_g },
+            PListClass::FileAccess => unsafe { H5P_CLS_FILE_ACCESS_ID_g },
+            PListClass::FileCreate => unsafe { H5P_CLS_FILE_CREATE_ID_g },
             _ => todo!(),
+        }
+    }
+
+    pub fn from_id(id: i64) -> Self {
+        let class_id = unsafe { H5Pget_class(id) };
+        let class_name = cchar_to_string!(H5Pget_class_name(class_id));
+        match class_name.as_str() {
+            "attribute create" => Self::AttributeCreate,
+            "dataset access" => Self::DataSetAccess,
+            "dataset create" => Self::DataSetCreate,
+            "data transfer" => Self::DataSetTransfer,
+            "datatype access" => Self::DataTypeAccess,
+            "datatype create" => Self::DataTypeCreate,
+            "file access" => Self::FileAccess,
+            "file create" => Self::FileCreate,
+            "file mount" => Self::FileMount,
+            "group access" => Self::GroupAccess,
+            "group create" => Self::GroupCreate,
+            "link access" => Self::LinkAccess,
+            "link create" => Self::LinkCreate,
+            "object copy" => Self::ObjectCopy,
+            "object create" => Self::ObjectCreate,
+            "string create" => Self::StringCreate,
+            _ => Self::None,
         }
     }
 }
 
 pub struct PList<'lib> {
     pub lib: &'lib Hdf5,
-    pub class: PListClass,
     pub pid: i64,
+    pub class: PListClass,
 }
 
 impl<'lib> PList<'lib> {
-    pub fn copy(_pid: i64) -> Result<Self, String> {
-        todo!()
+    pub fn check_class(&self, class: PListClass) -> Result<(), Error> {
+        if unsafe { H5Pequal(self.class.get_id(), class.get_id()) } > 0 {
+            Ok(())
+        } else {
+            Err(Error::plist_classes_do_not_match(
+                &format!("{:?}", self.class),
+                &format!("{:?}", class),
+            ))
+        }
     }
 
     pub fn get_pid(&self) -> i64 {
@@ -83,6 +106,29 @@ impl<'lib> PList<'lib> {
             }
 
             Ok(())
+        }
+    }
+
+    // DATASET CREATE PLIST
+
+    pub fn get_chunk(&self, ndims: usize) -> Result<Vec<usize>, Error> {
+        match self.class {
+            PListClass::DataSetCreate => {
+                let dims = vec![0u64; ndims];
+                unsafe {
+                    if H5Pget_chunk(
+                        self.pid,
+                        ndims as _,
+                        dims.as_ptr().cast_mut(),
+                    ) < 0
+                    {
+                        Err(Error::plist_get_chunk_fail())
+                    } else {
+                        Ok(dims.iter().map(|x| *x as usize).collect())
+                    }
+                }
+            }
+            _ => Err(Error::plist_not_dataset_access()),
         }
     }
 }

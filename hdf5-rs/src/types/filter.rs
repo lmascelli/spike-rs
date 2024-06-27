@@ -1,4 +1,4 @@
-use crate::Hdf5;
+use crate::{h5sys::H5Z_class2_t, Hdf5};
 
 pub type CFilter = extern "C" fn(
     flags: u32,
@@ -16,6 +16,7 @@ pub struct Filter<'lib> {
     pub function: CFilter,
     pub n_params: usize,
     pub flags: u32,
+    pub cls: H5Z_class2_t,
 }
 
 impl<'lib> Filter<'lib> {
