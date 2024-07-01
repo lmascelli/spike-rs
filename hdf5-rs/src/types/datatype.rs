@@ -1,4 +1,4 @@
-use crate::{error::Error, h5sys::*, Hdf5};
+use crate::{error::H5Error, h5sys::*};
 
 #[derive(Clone, Copy)]
 pub enum DataTypeL {
@@ -14,33 +14,36 @@ pub enum DataTypeL {
     Compound,
 }
 
-pub struct DataType<'lib> {
-    pub lib: &'lib Hdf5,
+pub struct DataType {
     pub tid: i64,
     pub dtype: DataTypeL,
 }
 
-impl<'lib> DataType<'lib> {
+impl DataType {
+    pub fn open(dtype_id: i64) -> Result<DataType, H5Error> {
+        Ok(DataType { tid: dtype_id, dtype: DataType::parse_type(dtype_id)? })
+    }
+
     pub fn get_dtype(&self) -> DataTypeL {
         self.dtype
     }
 
     #[allow(non_upper_case_globals)]
-    pub fn parse_type(dtype_id: i64) -> Result<DataTypeL, Error> {
+    pub fn parse_type(dtype_id: i64) -> Result<DataTypeL, H5Error> {
         if dtype_id <= 0 {
-            return Err(Error::datatype_get_type_fail());
+            return Err(H5Error::datatype_get_type_fail());
         }
         unsafe {
-            match H5Tget_class(dtype_id) {
-                H5T_class_t_H5T_INTEGER => {
-                    let sign = match H5Tget_sign(dtype_id) {
-                        H5T_sign_t_H5T_SGN_2 => true,
-                        H5T_sign_t_H5T_SGN_NONE => false,
+            match datatype::H5Tget_class(dtype_id) {
+                datatype::H5T_class_t_H5T_INTEGER => {
+                    let sign = match datatype::H5Tget_sign(dtype_id) {
+                        datatype::H5T_sign_t_H5T_SGN_2 => true,
+                        datatype::H5T_sign_t_H5T_SGN_NONE => false,
                         _ => {
                             return Ok(DataTypeL::Unimplemented);
                         }
                     };
-                    let size = H5Tget_size(dtype_id);
+                    let size = datatype::H5Tget_size(dtype_id);
                     if sign {
                         if size == 4 {
                             return Ok(DataTypeL::Signed32);
@@ -59,30 +62,33 @@ impl<'lib> DataType<'lib> {
                     }
                 }
 
-                H5T_class_t_H5T_FLOAT => match H5Tget_size(dtype_id) {
-                    4 => Ok(DataTypeL::Float32),
-                    8 => Ok(DataTypeL::Float64),
-                    _ => Ok(DataTypeL::Unimplemented),
-                },
+                datatype::H5T_class_t_H5T_FLOAT => {
+                    match datatype::H5Tget_size(dtype_id) {
+                        4 => Ok(DataTypeL::Float32),
+                        8 => Ok(DataTypeL::Float64),
+                        _ => Ok(DataTypeL::Unimplemented),
+                    }
+                }
 
-                H5T_class_t_H5T_STRING => {
-                    let padding = H5Tget_strpad(dtype_id);
-                    let cset = H5Tget_cset(dtype_id);
+                datatype::H5T_class_t_H5T_STRING => {
+                    let padding = datatype::H5Tget_strpad(dtype_id);
+                    let cset = datatype::H5Tget_cset(dtype_id);
                     let is_variable = {
-                        let r = H5Tis_variable_str(dtype_id);
+                        let r = datatype::H5Tis_variable_str(dtype_id);
                         match r {
                             0 => false,
                             _ if r > 0 => true,
                             _ => {
                                 return Err(
-                                    Error::datatype_parse_string_is_variable(),
+                                    H5Error::datatype_parse_string_is_variable(
+                                    ),
                                 );
                             }
                         }
                     };
 
-                    if padding == H5T_str_t_H5T_STR_NULLTERM
-                        && cset == H5T_cset_t_H5T_CSET_ASCII
+                    if padding == datatype::H5T_str_t_H5T_STR_NULLTERM
+                        && cset == datatype::H5T_cset_t_H5T_CSET_ASCII
                     {
                         Ok(if is_variable {
                             DataTypeL::StringDynamic
@@ -90,11 +96,11 @@ impl<'lib> DataType<'lib> {
                             DataTypeL::StringStatic
                         })
                     } else {
-                        Err(Error::datatype_parse_string_type_not_supported())
+                        Err(H5Error::datatype_parse_string_type_not_supported())
                     }
                 }
 
-                H5T_class_t_H5T_COMPOUND => Ok(DataTypeL::Compound),
+                datatype::H5T_class_t_H5T_COMPOUND => Ok(DataTypeL::Compound),
                 _ => Ok(DataTypeL::Unimplemented),
             }
         }
@@ -105,23 +111,23 @@ impl<'lib> DataType<'lib> {
     }
 
     pub fn size(&self) -> usize {
-        unsafe { H5Tget_size(self.tid) }
+        unsafe { datatype::H5Tget_size(self.tid) }
     }
 }
 
-impl<'lib> Drop for DataType<'lib> {
+impl Drop for DataType {
     fn drop(&mut self) {
         if self.tid > 0 {
             #[cfg(debug_assertions)]
             {
                 println!("Closing type: {}", self.tid);
             }
-            unsafe { H5Tclose(self.tid) };
+            unsafe { datatype::H5Tclose(self.tid) };
         }
     }
 }
 
-impl<'lib> std::fmt::Display for DataType<'lib> {
+impl std::fmt::Display for DataType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         writeln!(f, "H5Type")?;
         writeln!(
@@ -147,5 +153,5 @@ impl<'lib> std::fmt::Display for DataType<'lib> {
 }
 
 pub trait DataTypeOwner {
-    fn get_type(&self) -> Result<DataType, Error>;
+    fn get_type(&self) -> Result<DataType, H5Error>;
 }

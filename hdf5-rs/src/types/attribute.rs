@@ -1,27 +1,42 @@
 use crate::{
-    error::Error,
+    error::H5Error,
     h5sys::*,
+    str_to_cchar,
     types::{DataSpace, DataSpaceOwner, DataType, DataTypeL, DataTypeOwner},
-    Hdf5,
 };
 
-pub struct Attr<'lib> {
-    pub lib: &'lib Hdf5,
+pub struct Attr {
     pub name: String,
     pub aid: i64,
 }
 
 pub trait AttributeFillable<T> {
-    fn from_attribute(attribute: &Attr) -> Result<T, Error>;
+    fn from_attribute(attribute: &Attr) -> Result<T, H5Error>;
 }
 
-impl<'lib> Attr<'lib> {
+impl Attr {
+    pub fn open(group: i64, name: &str) -> Result<Self, H5Error> {
+        let aid;
+        unsafe {
+            aid = attribute::H5Aopen(
+                group,
+                str_to_cchar!(name),
+                plist::H5P_DEFAULT,
+            );
+            if aid <= 0 {
+                return Err(H5Error::attribute_open(name));
+            }
+        }
+
+        Ok(Self { name: name.to_string(), aid })
+    }
+
     pub fn get_aid(&self) -> i64 {
         self.aid
     }
 }
 
-impl<'lib> Drop for Attr<'lib> {
+impl Drop for Attr {
     fn drop(&mut self) {
         if self.aid > 0 {
             #[cfg(debug_assertions)]
@@ -29,13 +44,13 @@ impl<'lib> Drop for Attr<'lib> {
                 println!("Closing attribute: {}", self.aid);
             }
             unsafe {
-                H5Aclose(self.aid);
+                attribute::H5Aclose(self.aid);
             }
         }
     }
 }
 
-impl<'lib> std::fmt::Display for Attr<'lib> {
+impl std::fmt::Display for Attr {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         writeln!(f, "H5Attribute")?;
         writeln!(f, "  name: {}", self.name)?;
@@ -61,30 +76,29 @@ impl<'lib> std::fmt::Display for Attr<'lib> {
 }
 
 pub trait AttrOpener {
-    fn open_attr(&self, name: &str) -> Result<Attr, Error>;
+    fn open_attr(&self, name: &str) -> Result<Attr, H5Error>;
 }
 
-impl<'lib> DataTypeOwner for Attr<'lib> {
-    fn get_type(&self) -> Result<DataType, Error> {
-        self.lib.open_type(unsafe { H5Aget_type(self.aid) })
+impl DataTypeOwner for Attr {
+    fn get_type(&self) -> Result<DataType, H5Error> {
+        DataType::open(unsafe { attribute::H5Aget_type(self.aid) })
     }
 }
 
-impl<'lib> DataSpaceOwner for Attr<'lib> {
-    fn get_space(&self) -> Result<DataSpace, Error> {
-        self.lib
-            .open_dataspace(unsafe { H5Aget_space(self.get_aid()) })
+impl DataSpaceOwner for Attr {
+    fn get_space(&self) -> Result<DataSpace, H5Error> {
+        DataSpace::open(unsafe { attribute::H5Aget_space(self.get_aid()) })
     }
 }
 
 impl AttributeFillable<String> for String {
-    fn from_attribute(attribute: &Attr) -> Result<String, Error> {
+    fn from_attribute(attribute: &Attr) -> Result<String, H5Error> {
         let data_type = attribute.get_type()?;
         match data_type.get_dtype() {
             DataTypeL::StringStatic => {
                 let mut data = vec![0; data_type.size()];
                 unsafe {
-                    H5Aread(
+                    attribute::H5Aread(
                         attribute.get_aid(),
                         data_type.get_tid(),
                         data.as_mut_ptr().cast(),
@@ -94,7 +108,7 @@ impl AttributeFillable<String> for String {
                     {
                         Ok(s.to_string())
                     } else {
-                        Err(Error::attribute_fill_fail(
+                        Err(H5Error::attribute_fill_fail(
                             "String Static",
                             "String",
                         ))
@@ -104,7 +118,7 @@ impl AttributeFillable<String> for String {
             DataTypeL::StringDynamic => {
                 let mut str_ptr = 0usize;
                 unsafe {
-                    H5Aread(
+                    attribute::H5Aread(
                         attribute.get_aid(),
                         data_type.get_tid(),
                         &mut str_ptr as *mut usize as *mut c_void,
@@ -114,26 +128,26 @@ impl AttributeFillable<String> for String {
                     {
                         Ok(string.to_string())
                     } else {
-                        Err(Error::attribute_fill_fail(
+                        Err(H5Error::attribute_fill_fail(
                             "String Dynamic",
                             "String",
                         ))
                     }
                 }
             }
-            _ => Err(Error::attribute_fill_not_available("String")),
+            _ => Err(H5Error::attribute_fill_not_available("String")),
         }
     }
 }
 
 impl AttributeFillable<i64> for i64 {
-    fn from_attribute(attribute: &Attr) -> Result<i64, Error> {
+    fn from_attribute(attribute: &Attr) -> Result<i64, H5Error> {
         let data_type = attribute.get_type()?;
         match data_type.get_dtype() {
             DataTypeL::Signed64 => {
                 let mut data = 0i64;
                 unsafe {
-                    H5Aread(
+                    attribute::H5Aread(
                         attribute.get_aid(),
                         data_type.get_tid(),
                         &mut data as *mut i64 as *mut c_void,
@@ -141,7 +155,7 @@ impl AttributeFillable<i64> for i64 {
                     Ok(data)
                 }
             }
-            _ => Err(Error::attribute_fill_not_available("i64")),
+            _ => Err(H5Error::attribute_fill_not_available("i64")),
         }
     }
 }

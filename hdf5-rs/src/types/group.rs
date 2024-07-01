@@ -1,14 +1,47 @@
-use crate::types::{Attr, AttrOpener, Dataset, DatasetOwner};
-use crate::{error::Error, utils::get_group_names};
-use crate::{h5sys::*, Hdf5};
+use crate::types::{Attr, AttrOpener, DataSet, DatasetOwner};
+use crate::{error::H5Error, utils::get_group_names};
+use crate::{h5sys::*, str_to_cchar};
 
-pub struct Group<'lib> {
-    pub lib: &'lib Hdf5,
+pub struct Group {
     pub path: String,
     pub gid: i64,
 }
 
-impl<'lib> Group<'lib> {
+impl Group {
+    pub fn open(parent: i64, name: &str) -> Result<Self, H5Error> {
+        let g_exists = unsafe {
+            link::H5Lexists(parent, str_to_cchar!(name), plist::H5P_DEFAULT)
+        };
+
+        match g_exists.cmp(&0i32) {
+            std::cmp::Ordering::Equal => {
+                return Err(H5Error::group_doesnt_exists(name));
+            }
+            std::cmp::Ordering::Less => {
+                return Err(H5Error::group_open(name));
+            }
+            _ => (),
+        }
+
+        let gid = unsafe {
+            group::H5Gopen2(parent, str_to_cchar!(name), plist::H5P_DEFAULT)
+        };
+        if gid <= 0 {
+            Err(H5Error::group_open(name))
+        } else {
+            let path_len =
+                unsafe { identifier::H5Iget_name(gid, null_mut(), 0) } as usize;
+            let buffer = vec![0usize; path_len + 1];
+            unsafe {
+                identifier::H5Iget_name(gid, buffer.as_ptr() as _, buffer.len())
+            };
+            let path = unsafe {
+                CStr::from_ptr(buffer.as_ptr().cast()).to_str().unwrap()
+            };
+            Ok(Self { path: path.to_string(), gid })
+        }
+    }
+
     pub fn get_gid(&self) -> i64 {
         self.gid
     }
@@ -19,23 +52,23 @@ impl<'lib> Group<'lib> {
 }
 
 pub trait GroupOpener {
-    fn open_group(&self, name: &str) -> Result<Group, Error>;
+    fn open_group(&self, name: &str) -> Result<Group, H5Error>;
     fn list_groups(&self) -> Vec<String>;
 }
 
-impl<'lib> Drop for Group<'lib> {
+impl Drop for Group {
     fn drop(&mut self) {
         if self.gid > 0 {
             #[cfg(debug_assertions)]
             {
                 println!("Closing group: {}", self.path);
             }
-            unsafe { H5Gclose(self.gid) };
+            unsafe { group::H5Gclose(self.gid) };
         }
     }
 }
 
-impl<'lib> std::fmt::Display for Group<'lib> {
+impl std::fmt::Display for Group {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         writeln!(f, "H5Group")?;
         writeln!(f, "  path: {}", self.path)?;
@@ -44,24 +77,24 @@ impl<'lib> std::fmt::Display for Group<'lib> {
     }
 }
 
-impl<'lib> AttrOpener for Group<'lib> {
-    fn open_attr(&self, name: &str) -> Result<Attr, Error> {
-        self.lib.open_attribute(self.get_gid(), name)
+impl AttrOpener for Group {
+    fn open_attr(&self, name: &str) -> Result<Attr, H5Error> {
+        Attr::open(self.get_gid(), name)
     }
 }
 
-impl<'lib> DatasetOwner for Group<'lib> {
-    fn get_dataset(&self, name: &str) -> Result<Dataset, Error> {
-        self.lib.open_dataset(self.gid, name)
+impl DatasetOwner for Group {
+    fn get_dataset(&self, name: &str) -> Result<DataSet, H5Error> {
+        DataSet::open(self.gid, name)
     }
     fn list_datasets(&self) -> Vec<String> {
         get_group_names(self.gid)
     }
 }
 
-impl<'lib> GroupOpener for Group<'lib> {
-    fn open_group(&self, name: &str) -> Result<Group, Error> {
-        self.lib.open_group(self.get_gid(), name)
+impl GroupOpener for Group {
+    fn open_group(&self, name: &str) -> Result<Group, H5Error> {
+        Group::open(self.get_gid(), name)
     }
 
     fn list_groups(&self) -> Vec<String> {
