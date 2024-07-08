@@ -57,7 +57,17 @@ pub mod group {
 }
 
 pub mod identifier {
-    pub use super::sys::{H5Iget_name, H5Iis_valid};
+    pub use super::sys::{
+        H5I_type_t_H5I_ATTR, H5I_type_t_H5I_BADID, H5I_type_t_H5I_DATASET,
+        H5I_type_t_H5I_DATASPACE, H5I_type_t_H5I_DATATYPE,
+        H5I_type_t_H5I_ERROR_CLASS, H5I_type_t_H5I_ERROR_MSG,
+        H5I_type_t_H5I_ERROR_STACK, H5I_type_t_H5I_EVENTSET,
+        H5I_type_t_H5I_FILE, H5I_type_t_H5I_GENPROP_CLS,
+        H5I_type_t_H5I_GENPROP_LST, H5I_type_t_H5I_GROUP, H5I_type_t_H5I_MAP,
+        H5I_type_t_H5I_SPACE_SEL_ITER, H5I_type_t_H5I_UNINIT,
+        H5I_type_t_H5I_VFL, H5I_type_t_H5I_VOL, H5Iget_name,
+        H5Iis_valid, H5I_INVALID_HID, H5Iinc_ref, H5Idec_ref, H5Iget_ref
+    };
 }
 
 pub mod link {

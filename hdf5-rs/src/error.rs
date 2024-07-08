@@ -9,17 +9,23 @@ pub enum H5ErrorType {
     DataSpaceGetDimensionsFail,
     DataSpaceSelectSlabFail(Vec<u64>, Vec<u64>, Vec<u64>),
     DataSpaceSelectSlabOutOfBounds(Vec<u64>, Vec<u64>, Vec<u64>),
-    DataSpaceSelectRowNotBidimensional(Vec<u64>),
+    DataSpaceNotBidimensional(Vec<u64>),
+    DataSpaceOutOfBounds(Vec<u64>),
 
+    DataTypeCopyFail,
     DataTypeGetTypeFail,
     DataTypeParseStringIsVariableFail,
     DataTypeParseStringTypeNotSupported,
 
+    DataSetCreationFailed(String),
+    DataSetAlreadyExists(String),
     DataSetOpenFail(String),
     DataSetHasNoDataSpace(String),
     DataSetHasNoDataType(String),
     DataSetUnvalidType(String, String),
     DataSetFillMemoryFail(String),
+    DataSetFromSubspaceStartPointWrongDims,
+    DataSetFromSubspaceStartAndOffsetHaveDifferentDims,
 
     FileCreate(String),
     FileOpen(String),
@@ -46,6 +52,7 @@ pub enum H5ErrorType {
 
 #[derive(Debug)]
 pub struct H5Error {
+    // eid: crate::h5sys::types::Hid,
     etype: H5ErrorType,
 }
 
@@ -129,9 +136,9 @@ impl H5Error {
         }
     }
 
-    pub fn dataspace_select_row_not_bidimensional(dims: &[u64]) -> Self {
+    pub fn dataspace_not_bidimensional(dims: &[u64]) -> Self {
         Self {
-            etype: H5ErrorType::DataSpaceSelectRowNotBidimensional(
+            etype: H5ErrorType::DataSpaceNotBidimensional(
                 dims.iter().map(|x| *x).collect(),
             ),
         }
@@ -153,7 +160,19 @@ impl H5Error {
         Self { etype: H5ErrorType::DataSetFillMemoryFail(path.to_string()) }
     }
 
+    pub fn dataspace_out_of_bounds(dims: &[u64]) -> Self {
+        Self {
+            etype: H5ErrorType::DataSpaceOutOfBounds(
+                dims.iter().map(|x| *x).collect(),
+            ),
+        }
+    }
+
     // DATATYPE ERRORS
+
+    pub fn datatype_copy_fail() -> Self {
+        Self { etype: H5ErrorType::DataTypeCopyFail }
+    }
 
     pub fn datatype_get_type_fail() -> Self {
         Self { etype: H5ErrorType::DataTypeGetTypeFail }
@@ -168,6 +187,18 @@ impl H5Error {
     }
 
     // DATASET ERRORS
+    
+    pub fn dataset_creation_failed(path: &str) -> Self {
+        Self {
+            etype: H5ErrorType::DataSetCreationFailed(path.to_string()),
+        }
+    }
+
+    pub fn dataset_already_exists(path: &str) -> Self {
+        Self {
+            etype: H5ErrorType::DataSetAlreadyExists(path.to_string()),
+        }
+    }
 
     pub fn dataset_open_fail(path: &str) -> Self {
         Self { etype: H5ErrorType::DataSetOpenFail(path.to_string()) }
@@ -187,6 +218,18 @@ impl H5Error {
                 path.to_string(),
                 typename.to_string(),
             ),
+        }
+    }
+
+    pub fn dataset_from_subspace_start_point_wrong_dims() -> Self {
+        Self { etype: H5ErrorType::DataSetFromSubspaceStartPointWrongDims }
+    }
+
+    pub fn dataset_from_subspace_start_and_offset_have_different_dims() -> Self
+    {
+        Self {
+            etype:
+                H5ErrorType::DataSetFromSubspaceStartAndOffsetHaveDifferentDims,
         }
     }
 
@@ -245,7 +288,9 @@ impl H5Error {
     // FILTER ERRORS
     pub fn filter_registration_failed(filter_name: &str) -> Self {
         Self {
-            etype: H5ErrorType::FilterRegistrationFailed(filter_name.to_string()),
+            etype: H5ErrorType::FilterRegistrationFailed(
+                filter_name.to_string(),
+            ),
         }
     }
 }
@@ -326,13 +371,17 @@ impl std::fmt::Display for H5Error {
                 )?;
             }
 
-            H5ErrorType::DataSpaceSelectRowNotBidimensional(ref dims) => {
+            H5ErrorType::DataSpaceNotBidimensional(ref dims) => {
                 writeln!(
                     f,
-                    r#"Error::DataSpaceSelectRowNotBidimensional: select_row: select_row is valid 
+                    r#"Error::DataSpaceNotBidimensional: row operations are valid 
                             only for bidimensional dataspaces. Current dataspace dimensions: {:?}"#,
                     dims
                 )?;
+            }
+
+            H5ErrorType::DataTypeCopyFail => {
+                writeln!(f, "Error:DataTypeCopyFail: failed to create a copy of the datatype")?;
             }
 
             H5ErrorType::DataTypeGetTypeFail => {
@@ -355,6 +404,14 @@ impl std::fmt::Display for H5Error {
                 )?;
             }
 
+            H5ErrorType::DataSetCreationFailed(ref path) => {
+                writeln!(f, "Error::DataSetCreationFail: {}", path)?;
+            }
+
+            H5ErrorType::DataSetAlreadyExists(ref path) => {
+                writeln!(f, "Error::DataSetAlreadyExists: {}", path)?;
+            }
+
             H5ErrorType::DataSetOpenFail(ref path) => {
                 writeln!(f, "Error::DataSetOpenFail: {}", path)?;
             }
@@ -374,6 +431,17 @@ impl std::fmt::Display for H5Error {
 
             H5ErrorType::DataSetFillMemoryFail(ref path) => {
                 writeln!(f, "Error::DataSetFillMemoryFail: failed to fill memory from dataset {}", path)?;
+            }
+
+            H5ErrorType::DataSetFromSubspaceStartPointWrongDims => {
+                writeln!(f, "Error::DataSetFromSubspaceStartPointWrongDims")?;
+            }
+
+            H5ErrorType::DataSetFromSubspaceStartAndOffsetHaveDifferentDims => {
+                writeln!(
+                    f,
+                    "Error::DataSetFromSubspaceStartAndOffsetHaveDifferentDims"
+                )?;
             }
 
             H5ErrorType::AttributeOpenFail(ref name) => {

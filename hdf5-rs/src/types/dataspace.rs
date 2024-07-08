@@ -9,7 +9,7 @@ pub enum DataSpaceType {
 pub struct DataSpace {
     pub did: i64,
     pub space_type: DataSpaceType,
-    pub dims: Vec<usize>,
+    pub dims: Vec<u64>,
 }
 
 impl DataSpace {
@@ -22,7 +22,7 @@ impl DataSpace {
             if n_dims < 0 {
                 return Err(H5Error::dataspace_get_dimensions_fail());
             }
-            dims.resize(n_dims as usize, 0usize);
+            dims.resize(n_dims as usize, 0);
             space_type = if n_dims == 0 {
                 DataSpaceType::Scalar
             } else {
@@ -55,7 +55,7 @@ impl DataSpace {
                     Ok(Self {
                         did,
                         space_type: DataSpaceType::Simple,
-                        dims: dims.iter().map(|x| *x as usize).collect(),
+                        dims: dims.iter().map(|x| *x).collect(),
                     })
                 } else {
                     Err(H5Error::dataspace_simple_new(dims))
@@ -69,7 +69,7 @@ impl DataSpace {
         self.did
     }
 
-    pub fn get_dims(&self) -> &[usize] {
+    pub fn get_dims(&self) -> &[u64] {
         &self.dims[..]
     }
 
@@ -87,8 +87,8 @@ impl DataSpace {
         } else {
             let mut valid = true;
             for dim in 0..start.len() {
-                if start[dim] as usize >= self.dims[dim]
-                    || (start[dim] + offset[dim]) as usize > self.dims[dim]
+                if start[dim] >= self.dims[dim]
+                    || (start[dim] + offset[dim]) > self.dims[dim]
                 {
                     valid = false;
                     break;
@@ -126,9 +126,7 @@ impl DataSpace {
 
     pub fn select_row(&self, row: usize) -> Result<DataSpace, H5Error> {
         if self.dims.len() != 2 {
-            Err(H5Error::dataspace_select_row_not_bidimensional(
-                &self.dims[..].iter().map(|x| *x as u64).collect::<Vec<u64>>(),
-            ))
+            Err(H5Error::dataspace_not_bidimensional(&self.dims[..]))
         } else {
             let start = [row as u64, 0];
             let offset = [1, (self.dims[1]) as u64];

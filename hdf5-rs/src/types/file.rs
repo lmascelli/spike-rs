@@ -2,6 +2,10 @@ use crate::{
     error::H5Error,
     h5sys::*,
     types::{
+        link::exists,
+        dataset::{CreateDataSetOptions, DataSet, DatasetOwner},
+        datatype::DataType,
+        dataspace::DataSpace,
         group::{Group, GroupOpener},
         plist::PList,
     },
@@ -14,6 +18,7 @@ pub enum FileOpenAccess {
 }
 
 #[allow(unused)]
+#[derive(Debug)]
 pub struct File {
     pub filename: String,
     pub fid: i64,
@@ -104,6 +109,59 @@ impl GroupOpener for File {
     }
 
     fn list_groups(&self) -> Vec<String> {
+        get_group_names(self.fid)
+    }
+}
+
+impl DatasetOwner for File {
+    fn get_dataset(&self, name: &str) -> Result<DataSet, H5Error> {
+        DataSet::open(self.fid, name)
+    }
+
+    fn create_dataset(&self, options: CreateDataSetOptions) -> Result<DataSet, H5Error> {
+        let mut path = self.filename.clone();
+        path.push_str("/");
+        path.push_str(options.name);
+
+        // checks if the dataset already exists
+        if exists(self.fid, options.name) {
+            Err(H5Error::dataset_already_exists(&path))
+        } else {
+            let did = unsafe {
+                dataset::H5Dcreate2(
+                    self.fid,
+                    str_to_cchar!(options.name),
+                    options.dtype.tid,
+                    options.dspace.did,
+                    match options.link_plist {
+                        Some(plist) => plist.pid,
+                        None => plist::H5P_DEFAULT,
+                    },
+                    match options.create_plist{
+                        Some(plist) => plist.pid,
+                        None => plist::H5P_DEFAULT,
+                    },
+                    match options.access_plist{
+                        Some(plist) => plist.pid,
+                        None => plist::H5P_DEFAULT,
+                    },
+                )
+            };
+
+            if did <= 0 {
+                Err(H5Error::dataset_creation_failed(&path))
+            } else {
+                Ok(DataSet {
+                    did,
+                    path,
+                    dataspace: Some(options.dspace),
+                    datatype: Some(options.dtype),
+                })
+            }
+        }
+    }
+
+    fn list_datasets(&self) -> Vec<String> {
         get_group_names(self.fid)
     }
 }
