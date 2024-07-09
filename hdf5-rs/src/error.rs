@@ -26,6 +26,7 @@ pub enum H5ErrorType {
     DataSetFillMemoryFail(String),
     DataSetFromSubspaceStartPointWrongDims,
     DataSetFromSubspaceStartAndOffsetHaveDifferentDims,
+    DataSetWriteFail(String, String),
 
     FileCreate(String),
     FileOpen(String),
@@ -187,17 +188,13 @@ impl H5Error {
     }
 
     // DATASET ERRORS
-    
+
     pub fn dataset_creation_failed(path: &str) -> Self {
-        Self {
-            etype: H5ErrorType::DataSetCreationFailed(path.to_string()),
-        }
+        Self { etype: H5ErrorType::DataSetCreationFailed(path.to_string()) }
     }
 
     pub fn dataset_already_exists(path: &str) -> Self {
-        Self {
-            etype: H5ErrorType::DataSetAlreadyExists(path.to_string()),
-        }
+        Self { etype: H5ErrorType::DataSetAlreadyExists(path.to_string()) }
     }
 
     pub fn dataset_open_fail(path: &str) -> Self {
@@ -230,6 +227,15 @@ impl H5Error {
         Self {
             etype:
                 H5ErrorType::DataSetFromSubspaceStartAndOffsetHaveDifferentDims,
+        }
+    }
+
+    pub fn dataset_write_fail(path: &str, dtype: &str) -> Self {
+        Self {
+            etype: H5ErrorType::DataSetWriteFail(
+                path.to_string(),
+                dtype.to_string(),
+            ),
         }
     }
 

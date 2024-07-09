@@ -98,32 +98,21 @@ impl PhaseHandler for PhaseMemory {
         &mut self,
         channel: &str,
         start: Option<usize>,
-        end: Option<usize>,
         data: &[f32],
     ) -> Result<(), SpikeError> {
         if self.raw_data.contains_key(channel) {
             let _start;
-            let _end;
             if let Some(start) = start {
                 _start = start;
             } else {
                 _start = 0;
             }
-            if let Some(end) = end {
-                _end = end;
-            } else {
-                _end = self.datalen;
-            }
-
             // check if ranges are in bounds
-            if data.len() != _end - _start {
-                return Err(SpikeError::ReplaceRangeError);
-            }
-            if _start >= self.datalen || _start >= _end {
+            if _start >= self.datalen {
                 return Err(SpikeError::IndexOutOfRange);
             }
 
-            if _end >= self.datalen || _end >= _start {
+            if _start + data.len() >= self.datalen {
                 return Err(SpikeError::IndexOutOfRange);
             }
             // end check

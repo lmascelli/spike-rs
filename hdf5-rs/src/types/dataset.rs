@@ -95,7 +95,10 @@ pub struct CreateDataSetOptions {
 
 pub trait DatasetOwner {
     fn get_dataset(&self, name: &str) -> Result<DataSet, H5Error>;
-    fn create_dataset(&self, options: CreateDataSetOptions) -> Result<DataSet, H5Error>;
+    fn create_dataset(
+        &self,
+        options: CreateDataSetOptions,
+    ) -> Result<DataSet, H5Error>;
     fn list_datasets(&self) -> Vec<String>;
 }
 
@@ -334,18 +337,18 @@ impl DatasetFillable<i32> for i32 {
         offset: &[u64],
         _plist: Option<&PList>,
     ) -> Result<Vec<Vec<i32>>, H5Error> {
-        let mut ret = vec![];
+        let ret = vec![];
         let dataspace = dataset.get_space()?;
         let dims = dataspace.get_dims();
-        if start.len() != offset.len() {
-            Err(H5Error::dataset_from_subspace_start_and_offset_have_different_dims())
-        } else {
+        if start.len() == offset.len() {
             if start.len() != dims.len() {
                 Err(H5Error::dataset_from_subspace_start_point_wrong_dims())
             } else {
-                let dataspace_slab = dataspace.select_slab(start, offset)?;
+                let _dataspace_slab = dataspace.select_slab(start, offset)?;
                 Ok(ret)
             }
+        } else {
+            Err(H5Error::dataset_from_subspace_start_and_offset_have_different_dims())
         }
     }
 }
@@ -372,39 +375,56 @@ impl DataSetWriter<i32> for &[i32] {
         // check the boundaries of the dataset
         let dataspace = dataset.get_space()?;
         let dims = dataspace.get_dims();
-        if dims.len() != 2 {
-            Err(H5Error::dataspace_not_bidimensional(&dims))
-        } else {
+        if dims.len() == 2 {
             if row as u64 >= dims[0] {
                 Err(H5Error::dataspace_select_slab_out_of_boulds(
-                        &[row as u64, 0],
-                        &[0, dims[1]],
-                        &dims[..]))
-            }
-            else {
+                    &[row as u64, 0],
+                    &[0, dims[1]],
+                    dims,
+                ))
+            } else {
                 // select dataspace slab
                 let dataspace = dataset.get_space()?;
-                let start = [row as u64, match offset {
-                    Some(offset) => offset as u64,
-                    None => 0,
-                }];
+                let memory_dataspace = DataSpace::create_dataspace(
+                    super::DataSpaceType::Simple,
+                    &[1, self.len() as u64],
+                )?;
+                let start = [
+                    row as u64,
+                    match offset {
+                        Some(offset) => offset as u64,
+                        None => 0,
+                    },
+                ];
                 let offset = [1u64, self.len() as u64];
                 dataspace.select_slab(&start, &offset)?;
-                unsafe {
-                    let res = dataset::H5Dwrite(
+                if unsafe {
+                    dataset::H5Dwrite(
                         dataset.did,
                         datatype::H5T_NATIVE_INT_g,
-                        dataspace::H5S_ALL,
+                        memory_dataspace.did,
                         dataspace.did,
                         match plist {
                             Some(plist) => plist.pid,
                             None => plist::H5P_DEFAULT,
                         },
-                        self.as_ptr().cast_mut().cast(),
-                        );
+                        (*self).as_ptr().cast(),
+                    )
+                } >= 0
+                {
+                    unsafe {
+                        dataset::H5Dflush(dataset.did);
+                    }
+                    Ok(())
+                } else {
+                    Err(H5Error::dataset_write_fail(
+                        &dataset.path,
+                        type_name::<i32>(),
+                    ))
                 }
-                Ok(())
             }
+        } else {
+            Err(H5Error::dataspace_not_bidimensional(dims))
         }
     }
 }
@@ -432,6 +452,7 @@ impl DatasetFillable<i64> for i64 {
 
                 // create memory dataspace
 
+                #[allow(clippy::cast_possible_truncation)]
                 ret.resize(dims[1] as usize, 0);
 
                 // read the data
@@ -467,6 +488,75 @@ impl DatasetFillable<i64> for i64 {
     }
 }
 
+impl DataSetWriter<i64> for &[i64] {
+    fn to_dataset(
+        &self,
+        _dataset: &mut DataSet,
+        _plist: Option<PList>,
+    ) -> Result<(), H5Error> {
+        Err(H5Error::not_yet_implemented(Some(&format!(
+            "Dataset::to_dataset: cannot write the whole dataset for type {}",
+            type_name::<i64>()
+        ))))
+    }
+
+    fn to_dataset_row(
+        &self,
+        dataset: &DataSet,
+        row: usize,
+        offset: Option<usize>,
+        plist: Option<&PList>,
+    ) -> Result<(), H5Error> {
+        // check the boundaries of the dataset
+        let dataspace = dataset.get_space()?;
+        let dims = dataspace.get_dims();
+        if dims.len() == 2 {
+            if row as u64 >= dims[0] {
+                Err(H5Error::dataspace_select_slab_out_of_boulds(
+                    &[row as u64, 0],
+                    &[0, dims[1]],
+                    dims,
+                ))
+            } else {
+                // select dataspace slab
+                let dataspace = dataset.get_space()?;
+                let start = [
+                    row as u64,
+                    match offset {
+                        Some(offset) => offset as u64,
+                        None => 0,
+                    },
+                ];
+                let offset = [1u64, self.len() as u64];
+                dataspace.select_slab(&start, &offset)?;
+                let res;
+                unsafe {
+                    res = dataset::H5Dwrite(
+                        dataset.did,
+                        datatype::H5T_NATIVE_LLONG_g,
+                        dataspace::H5S_ALL,
+                        dataspace.did,
+                        match plist {
+                            Some(plist) => plist.pid,
+                            None => plist::H5P_DEFAULT,
+                        },
+                        self.as_ptr().cast_mut().cast(),
+                    );
+                }
+                if res >= 0 {
+                    Ok(())
+                } else {
+                    Err(H5Error::dataset_write_fail(
+                        &dataset.path,
+                        type_name::<i32>(),
+                    ))
+                }
+            }
+        } else {
+            Err(H5Error::dataspace_not_bidimensional(dims))
+        }
+    }
+}
 impl DatasetFillable<u64> for u64 {
     fn from_dataset_row(
         dataset: &DataSet,
@@ -490,6 +580,7 @@ impl DatasetFillable<u64> for u64 {
 
                 // create memory dataspace
 
+                #[allow(clippy::cast_possible_truncation)]
                 ret.resize(dims[1] as usize, 0);
 
                 // read the data

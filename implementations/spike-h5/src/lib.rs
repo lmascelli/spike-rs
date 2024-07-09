@@ -3,8 +3,9 @@ use hdf5_rs::{
     error::H5Error,
     h5sys::{dataset, datatype, plist, CStr},
     types::{
-        AttrOpener, AttributeFillable, DataSet, DataSpace, DataSpaceOwner,
-        DataSpaceType, DatasetOwner, File, FileOpenAccess, Group, GroupOpener,
+        AttrOpener, AttributeFillable, DataSet, DataSetWriter, DataSpace,
+        DataSpaceOwner, DataSpaceType, DatasetFillable, DatasetOwner, File,
+        FileOpenAccess, Group, GroupOpener,
     },
 };
 use spike_rs::error::SpikeError;
@@ -342,38 +343,24 @@ impl PhaseHandler for PhaseH5 {
                     .raw_data
                     .info_channels
                     .iter()
-                    .find(|ic| &cchar_to_string!(ic.label) == channel)
+                    .find(|ic| cchar_to_string!(ic.label) == channel)
                     .unwrap();
 
-                if let Ok(cd_dataspace) = self.raw_data.channel_data.get_space()
-                {
+                // if let Ok(cd_dataspace) = self.raw_data.channel_data.get_space()
+                // {
                     let start = [ic.row_index as u64, actual_start as u64];
                     let offset = [1u64, (actual_end - actual_start) as u64];
-                    if let Ok(cd_slab) =
-                        cd_dataspace.select_slab(&start[..], &offset[..])
-                    {
-                        let mut ret = vec![0i32; actual_end - actual_start];
-                        if let Ok(memory_dataspace) =
-                            DataSpace::create_dataspace(
-                                DataSpaceType::Simple,
-                                &offset[..],
-                            )
-                        {
-                            unsafe {
-                                dataset::H5Dread(
-                                    self.raw_data.channel_data.get_did(),
-                                    datatype::H5T_NATIVE_INT_g,
-                                    memory_dataspace.get_did(),
-                                    cd_slab.get_did(),
-                                    plist::H5P_DEFAULT,
-                                    ret.as_mut_ptr().cast(),
-                                );
-                            }
-                            cd_slab.reset_selection();
-                            println!("{:?}", cd_slab.get_dims());
+                    if let Ok(data) = i32::from_dataset_subspace(
+                        &self.raw_data.channel_data,
+                        &start,
+                        &offset,
+                        None,
+                    ) {
+                        if data.len() == 1 {
+                            let data = &data[0];
                             let conversion_factor = ic.conversion_factor as f32
                                 * 10f32.powf(ic.exponent as f32);
-                            Ok(ret
+                            Ok(data
                                 .iter()
                                 .map(|x| {
                                     *x as f32 * conversion_factor
@@ -386,9 +373,47 @@ impl PhaseHandler for PhaseH5 {
                     } else {
                         Err(SpikeError::OperationFailed)
                     }
-                } else {
-                    Err(SpikeError::OperationFailed)
-                }
+                    // if let Ok(cd_slab) =
+                    //     cd_dataspace.select_slab(&start[..], &offset[..])
+                    // {
+                    //     let mut ret = vec![0i32; actual_end - actual_start];
+                    //     if let Ok(memory_dataspace) =
+                    //         DataSpace::create_dataspace(
+                    //             DataSpaceType::Simple,
+                    //             &offset[..],
+                    //         )
+                    //     {
+                    //         println!("READ FROM ROW {}", ic.row_index);
+                    //         unsafe {
+                    //             dataset::H5Dread(
+                    //                 self.raw_data.channel_data.get_did(),
+                    //                 datatype::H5T_NATIVE_INT_g,
+                    //                 memory_dataspace.get_did(),
+                    //                 cd_dataspace.get_did(),
+                    //                 plist::H5P_DEFAULT,
+                    //                 ret.as_mut_ptr().cast(),
+                    //             );
+                    //         }
+                    //         cd_slab.reset_selection();
+                    //         println!("{:?}", cd_slab.get_dims());
+                    //         let conversion_factor = ic.conversion_factor as f32
+                    //             * 10f32.powf(ic.exponent as f32);
+                    //         Ok(ret
+                    //             .iter()
+                    //             .map(|x| {
+                    //                 *x as f32 * conversion_factor
+                    //                     + ic.ad_zero as f32
+                    //             })
+                    //             .collect())
+                    //     } else {
+                    //         Err(SpikeError::OperationFailed)
+                    //     }
+                    // } else {
+                    //     Err(SpikeError::OperationFailed)
+                    // }
+                // } else {
+                //     Err(SpikeError::OperationFailed)
+                // }
             } else {
                 Err(SpikeError::IndexOutOfRange)
             }
@@ -401,11 +426,39 @@ impl PhaseHandler for PhaseH5 {
         &mut self,
         channel: &str,
         start: Option<usize>,
-        end: Option<usize>,
         data: &[f32],
     ) -> Result<(), SpikeError> {
         if self.raw_data.labels.contains(&channel.to_string()) {
-            todo!()
+            let actual_start = start.unwrap_or(0);
+            if actual_start + data.len() < self.datalen {
+                let ic = self
+                    .raw_data
+                    .info_channels
+                    .iter()
+                    .find(|ic| cchar_to_string!(ic.label) == channel)
+                    .unwrap();
+                let conversion_factor = ic.conversion_factor as f32
+                    * 10f32.powf(ic.exponent as f32);
+                let data_c: Vec<i32> = data
+                    .iter()
+                    .map(|x| {
+                        ((*x - ic.ad_zero as f32) / conversion_factor) as i32
+                    })
+                    .collect();
+                println!("WRITE TO ROW {}", ic.row_index);
+                if let Ok(()) = data_c[..].as_ref().to_dataset_row(
+                    &self.raw_data.channel_data,
+                    ic.row_index as usize,
+                    Some(actual_start),
+                    None,
+                ) {
+                    Ok(())
+                } else {
+                    Err(SpikeError::OperationFailed)
+                }
+            } else {
+                Err(SpikeError::IndexOutOfRange)
+            }
         } else {
             Err(SpikeError::LabelNotFound)
         }

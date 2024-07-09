@@ -39,8 +39,8 @@ pub mod attribute {
 
 pub mod dataset {
     pub use super::sys::{
-        H5Dclose, H5Dcreate2, H5Dget_create_plist, H5Dget_space, H5Dget_type,
-        H5Dopen2, H5Dread, H5Dwrite,
+        H5Dclose, H5Dcreate2, H5Dflush, H5Dget_create_plist, H5Dget_space,
+        H5Dget_type, H5Dopen2, H5Dread, H5Dwrite,
     };
 }
 
@@ -65,8 +65,8 @@ pub mod identifier {
         H5I_type_t_H5I_FILE, H5I_type_t_H5I_GENPROP_CLS,
         H5I_type_t_H5I_GENPROP_LST, H5I_type_t_H5I_GROUP, H5I_type_t_H5I_MAP,
         H5I_type_t_H5I_SPACE_SEL_ITER, H5I_type_t_H5I_UNINIT,
-        H5I_type_t_H5I_VFL, H5I_type_t_H5I_VOL, H5Iget_name,
-        H5Iis_valid, H5I_INVALID_HID, H5Iinc_ref, H5Idec_ref, H5Iget_ref
+        H5I_type_t_H5I_VFL, H5I_type_t_H5I_VOL, H5Idec_ref, H5Iget_name,
+        H5Iget_ref, H5Iinc_ref, H5Iis_valid, H5I_INVALID_HID,
     };
 }
 

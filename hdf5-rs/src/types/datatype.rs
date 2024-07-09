@@ -37,6 +37,20 @@ impl IntoDataType for i32 {
     }
 }
 
+impl IntoDataType for i64 {
+    fn into_datatype() -> Result<DataType, H5Error> {
+        let tid = unsafe { datatype::H5Tcopy(datatype::H5T_NATIVE_LLONG_g) };
+        if tid <= 0 {
+            todo!()
+        } else {
+            Ok(DataType {
+                tid,
+                dtype: DataTypeL::Signed32,
+            })
+        }
+    }
+}
+
 impl DataType {
     pub fn open(dtype_id: i64) -> Result<DataType, H5Error> {
         Ok(DataType { tid: dtype_id, dtype: DataType::parse_type(dtype_id)? })
