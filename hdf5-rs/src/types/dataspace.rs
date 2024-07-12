@@ -1,11 +1,13 @@
 use crate::{error::H5Error, h5sys::*};
 
+#[derive(Debug)]
 pub enum DataSpaceType {
     Null,
     Scalar,
     Simple,
 }
 
+#[derive(Debug)]
 pub struct DataSpace {
     pub did: i64,
     pub space_type: DataSpaceType,

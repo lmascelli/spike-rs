@@ -5,6 +5,7 @@ pub enum SpikeError {
     ReplaceRangeError,
     ComputeThresholdTooFewSamples(usize, usize),
     SpikeDetectionTooFewSamples,
+    NoSpikeTrainsAvailable,
     OperationFailed,
 }
 

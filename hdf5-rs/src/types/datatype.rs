@@ -1,6 +1,6 @@
 use crate::{error::H5Error, h5sys::*};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum DataTypeL {
     StringStatic,
     StringDynamic,
@@ -14,6 +14,7 @@ pub enum DataTypeL {
     Compound,
 }
 
+#[derive(Debug)]
 pub struct DataType {
     pub tid: i64,
     pub dtype: DataTypeL,

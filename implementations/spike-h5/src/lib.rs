@@ -1,13 +1,14 @@
 use hdf5_rs::{
     cchar_to_string,
     error::H5Error,
-    h5sys::{dataset, datatype, plist, CStr},
+    h5sys::CStr,
     types::{
-        AttrOpener, AttributeFillable, DataSet, DataSetWriter, DataSpace,
-        DataSpaceOwner, DataSpaceType, DatasetFillable, DatasetOwner, File,
-        FileOpenAccess, Group, GroupOpener,
+        AttrOpener, AttributeFillable, DataSet, DataSetWriter, DataSpaceOwner,
+        DatasetFillable, DatasetOwner, File, FileOpenAccess, Group,
+        GroupOpener,
     },
 };
+use info_channel::CInfoChannel;
 use spike_rs::error::SpikeError;
 use spike_rs::types::PhaseHandler;
 
@@ -27,6 +28,7 @@ pub enum FileErrorType {
     AnalogChannelsHaveDifferentSamplingFrequencies,
     RawDataAndDigitalHaveDifferentSamplingFrequencies,
     SystemTimeError,
+    MultipleEventStreams,
 }
 
 #[derive(Debug)]
@@ -61,6 +63,26 @@ impl From<std::time::SystemTimeError> for SpikeH5Error {
     }
 }
 
+#[derive(Debug)]
+pub struct PeakTrain {
+    pub trains: Vec<(String, DataSet, DataSet)>,
+}
+
+impl PeakTrain {
+    pub fn parse(group: Group) -> Result<Self, SpikeH5Error> {
+        let mut trains = vec![];
+        for label in group.list_groups() {
+            let channel_group = group.open_group(&label)?;
+            trains.push((
+                label.clone(),
+                channel_group.get_dataset("sample")?,
+                channel_group.get_dataset("value")?,
+            ));
+        }
+        Ok(Self { trains })
+    }
+}
+
 pub enum PhaseType {
     RawData,
     Digital,
@@ -68,9 +90,28 @@ pub enum PhaseType {
     Unknown,
 }
 
+pub struct InfoChannelData {
+    label: String,
+    row: usize,
+    conversion_factor: f32,
+    offset: f32,
+}
+
+impl InfoChannelData {
+    fn from_info_channel(ic: CInfoChannel) -> Self {
+        Self {
+            label: cchar_to_string!(ic.label),
+            row: ic.row_index as usize,
+            conversion_factor: ic.conversion_factor as f32
+                * 10f32.powf(ic.exponent as f32),
+            offset: ic.ad_zero as f32,
+        }
+    }
+}
+
 pub struct AnalogStream {
     pub label: String,
-    pub info_channels: Vec<info_channel::CInfoChannel>,
+    pub info_channels: Vec<InfoChannelData>,
     pub channel_data: DataSet,
     pub labels: Vec<String>,
 }
@@ -106,26 +147,27 @@ impl AnalogStream {
 
         let mut sampling_frequency = 0;
 
-        let mut info_channels =
+        let mut c_info_channels =
             vec![info_channel::CInfoChannel::default(); ic_dims[0] as usize];
+
+        let mut info_channels = vec![];
 
         info_channel.fill_memory(
             info_channel::info_channel_type(),
-            &mut info_channels,
+            &mut c_info_channels,
         )?;
 
         let mut labels = vec![];
 
-        for (i, ic) in info_channels.iter().enumerate() {
+        for (i, ic) in c_info_channels.iter().enumerate() {
             if i == 0 {
                 sampling_frequency = ic.tick * 100;
-            } else {
-                if ic.tick * 100 != sampling_frequency {
-                    return Err(SpikeH5Error::FileError(
+            } else if ic.tick * 100 != sampling_frequency {
+                return Err(SpikeH5Error::FileError(
                             FileErrorType::AnalogChannelsHaveDifferentSamplingFrequencies));
-                }
             }
             labels.push(cchar_to_string!(ic.label));
+            info_channels.push(InfoChannelData::from_info_channel(*ic));
         }
 
         let ret = Self { label, info_channels, channel_data, labels };
@@ -142,31 +184,30 @@ impl AnalogStream {
 
 pub struct EventStream {
     pub label: String,
-    pub channels: Vec<hdf5_rs::types::DataSet>,
+    pub channel: DataSet,
 }
 
 impl std::fmt::Debug for EventStream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "EventStream: {}", self.label)?;
-        for channel in &self.channels {
-            writeln!(f, "{}", channel.get_path())?;
-        }
+        writeln!(f, "{}", self.channel.get_path())?;
         Ok(())
     }
 }
 
 impl EventStream {
-    pub fn parse(group: Group) -> Result<Self, SpikeH5Error> {
-        let label = String::from_attribute(&group.open_attr("Label")?)?;
-
-        let mut channels = vec![];
+    pub fn parse(group: Group) -> Result<Vec<Self>, SpikeH5Error> {
+        let mut events = vec![];
 
         for ds_name in group.list_datasets() {
             if ds_name.starts_with("EventEntity_") {
-                channels.push(group.get_dataset(&ds_name)?);
+                events.push(Self {
+                    channel: group.get_dataset(&ds_name)?,
+                    label: ds_name,
+                });
             }
         }
-        Ok(Self { label, channels })
+        Ok(events)
     }
 }
 
@@ -177,13 +218,14 @@ pub struct PhaseH5 {
     pub raw_data: AnalogStream,
     pub digital: Option<AnalogStream>,
     pub events: Vec<EventStream>,
-    pub peak_train: Option<Group>,
+    pub peak_train: Option<PeakTrain>,
     pub sampling_frequency: f32,
     pub datalen: usize,
 }
 
 impl PhaseH5 {
     pub fn open(filepath: &str) -> Result<Self, SpikeH5Error> {
+        hdf5_rs::init()?;
         // read the timestamp of the file
         // for future use in ordering the phase without parsing the name of the file
         let timestamp;
@@ -212,7 +254,7 @@ impl PhaseH5 {
         let mut digital = None;
         let mut digital_sf = 0;
         let mut digital_duration = 0;
-        let mut events = vec![];
+        let mut events = None;
         let mut peak_train = None;
 
         // parse the analog streams to get the raw data and the digital data (if available)
@@ -278,13 +320,15 @@ impl PhaseH5 {
             for group_name in event_streams.list_groups() {
                 let event = event_streams.open_group(&group_name)?;
                 let label = String::from_attribute(&event.open_attr("Label")?)?;
-                if label.contains("STG Events") {}
-                println!("EventStream: {}", label);
-                println!("{:?}", event.list_groups());
-                println!("------------------------------");
-                println!("{:?}", event.list_datasets());
-
-                events.push(EventStream::parse(event)?);
+                if label.contains("STG Events") {
+                    if events.is_none() {
+                        events.replace(EventStream::parse(event)?);
+                    } else {
+                        return Err(SpikeH5Error::FileError(
+                            FileErrorType::MultipleEventStreams,
+                        ));
+                    }
+                }
             }
         }
 
@@ -292,7 +336,7 @@ impl PhaseH5 {
         if let Ok(peak_train_group) =
             file.open_group("/Data/Recording_0/Peak_Train")
         {
-            peak_train.replace(peak_train_group);
+            peak_train.replace(PeakTrain::parse(peak_train_group)?);
         }
 
         Ok(Self {
@@ -300,7 +344,7 @@ impl PhaseH5 {
             date,
             raw_data: raw_data.unwrap(),
             digital,
-            events,
+            events: events.unwrap_or(vec![]),
             peak_train,
             sampling_frequency: raw_data_sf as f32,
             datalen: raw_data_duration as usize,
@@ -328,92 +372,46 @@ impl PhaseHandler for PhaseH5 {
         end: Option<usize>,
     ) -> Result<Vec<f32>, SpikeError> {
         if self.raw_data.labels.contains(&channel.to_string()) {
-            let actual_start = match start {
-                Some(start) => start,
-                None => 0,
-            };
+            let actual_start = start.unwrap_or(0);
 
             let actual_end = match end {
                 Some(end) => end,
-                None => self.datalen - 1,
+                None => self.datalen,
             };
 
-            if actual_start < actual_end && actual_end < self.datalen {
+            if actual_start < actual_end && actual_end <= self.datalen {
                 let ic = self
                     .raw_data
                     .info_channels
                     .iter()
-                    .find(|ic| cchar_to_string!(ic.label) == channel)
+                    .find(|ic| ic.label == channel)
                     .unwrap();
 
                 // if let Ok(cd_dataspace) = self.raw_data.channel_data.get_space()
                 // {
-                    let start = [ic.row_index as u64, actual_start as u64];
-                    let offset = [1u64, (actual_end - actual_start) as u64];
-                    if let Ok(data) = i32::from_dataset_subspace(
-                        &self.raw_data.channel_data,
-                        &start,
-                        &offset,
-                        None,
-                    ) {
-                        if data.len() == 1 {
-                            let data = &data[0];
-                            let conversion_factor = ic.conversion_factor as f32
-                                * 10f32.powf(ic.exponent as f32);
-                            Ok(data
-                                .iter()
-                                .map(|x| {
-                                    *x as f32 * conversion_factor
-                                        + ic.ad_zero as f32
-                                })
-                                .collect())
-                        } else {
-                            Err(SpikeError::OperationFailed)
-                        }
+                let start = [ic.row as u64, actual_start as u64];
+                let offset = [1u64, (actual_end - actual_start) as u64];
+                if let Ok(data) = i32::from_dataset_subspace(
+                    &self.raw_data.channel_data,
+                    &start,
+                    &offset,
+                    None,
+                ) {
+                    // check if the subspace gotten was a single row
+                    // and has the same length that an actual row
+                    if data.len() == (actual_end-actual_start) {
+                        Ok(data
+                            .iter()
+                            .map(|x| {
+                                *x as f32 * ic.conversion_factor + ic.offset
+                            })
+                            .collect())
                     } else {
                         Err(SpikeError::OperationFailed)
                     }
-                    // if let Ok(cd_slab) =
-                    //     cd_dataspace.select_slab(&start[..], &offset[..])
-                    // {
-                    //     let mut ret = vec![0i32; actual_end - actual_start];
-                    //     if let Ok(memory_dataspace) =
-                    //         DataSpace::create_dataspace(
-                    //             DataSpaceType::Simple,
-                    //             &offset[..],
-                    //         )
-                    //     {
-                    //         println!("READ FROM ROW {}", ic.row_index);
-                    //         unsafe {
-                    //             dataset::H5Dread(
-                    //                 self.raw_data.channel_data.get_did(),
-                    //                 datatype::H5T_NATIVE_INT_g,
-                    //                 memory_dataspace.get_did(),
-                    //                 cd_dataspace.get_did(),
-                    //                 plist::H5P_DEFAULT,
-                    //                 ret.as_mut_ptr().cast(),
-                    //             );
-                    //         }
-                    //         cd_slab.reset_selection();
-                    //         println!("{:?}", cd_slab.get_dims());
-                    //         let conversion_factor = ic.conversion_factor as f32
-                    //             * 10f32.powf(ic.exponent as f32);
-                    //         Ok(ret
-                    //             .iter()
-                    //             .map(|x| {
-                    //                 *x as f32 * conversion_factor
-                    //                     + ic.ad_zero as f32
-                    //             })
-                    //             .collect())
-                    //     } else {
-                    //         Err(SpikeError::OperationFailed)
-                    //     }
-                    // } else {
-                    //     Err(SpikeError::OperationFailed)
-                    // }
-                // } else {
-                //     Err(SpikeError::OperationFailed)
-                // }
+                } else {
+                    Err(SpikeError::OperationFailed)
+                }
             } else {
                 Err(SpikeError::IndexOutOfRange)
             }
@@ -429,27 +427,22 @@ impl PhaseHandler for PhaseH5 {
         data: &[f32],
     ) -> Result<(), SpikeError> {
         if self.raw_data.labels.contains(&channel.to_string()) {
-            let actual_start = start.unwrap_or(0);
-            if actual_start + data.len() < self.datalen {
+            let start = start.unwrap_or(0);
+            if start + data.len() < self.datalen {
                 let ic = self
                     .raw_data
                     .info_channels
                     .iter()
-                    .find(|ic| cchar_to_string!(ic.label) == channel)
+                    .find(|ic| ic.label == channel)
                     .unwrap();
-                let conversion_factor = ic.conversion_factor as f32
-                    * 10f32.powf(ic.exponent as f32);
                 let data_c: Vec<i32> = data
                     .iter()
-                    .map(|x| {
-                        ((*x - ic.ad_zero as f32) / conversion_factor) as i32
-                    })
+                    .map(|x| ((*x - ic.offset) / ic.conversion_factor) as i32)
                     .collect();
-                println!("WRITE TO ROW {}", ic.row_index);
                 if let Ok(()) = data_c[..].as_ref().to_dataset_row(
                     &self.raw_data.channel_data,
-                    ic.row_index as usize,
-                    Some(actual_start),
+                    ic.row,
+                    Some(start),
                     None,
                 ) {
                     Ok(())
@@ -478,7 +471,18 @@ impl PhaseHandler for PhaseH5 {
         end: Option<usize>,
     ) -> Result<Vec<f32>, SpikeError> {
         if index == 0 && self.digital.is_some() {
-            todo!()
+            let start = start.unwrap_or(0);
+            let end = end.unwrap_or(self.datalen);
+            if let Ok(data) = i32::from_dataset_subspace(
+                &self.digital.as_ref().unwrap().channel_data,
+                &[0, start as u64],
+                &[1, (end - start) as u64],
+                None,
+            ) {
+                Ok(data.iter().map(|x| *x as f32).collect())
+            } else {
+                Err(SpikeError::OperationFailed)
+            }
         } else {
             Err(SpikeError::IndexOutOfRange)
         }
@@ -488,11 +492,25 @@ impl PhaseHandler for PhaseH5 {
         &mut self,
         index: usize,
         start: Option<usize>,
-        end: Option<usize>,
         data: &[f32],
     ) -> Result<(), SpikeError> {
         if index == 0 && self.digital.is_some() {
-            todo!()
+            let start = start.unwrap_or(0);
+            if start + data.len() < self.datalen {
+                let data: Vec<i32> = data.iter().map(|x| *x as i32).collect();
+                if let Ok(()) = (&data[..]).to_dataset_row(
+                    &self.digital.as_ref().unwrap().channel_data,
+                    index,
+                    Some(start),
+                    None,
+                ) {
+                    Ok(())
+                } else {
+                    Err(SpikeError::OperationFailed)
+                }
+            } else {
+                Err(SpikeError::IndexOutOfRange)
+            }
         } else {
             Err(SpikeError::IndexOutOfRange)
         }
@@ -504,7 +522,12 @@ impl PhaseHandler for PhaseH5 {
 
     fn events(&self, index: usize) -> Result<Vec<u64>, SpikeError> {
         if index <= self.events.len() {
-            todo!()
+            let events = &self.events[index];
+            if let Ok(row) = u64::from_dataset_row(&events.channel, 0, None) {
+                Ok(row)
+            } else {
+                Err(SpikeError::OperationFailed)
+            }
         } else {
             Err(SpikeError::IndexOutOfRange)
         }
@@ -516,7 +539,31 @@ impl PhaseHandler for PhaseH5 {
         start: Option<usize>,
         end: Option<usize>,
     ) -> Result<(Vec<f32>, Vec<usize>), SpikeError> {
-        todo!()
+        if self.peak_train.is_some() {
+            if let Some(train) = self
+                .peak_train
+                .as_ref()
+                .unwrap()
+                .trains
+                .iter()
+                .filter(|v| v.0 == channel)
+                .next()
+            {
+                if let Ok(times) = i64::from_dataset(&train.1, None) {
+                    if let Ok(values) = f32::from_dataset(&train.2, None) {
+                        todo!()
+                    } else {
+                        Err(SpikeError::OperationFailed)
+                    }
+                } else {
+                    Err(SpikeError::OperationFailed)
+                }
+            } else {
+                Err(SpikeError::LabelNotFound)
+            }
+        } else {
+            Err(SpikeError::NoSpikeTrainsAvailable)
+        }
     }
 
     fn set_peak_train(
@@ -526,6 +573,11 @@ impl PhaseHandler for PhaseH5 {
         end: Option<usize>,
         data: (Vec<f32>, Vec<usize>),
     ) -> Result<(), SpikeError> {
+        // get all values before start
+        // get all values after end
+        // join the values with data
+        // delete the old dataspace
+        // create a new one
         todo!()
     }
 }

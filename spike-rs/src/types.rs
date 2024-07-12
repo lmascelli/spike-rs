@@ -66,7 +66,6 @@ pub trait PhaseHandler {
         &mut self,
         index: usize,
         start: Option<usize>,
-        end: Option<usize>,
         data: &[f32],
     ) -> Result<(), SpikeError>;
 

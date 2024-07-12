@@ -4,8 +4,6 @@ use crate::{
     types::{
         link::exists,
         dataset::{CreateDataSetOptions, DataSet, DatasetOwner},
-        datatype::DataType,
-        dataspace::DataSpace,
         group::{Group, GroupOpener},
         plist::PList,
     },

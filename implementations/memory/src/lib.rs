@@ -90,7 +90,7 @@ impl PhaseHandler for PhaseMemory {
             let data = &self.raw_data[channel];
             Ok(data[_start.._end].into())
         } else {
-            return Err(SpikeError::LabelNotFound);
+            Err(SpikeError::LabelNotFound)
         }
     }
 
@@ -124,7 +124,7 @@ impl PhaseHandler for PhaseMemory {
 
             Ok(())
         } else {
-            return Err(SpikeError::LabelNotFound);
+            Err(SpikeError::LabelNotFound)
         }
     }
 
@@ -165,7 +165,7 @@ impl PhaseHandler for PhaseMemory {
             let data = &self.digitals[index];
             Ok(data[_start.._end].into())
         } else {
-            return Err(SpikeError::LabelNotFound);
+            Err(SpikeError::LabelNotFound)
         }
     }
 
@@ -173,44 +173,28 @@ impl PhaseHandler for PhaseMemory {
         &mut self,
         index: usize,
         start: Option<usize>,
-        end: Option<usize>,
         data: &[f32],
     ) -> Result<(), SpikeError> {
         if index < self.digitals.len() {
-            let _start;
-            let _end;
-            if let Some(start) = start {
-                _start = start;
-            } else {
-                _start = 0;
-            }
-            if let Some(end) = end {
-                _end = end;
-            } else {
-                _end = self.datalen;
-            }
-
+            let start = start.unwrap_or(0);
             // check if ranges are in bounds
-            if data.len() != _end - _start {
-                return Err(SpikeError::ReplaceRangeError);
-            }
-            if _start >= self.datalen || _start >= _end {
+            if start >= self.datalen {
                 return Err(SpikeError::IndexOutOfRange);
             }
 
-            if _end >= self.datalen || _end >= _start {
+            if start + data.len() >= self.datalen {
                 return Err(SpikeError::IndexOutOfRange);
             }
             // end check
 
             let original_data = self.digitals.get_mut(index).unwrap();
             for (i, val) in data.iter().enumerate() {
-                original_data[i + _start] = *val;
+                original_data[i + start] = *val;
             }
 
             Ok(())
         } else {
-            return Err(SpikeError::IndexOutOfRange);
+            Err(SpikeError::IndexOutOfRange)
         }
     }
 
@@ -220,9 +204,9 @@ impl PhaseHandler for PhaseMemory {
 
     fn events(&self, index: usize) -> Result<Vec<u64>, SpikeError> {
         if index < self.el_stim_intervals.len() {
-            return Ok(self.el_stim_intervals[index].clone());
+            Ok(self.el_stim_intervals[index].clone())
         } else {
-            return Err(SpikeError::IndexOutOfRange);
+            Err(SpikeError::IndexOutOfRange)
         }
     }
 
@@ -270,7 +254,7 @@ impl PhaseHandler for PhaseMemory {
                 samples[array_start..array_end].into(),
             ))
         } else {
-            return Err(SpikeError::LabelNotFound);
+            Err(SpikeError::LabelNotFound)
         }
     }
 
@@ -282,28 +266,14 @@ impl PhaseHandler for PhaseMemory {
         data: (Vec<f32>, Vec<usize>),
     ) -> Result<(), SpikeError> {
         if self.peaks_trains.contains_key(channel) {
-            let _start;
-            let _end;
-            if let Some(start) = start {
-                _start = start;
-            } else {
-                _start = 0;
-            }
-            if let Some(end) = end {
-                _end = end;
-            } else {
-                _end = self.datalen;
-            }
+            let start = start.unwrap_or(0);
+            let end = end.unwrap_or(self.datalen);
 
             // check if ranges are in bounds
             if data.0.len() != data.1.len() {
                 return Err(SpikeError::ReplaceRangeError);
             }
-            if _start >= self.datalen || _start >= _end {
-                return Err(SpikeError::IndexOutOfRange);
-            }
-
-            if _end >= self.datalen || _end >= _start {
+            if start + self.datalen >= self.datalen {
                 return Err(SpikeError::IndexOutOfRange);
             }
             // end check
@@ -311,11 +281,11 @@ impl PhaseHandler for PhaseMemory {
             let (vals, samples) = self.peaks_trains.get(channel).unwrap();
             let array_start = *(*samples)
                 .iter()
-                .find(|x| **x >= _start)
+                .find(|x| **x >= start)
                 .unwrap_or(&self.datalen);
             let array_end = *(*samples)
                 .iter()
-                .find(|x| **x <= _end)
+                .find(|x| **x <= end)
                 .unwrap_or(&self.datalen);
 
             let mut new_vals = vec![];
@@ -333,7 +303,7 @@ impl PhaseHandler for PhaseMemory {
 
             Ok(())
         } else {
-            return Err(SpikeError::LabelNotFound);
+            Err(SpikeError::LabelNotFound)
         }
     }
 }

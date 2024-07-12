@@ -9,5 +9,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 spike-rs = { path = "../spike-rs" }
-mc_explorer = { path = "../mc_explorer"}
+# mc_explorer = { path = "../mc_explorer"}
+spike-h5 = { path = "../implementations/spike-h5" }
 pyo3 = { version = "*", features = ["extension-module"] }

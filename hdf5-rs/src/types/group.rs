@@ -1,4 +1,4 @@
-use crate::types::{Attr, AttrOpener, CreateDataSetOptions, DataType, DataSpace, DataSet, DatasetOwner};
+use crate::types::{Attr, AttrOpener, CreateDataSetOptions, DataSet, DatasetOwner};
 use crate::{error::H5Error, utils::get_group_names};
 use crate::{h5sys::*, str_to_cchar};
 
@@ -91,7 +91,7 @@ impl DatasetOwner for Group {
 
     fn create_dataset(&self, options: CreateDataSetOptions) -> Result<DataSet, H5Error> {
         let mut path = self.path.clone();
-        path.push_str("/");
+        path.push('/');
         path.push_str(options.name);
 
         // checks if the dataset already exists

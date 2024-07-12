@@ -8,4 +8,6 @@ build = "build.rs"
 name = "hdf5_rs"
 
 [build-dependencies]
+git2 = "*"
+cmake = "*"
 bindgen = "*"
