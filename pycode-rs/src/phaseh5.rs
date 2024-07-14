@@ -67,4 +67,22 @@ impl PyPhaseH5 {
             None
         }
     }
+
+    #[pyo3(signature = (channel, data, start=None))]
+    pub fn set_raw_data(
+        &mut self,
+        channel: &str,
+        data: Vec<f32>,
+        start: Option<usize>,
+    ) -> Option<()> {
+        if self._phaseh5.is_some() {
+            if let Ok(()) = self._phaseh5.as_mut().unwrap().set_raw_data(channel, start, &data) {
+                Some(())
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
 }

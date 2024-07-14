@@ -1,7 +1,7 @@
 /target
-/pycode/libpycode_rs.so
 /pycode/pycode_rs.pyd
 /pycode/pycode_rs.so
+/venv
 **/__pycache__/
 Cargo.lock
 tags
@@ -10,3 +10,4 @@ test.h5
 test.py
 .nvim.lua
 /.nvim
+.project.lua
