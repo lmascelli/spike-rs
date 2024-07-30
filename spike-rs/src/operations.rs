@@ -356,7 +356,7 @@ pub fn subsample_range(
     bin_size: usize,
     n_bins: usize,
 ) -> Vec<usize> {
-    let mut ret = vec![0; n_bins];
+    let mut ret = vec![0; n_bins as usize];
     let mut current_bin_index = 0;
     let mut current_bin_start = starting_sample;
     let mut current_bin_end = current_bin_start + bin_size;
@@ -366,7 +366,7 @@ pub fn subsample_range(
             continue;
         } else if *peak >= current_bin_start && *peak < current_bin_end {
             // we are in a useful bin
-            ret[current_bin_index] += 1;
+            ret[current_bin_index as usize] += 1;
         } else {
             // we've overcome the current bin. need to find the index of the following bin
             loop {
@@ -380,7 +380,7 @@ pub fn subsample_range(
                 if *peak >= current_bin_start && *peak < current_bin_end {
                     // check if the peak is
                     // contained in this bin
-                    ret[current_bin_index] += 1;
+                    ret[current_bin_index as usize] += 1;
                     break;
                 }
             }

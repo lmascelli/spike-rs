@@ -11,6 +11,8 @@ import argparse
 # environ["HDF5_INCLUDE_DIR"] = "D:/msys64/mingw64/include"
 environ["PYCODE_PATH"] = f"{Path(curdir).absolute()}/pycode"
 path.append(environ["PYCODE_PATH"])
+PYSIDE6_UIC = "venv/bin/pyside6-uic"
+PYSIDE6_RCC = "venv/bin/pyside6-rcc"
 
 parser = argparse.ArgumentParser(
         prog="project.py",
@@ -45,6 +47,14 @@ run_parser.add_argument(
         )
 
 gui_parser = subparsers.add_parser('gui', help="Open the PyCode GUI")
+gui_parser.add_argument(
+        '-b',
+        '--build',
+        dest="build",
+        action="store_true",
+        help="Build Qt python bindings"
+        )
+
 test_parser = subparsers.add_parser('test', help="Run the test.py file")
 
 def build(release: bool):
@@ -64,10 +74,27 @@ def run(release: bool):
 def test():
     import test
 
-def gui():
-    import pycode
+def gui(build: bool):
+    if build:
+        gui_files = [
+                "main",
+                "project_view",
+                ]
+
+        for file in gui_files:
+            system(f"{PYSIDE6_UIC} pycode/gui/{file}.ui -o pycode/gui/{file}.py")
+
+        rc_files = [
+
+                ]
+        for file in rc_files:
+            system(f"{PYSIDE6_RCC} pycode/res/{file}.rc -o pycode/res/{file}.py")
+    else:
+        from pycode.main import run as run_gui
+        run_gui()
 
 if __name__ == '__main__':
+    system("clear")
     args = parser.parse_args()
     match args.command:
         case "build":
@@ -77,6 +104,6 @@ if __name__ == '__main__':
         case "test":
             test()
         case "gui":
-            gui()
+            gui(args.build)
         case _:
             pass

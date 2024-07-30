@@ -1,0 +1,4 @@
+* PyCode
+  - Riorganizzare la gui in moduli
+  - Recap dei dati una volta selezionata una fase
+  - Rasterplot di tutta la fase

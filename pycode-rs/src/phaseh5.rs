@@ -56,7 +56,8 @@ impl PyPhaseH5 {
         end: Option<usize>,
     ) -> Option<Vec<f32>> {
         if self._phaseh5.is_some() {
-            match self._phaseh5.as_ref().unwrap().raw_data(channel, start, end) {
+            match self._phaseh5.as_ref().unwrap().raw_data(channel, start, end)
+            {
                 Ok(data) => Some(data),
                 Err(err) => {
                     println!("{:?}", err);
@@ -76,13 +77,114 @@ impl PyPhaseH5 {
         start: Option<usize>,
     ) -> Option<()> {
         if self._phaseh5.is_some() {
-            if let Ok(()) = self._phaseh5.as_mut().unwrap().set_raw_data(channel, start, &data) {
+            if let Ok(()) = self
+                ._phaseh5
+                .as_mut()
+                .unwrap()
+                .set_raw_data(channel, start, &data)
+            {
                 Some(())
             } else {
                 None
             }
         } else {
             None
+        }
+    }
+
+    #[pyo3(signature = ())]
+    pub fn n_digitals(&self) -> Option<usize> {
+        if self._phaseh5.is_some() {
+            Some(self._phaseh5.as_ref().unwrap().n_digitals())
+        } else {
+            None
+        }
+    }
+
+    #[pyo3(signature = (index, start=None, end=None))]
+    pub fn digital(&self, index: usize, start: Option<usize>, end: Option<usize>) -> Option<Vec<f32>> {
+        if self._phaseh5.is_some() {
+            if let Ok(data) = self._phaseh5.as_ref().unwrap().digital(index, start, end) {
+                Some(data)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    #[pyo3(signature = (index, data, start=None))]
+    pub fn set_digital(
+        &mut self,
+        index: usize,
+        data: Vec<f32>,
+        start: Option<usize>,
+    ) -> bool {
+        if self._phaseh5.is_some() {
+            if let Ok(set_digital) = self._phaseh5.as_mut().unwrap().set_digital(index, start, &data[..]) {
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+    
+
+    fn n_events(&self) -> Option<usize> {
+        if self._phaseh5.is_some() {
+            Some(self._phaseh5.as_ref().unwrap().n_events())
+        } else {
+            println!("Phase not present");
+            None
+        }
+    }
+
+    fn events(&self, index: usize) -> Option<Vec<u64>> {
+        if self._phaseh5.is_some() {
+            if let Ok(ret) = self._phaseh5.as_ref().unwrap().events(index) {
+                Some(ret)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+
+    }
+
+    #[pyo3(signature = (channel, start=None, end=None))]
+    fn peak_train(
+        &self,
+        channel: &str,
+        start: Option<usize>,
+        end: Option<usize>,
+    ) -> Option<(Vec<f32>, Vec<usize>)> {
+        if self._phaseh5.is_some() {
+            if let Ok(data) = self._phaseh5.as_ref().unwrap().peak_train(channel, start, end) {
+                Some(data)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+
+    #[pyo3(signature = (channel, data, start=None, end=None))]
+    fn set_peak_train(
+        &mut self,
+        channel: &str,
+        data: (Vec<f32>, Vec<usize>),
+        start: Option<usize>,
+        end: Option<usize>,
+    ) -> bool {
+        if self._phaseh5.is_some() {
+            true
+        } else {
+            false
         }
     }
 }

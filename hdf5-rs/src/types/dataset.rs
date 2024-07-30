@@ -586,6 +586,62 @@ impl DataSetWriter<i64> for &[i64] {
     }
 }
 
+impl DatasetFillable<usize> for usize {
+    fn from_dataset_row(
+        dataset: &DataSet,
+        row: usize,
+        plist: Option<&PList>,
+    ) -> Result<Vec<usize>, H5Error> {
+        let mut ret = vec![];
+        match dataset.get_datatype()?.get_dtype() {
+            DataTypeL::Signed32 => {
+                todo!()
+            }
+            DataTypeL::Unsigned32 => {
+                todo!()
+            }
+            DataTypeL::Signed64 | DataTypeL::Unsigned64 => {
+                let dataspace = dataset.get_dataspace()?;
+                let dims = dataspace.get_dims();
+
+                // set subspace
+                let memory_dataspace = dataspace.select_row(row)?;
+
+                // create memory dataspace
+
+                #[allow(clippy::cast_possible_truncation)]
+                ret.resize(dims[1] as usize, 0);
+
+                // read the data
+                unsafe {
+                    dataset::H5Dread(
+                        dataset.get_did(),
+                        datatype::H5T_NATIVE_ULLONG_g,
+                        memory_dataspace.get_did(),
+                        dataspace.get_did(),
+                        match plist {
+                            Some(plist) => plist.get_pid(),
+                            None => plist::H5P_DEFAULT,
+                        },
+                        ret.as_ptr() as _,
+                    )
+                };
+
+                // reset original space
+                dataspace.reset_selection();
+            }
+            _ => {
+                return Err(H5Error::dataset_unvalid_type(
+                    &dataset.get_path(),
+                    "u64",
+                ));
+            }
+        };
+
+        Ok(ret)
+    }
+}
+
 impl DatasetFillable<u64> for u64 {
     fn from_dataset_row(
         dataset: &DataSet,
