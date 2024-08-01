@@ -90,7 +90,7 @@ pub trait PhaseHandler {
         channel: &str,
         start: Option<usize>,
         end: Option<usize>,
-    ) -> Result<(Vec<f32>, Vec<usize>), SpikeError>;
+    ) -> Result<(Vec<usize>, Vec<f32>), SpikeError>;
 
     /// Replace a slice of the peak trains of the selected channel, if exists
     /// with the provided `data`.
@@ -104,6 +104,6 @@ pub trait PhaseHandler {
         channel: &str,
         start: Option<usize>,
         end: Option<usize>,
-        data: (Vec<f32>, Vec<usize>),
+        data: (Vec<usize>, Vec<f32>),
     ) -> Result<(), SpikeError>;
 }

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from ..pycode_rs import PyPhaseH5
 
 
@@ -46,3 +46,20 @@ class PhaseH5:
 
     def n_events(self) -> Optional[int]:
         return self._phase.n_events()
+
+    def events(self, index: int) -> Optional[List[int]]:
+        return self._phase.events(index)
+
+    def peak_train(
+        self, channel: str, start: Optional[int], end: Optional[int]
+    ) -> Optional[Tuple[List[int], List[float]]]:
+        return self._phase.peak_train(channel, start, end)
+
+    def set_peak_train(
+        self,
+        channel: str,
+        data: Tuple[List[int], List[float]],
+        start: Optional[int] = None,
+        end: Optional[int] = None,
+    ) -> bool:
+        return self._phase.set_peak_train(channel, data, start, end)

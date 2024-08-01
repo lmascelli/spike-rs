@@ -101,7 +101,7 @@ pub fn get_subsampled_pre_stim_post_from_intervals(
 
     let mut ret = HashMap::new();
     for label in phase.labels() {
-        let (_, data_times) = phase.peak_train(&label, None, None)?;
+        let (data_times, _) = phase.peak_train(&label, None, None)?;
         let mut current_ret = vec![];
         for interval in &scan_intervals {
             current_ret.push((

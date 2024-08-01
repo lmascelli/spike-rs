@@ -161,7 +161,7 @@ impl PyPhaseH5 {
         channel: &str,
         start: Option<usize>,
         end: Option<usize>,
-    ) -> Option<(Vec<f32>, Vec<usize>)> {
+    ) -> Option<(Vec<usize>, Vec<f32>)> {
         if self._phaseh5.is_some() {
             if let Ok(data) = self._phaseh5.as_ref().unwrap().peak_train(channel, start, end) {
                 Some(data)
@@ -177,7 +177,7 @@ impl PyPhaseH5 {
     fn set_peak_train(
         &mut self,
         channel: &str,
-        data: (Vec<f32>, Vec<usize>),
+        data: (Vec<usize>, Vec<f32>),
         start: Option<usize>,
         end: Option<usize>,
     ) -> bool {

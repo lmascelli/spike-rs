@@ -538,7 +538,7 @@ impl PhaseHandler for PhaseH5 {
         channel: &str,
         start: Option<usize>,
         end: Option<usize>,
-    ) -> Result<(Vec<f32>, Vec<usize>), SpikeError> {
+    ) -> Result<(Vec<usize>, Vec<f32>), SpikeError> {
         if self.peak_train.is_some() {
             if let Some(train) = self
                 .peak_train
@@ -557,10 +557,11 @@ impl PhaseHandler for PhaseH5 {
                                 Ok((vec![], vec![]))
                             } else {
                                 if start.is_some() && end.is_none() {
-                                    Ok((values, times))
+                                    Ok((times, values))
                                 } else {
                                     let start = start.unwrap_or(times[0]);
-                                    let end = end.unwrap_or(times[times.len() - 1]);
+                                    let end =
+                                        end.unwrap_or(times[times.len() - 1]);
                                     let mut i_start = 0;
                                     let mut i_end = times.len() - 1;
                                     for (i, val) in times.iter().enumerate() {
@@ -575,7 +576,16 @@ impl PhaseHandler for PhaseH5 {
                                             break;
                                         }
                                     }
-                                    Ok((values[i_start..i_end].iter().map(|x| *x).collect(), times[i_start..i_end].iter().map(|x| *x).collect()))
+                                    Ok((
+                                        times[i_start..i_end]
+                                            .iter()
+                                            .map(|x| *x)
+                                            .collect(),
+                                        values[i_start..i_end]
+                                            .iter()
+                                            .map(|x| *x)
+                                            .collect(),
+                                    ))
                                 }
                             }
                         }
@@ -598,13 +608,109 @@ impl PhaseHandler for PhaseH5 {
         channel: &str,
         start: Option<usize>,
         end: Option<usize>,
-        data: (Vec<f32>, Vec<usize>),
+        data: (Vec<usize>, Vec<f32>),
     ) -> Result<(), SpikeError> {
-        // get all values before start
-        // get all values after end
-        // join the values with data
-        // delete the old dataspace
-        // create a new one
-        todo!()
+        if self.peak_train.is_none() {
+            return Err(SpikeError::NoSpikeTrainsAvailable);
+        }
+        let mut train = match self
+            .peak_train
+            .as_mut()
+            .unwrap()
+            .trains
+            .iter_mut()
+            .find(|v| v.0 == channel)
+        {
+            Some(train) => train,
+            None => return Err(SpikeError::LabelNotFound),
+        };
+
+        let t_dataset = &mut train.1;
+        let v_dataset = &mut train.2;
+
+        let times = {
+            match usize::from_dataset(t_dataset, None) {
+                Ok(data) => data,
+                Err(_err) => {
+                    return Err(SpikeError::OperationFailed);
+                }
+            }
+        };
+
+        let values = {
+            match f32::from_dataset(v_dataset, None) {
+                Ok(data) => data,
+                Err(_err) => {
+                    return Err(SpikeError::OperationFailed);
+                }
+            }
+        };
+
+        if times.len() != values.len() {
+            Err(SpikeError::OperationFailed)
+        } else {
+            if times.len() == 0 {
+                // just set data as the new dataset
+                if let Err(_e) = data.0[..].as_ref().to_dataset(t_dataset, None)
+                {
+                    return Err(SpikeError::OperationFailed);
+                }
+                if let Err(_e) = data.1[..].as_ref().to_dataset(v_dataset, None)
+                {
+                    return Err(SpikeError::OperationFailed);
+                }
+                Ok(())
+            } else {
+                let start = start.unwrap_or(times[0]);
+                let end = end.unwrap_or(times[times.len() - 1]);
+                let mut i_start = 0;
+                let mut i_end = times.len() - 1;
+                for (i, val) in times.iter().enumerate() {
+                    if *val >= start {
+                        i_start = i;
+                        break;
+                    }
+                }
+                for (i, val) in times.iter().enumerate() {
+                    if *val >= end {
+                        i_end = i;
+                        break;
+                    }
+                }
+
+                // get all values before start
+                let before_start_times = times[0..i_start].to_vec();
+                let before_start_values = values[0..i_start].to_vec();
+
+                // get all values after end
+                let after_end_times = times[i_end..].to_vec();
+                let after_end_values = values[i_end..].to_vec();
+
+                // join the values with data
+                let mut new_times = vec![];
+                let mut new_values = vec![];
+                new_times.extend_from_slice(before_start_times.as_slice());
+                new_times.extend_from_slice(data.0.as_slice());
+                new_times.extend_from_slice(after_end_times.as_slice());
+
+                new_values.extend_from_slice(before_start_values.as_slice());
+                new_values.extend_from_slice(data.1.as_slice());
+                new_values.extend_from_slice(after_end_values.as_slice());
+
+                // set it as the new dataset
+                if let Err(_e) =
+                    new_times[..].as_ref().to_dataset(t_dataset, None)
+                {
+                    return Err(SpikeError::OperationFailed);
+                }
+                if let Err(_e) =
+                    new_values[..].as_ref().to_dataset(v_dataset, None)
+                {
+                    return Err(SpikeError::OperationFailed);
+                }
+
+                Ok(())
+            }
+        }
     }
 }

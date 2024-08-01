@@ -124,7 +124,7 @@ pub fn spike_detection(
     threshold: f32,
     peak_duration: f32,
     refractory_time: f32,
-) -> Result<(Vec<f32>, Vec<usize>), SpikeError> {
+) -> Result<(Vec<usize>, Vec<f32>), SpikeError> {
     // TODO check if reserving space for the ret increases performances.
     let mut ret_values = Vec::new();
     let mut ret_times = Vec::new();
@@ -276,7 +276,7 @@ pub fn spike_detection(
         }
         index += 1;
     }
-    Ok((ret_values, ret_times))
+    Ok((ret_times, ret_values))
 }
 
 /// Build an histogram of `n_bins` equidistant values containing the distribution of
