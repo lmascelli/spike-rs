@@ -8,6 +8,7 @@ use std::{
 const BUILD: bool = true;
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
     println!("cargo:rerun-if-changed=build.rs");
     if BUILD {
         //==============================================================================
@@ -106,8 +107,20 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
             "cargo:rustc-link-search=native={}",
             (zlib_install_path.display().to_string() + "/lib")
         );
-        println!("cargo:rustc-link-lib=static=hdf5");
-        println!("cargo:rustc-link-lib=static=z");
+        match target_os.as_str() {
+            "linux" => {
+                println!("cargo:rustc-link-lib=static=hdf5");
+                println!("cargo:rustc-link-lib=static=z");
+            }
+            "windows" => {
+                println!("cargo:rustc-link-lib=static=libhdf5");
+                println!("cargo:rustc-link-lib=static=zlibstatic");
+                println!("cargo:rustc-link-lib=dylib=shlwapi");
+            }
+            _ => {
+                todo!("this os is not yet supported");
+            }
+        }
 
         //==============================================================================
         //

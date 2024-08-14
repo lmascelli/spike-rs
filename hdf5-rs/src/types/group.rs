@@ -1,4 +1,6 @@
-use crate::types::{Attr, AttrOpener, CreateDataSetOptions, DataSet, DatasetOwner};
+use crate::types::{
+    Attr, AttrOpener, CreateDataSetOptions, DataSet, DatasetOwner, PList,
+};
 use crate::{error::H5Error, utils::get_group_names};
 use crate::{h5sys::*, str_to_cchar};
 
@@ -52,8 +54,20 @@ impl Group {
     }
 }
 
+pub struct CreateGroupOptions {
+    pub loc_id: types::Hid,
+    pub path: String,
+    pub link_creation_properties: Option<PList>,
+    pub group_creation_properties: Option<PList>,
+    pub group_access_properties: Option<PList>,
+}
+
 pub trait GroupOpener {
     fn open_group(&self, name: &str) -> Result<Group, H5Error>;
+    fn create_group(
+        &self,
+        options: CreateGroupOptions,
+    ) -> Result<Group, H5Error>;
     fn list_groups(&self) -> Vec<String>;
 }
 
@@ -89,7 +103,10 @@ impl DatasetOwner for Group {
         DataSet::open(self.gid, name)
     }
 
-    fn create_dataset(&self, options: CreateDataSetOptions) -> Result<DataSet, H5Error> {
+    fn create_dataset(
+        &self,
+        options: CreateDataSetOptions,
+    ) -> Result<DataSet, H5Error> {
         let mut path = self.path.clone();
         path.push('/');
         path.push_str(options.name);
@@ -108,11 +125,11 @@ impl DatasetOwner for Group {
                         Some(plist) => plist.pid,
                         None => plist::H5P_DEFAULT,
                     },
-                    match options.create_plist{
+                    match options.create_plist {
                         Some(plist) => plist.pid,
                         None => plist::H5P_DEFAULT,
                     },
-                    match options.access_plist{
+                    match options.access_plist {
                         Some(plist) => plist.pid,
                         None => plist::H5P_DEFAULT,
                     },
@@ -131,7 +148,7 @@ impl DatasetOwner for Group {
             }
         }
     }
-    
+
     fn list_datasets(&self) -> Vec<String> {
         get_group_names(self.gid)
     }
@@ -140,6 +157,13 @@ impl DatasetOwner for Group {
 impl GroupOpener for Group {
     fn open_group(&self, name: &str) -> Result<Group, H5Error> {
         Group::open(self.get_gid(), name)
+    }
+
+    fn create_group(
+        &self,
+        options: CreateGroupOptions,
+    ) -> Result<Group, H5Error> {
+        todo!();
     }
 
     fn list_groups(&self) -> Vec<String> {

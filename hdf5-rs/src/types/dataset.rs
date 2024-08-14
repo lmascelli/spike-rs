@@ -104,6 +104,7 @@ pub trait DatasetOwner {
 }
 
 impl DataSet {
+    
     #[allow(unused_unsafe)]
     pub fn open(parent: i64, name: &str) -> Result<Self, H5Error> {
         let did;
@@ -140,6 +141,16 @@ impl DataSet {
             dataspace: Some(DataSpace::open(dataspace_id)?),
             datatype: Some(DataType::open(datatype_id)?),
         })
+    }
+
+    pub fn delete(&mut self) {
+        unsafe {
+            link::H5Ldelete(
+                self.did,
+                str_to_cchar!(&self.path),
+                plist::H5P_DEFAULT,
+            );
+        }
     }
 
     pub fn get_path(&self) -> String {
@@ -355,12 +366,14 @@ impl DatasetFillable<i32> for i32 {
                     offset,
                 )?;
                 let read_res = unsafe {
-                    dataset::H5Dread(dataset.did, datatype::H5T_NATIVE_INT_g,
+                    dataset::H5Dread(
+                        dataset.did,
+                        datatype::H5T_NATIVE_INT_g,
                         memory_dataspace.did,
                         dataspace.did,
                         plist::H5P_DEFAULT,
                         ret.as_ptr() as *mut c_void,
-                        )
+                    )
                 };
 
                 if read_res >= 0 {

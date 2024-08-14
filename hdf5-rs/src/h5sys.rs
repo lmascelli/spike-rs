@@ -71,7 +71,7 @@ pub mod identifier {
 }
 
 pub mod link {
-    pub use super::sys::{H5L_info2_t, H5Lexists, H5Literate2};
+    pub use super::sys::{H5L_info2_t, H5Lexists, H5Literate2, H5Ldelete};
 }
 
 pub mod plist {

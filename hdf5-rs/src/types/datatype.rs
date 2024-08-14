@@ -30,10 +30,7 @@ impl IntoDataType for i32 {
         if tid <= 0 {
             todo!()
         } else {
-            Ok(DataType {
-                tid,
-                dtype: DataTypeL::Signed32,
-            })
+            Ok(DataType { tid, dtype: DataTypeL::Signed32 })
         }
     }
 }
@@ -44,10 +41,28 @@ impl IntoDataType for i64 {
         if tid <= 0 {
             todo!()
         } else {
-            Ok(DataType {
-                tid,
-                dtype: DataTypeL::Signed32,
-            })
+            Ok(DataType { tid, dtype: DataTypeL::Signed32 })
+        }
+    }
+}
+
+impl IntoDataType for usize {
+    fn into_datatype() -> Result<DataType, H5Error> {
+        let tid = unsafe { datatype::H5Tcopy(datatype::H5T_NATIVE_ULLONG_g) };
+        if tid <= 0 {
+            todo!()
+        } else {
+            Ok(DataType { tid, dtype: DataTypeL::Unsigned64 })
+        }
+    }
+}
+impl IntoDataType for f32 {
+    fn into_datatype() -> Result<DataType, H5Error> {
+        let tid = unsafe { datatype::H5Tcopy(datatype::H5T_NATIVE_FLOAT_g) };
+        if tid <= 0 {
+            todo!()
+        } else {
+            Ok(DataType { tid, dtype: DataTypeL::Float32 })
         }
     }
 }

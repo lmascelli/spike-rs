@@ -15,6 +15,7 @@ impl PyPhaseH5 {
             _phaseh5: if let Ok(_phaseh5) = PhaseH5::open(filename) {
                 Some(_phaseh5)
             } else {
+                eprintln!("PyCode-rs: ERROR Phase not present");
                 None
             },
         }
@@ -28,6 +29,7 @@ impl PyPhaseH5 {
         if self._phaseh5.is_some() {
             Some(self._phaseh5.as_ref().unwrap().sampling_frequency())
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             None
         }
     }
@@ -36,6 +38,7 @@ impl PyPhaseH5 {
         if self._phaseh5.is_some() {
             Some(self._phaseh5.as_ref().unwrap().datalen())
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             None
         }
     }
@@ -44,6 +47,7 @@ impl PyPhaseH5 {
         if self._phaseh5.is_some() {
             Some(self._phaseh5.as_ref().unwrap().labels())
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             None
         }
     }
@@ -60,11 +64,12 @@ impl PyPhaseH5 {
             {
                 Ok(data) => Some(data),
                 Err(err) => {
-                    println!("{:?}", err);
+                    eprintln!("PyCode-rs: ERROR {:?}", err);
                     None
                 }
             }
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             None
         }
     }
@@ -77,17 +82,20 @@ impl PyPhaseH5 {
         start: Option<usize>,
     ) -> Option<()> {
         if self._phaseh5.is_some() {
-            if let Ok(()) = self
+            match self
                 ._phaseh5
                 .as_mut()
                 .unwrap()
                 .set_raw_data(channel, start, &data)
             {
-                Some(())
-            } else {
-                None
+                Ok(_) => Some(()),
+                Err(err) => {
+                    eprintln!("PyCode-rs: ERROR {:?}", err);
+                    None
+                }
             }
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             None
         }
     }
@@ -97,19 +105,28 @@ impl PyPhaseH5 {
         if self._phaseh5.is_some() {
             Some(self._phaseh5.as_ref().unwrap().n_digitals())
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             None
         }
     }
 
     #[pyo3(signature = (index, start=None, end=None))]
-    pub fn digital(&self, index: usize, start: Option<usize>, end: Option<usize>) -> Option<Vec<f32>> {
+    pub fn digital(
+        &self,
+        index: usize,
+        start: Option<usize>,
+        end: Option<usize>,
+    ) -> Option<Vec<f32>> {
         if self._phaseh5.is_some() {
-            if let Ok(data) = self._phaseh5.as_ref().unwrap().digital(index, start, end) {
-                Some(data)
-            } else {
-                None
+            match self._phaseh5.as_ref().unwrap().digital(index, start, end) {
+                Ok(data) => Some(data),
+                Err(err) => {
+                    eprintln!("PyCode-rs: ERROR {:?}", err);
+                    None
+                }
             }
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             None
         }
     }
@@ -122,22 +139,28 @@ impl PyPhaseH5 {
         start: Option<usize>,
     ) -> bool {
         if self._phaseh5.is_some() {
-            if let Ok(set_digital) = self._phaseh5.as_mut().unwrap().set_digital(index, start, &data[..]) {
-                true
-            } else {
-                false
+            match self._phaseh5.as_mut().unwrap().set_digital(
+                index,
+                start,
+                &data[..],
+            ) {
+                Ok(_) => true,
+                Err(err) => {
+                    eprintln!("PyCode-rs: ERROR {:?}", err);
+                    false
+                }
             }
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             false
         }
     }
-    
 
     fn n_events(&self) -> Option<usize> {
         if self._phaseh5.is_some() {
             Some(self._phaseh5.as_ref().unwrap().n_events())
         } else {
-            println!("Phase not present");
+            eprintln!("PyCode-rs: ERROR Phase not present");
             None
         }
     }
@@ -150,9 +173,9 @@ impl PyPhaseH5 {
                 None
             }
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             None
         }
-
     }
 
     #[pyo3(signature = (channel, start=None, end=None))]
@@ -163,12 +186,20 @@ impl PyPhaseH5 {
         end: Option<usize>,
     ) -> Option<(Vec<usize>, Vec<f32>)> {
         if self._phaseh5.is_some() {
-            if let Ok(data) = self._phaseh5.as_ref().unwrap().peak_train(channel, start, end) {
-                Some(data)
-            } else {
-                None
+            match self
+                ._phaseh5
+                .as_ref()
+                .unwrap()
+                .peak_train(channel, start, end)
+            {
+                Ok(data) => Some(data),
+                Err(err) => {
+                    eprintln!("PyCode-rs: ERROR {:?}", err);
+                    None
+                }
             }
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             None
         }
     }
@@ -182,8 +213,20 @@ impl PyPhaseH5 {
         end: Option<usize>,
     ) -> bool {
         if self._phaseh5.is_some() {
-            true
+            match self
+                ._phaseh5
+                .as_mut()
+                .unwrap()
+                .set_peak_train(channel, start, end, data)
+            {
+                Ok(_) => true,
+                Err(err) => {
+                    eprintln!("PyCode-rs: ERROR {:?}", err);
+                    false
+                }
+            }
         } else {
+            eprintln!("PyCode-rs: ERROR Phase not present");
             false
         }
     }

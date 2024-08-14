@@ -35,6 +35,7 @@ pub enum H5ErrorType {
 
     GroupDoesntExist(String),
     GroupOpenFail(String),
+    GroupCreationFailed(String),
 
     IdUnvalid,
 
@@ -105,6 +106,10 @@ impl H5Error {
 
     pub fn group_doesnt_exists(name: &str) -> Self {
         Self { etype: H5ErrorType::GroupDoesntExist(name.to_string()) }
+    }
+
+    pub fn group_creation_failed(name: &str) -> Self {
+        Self { etype: H5ErrorType::GroupCreationFailed(name.to_string()) }
     }
 
     // DATASPACE ERRORS
@@ -341,6 +346,10 @@ impl std::fmt::Display for H5Error {
 
             H5ErrorType::GroupDoesntExist(ref name) => {
                 writeln!(f, "Error::GroupDoesntExist: {}", name)?;
+            }
+
+            H5ErrorType::GroupCreationFailed(ref name) => {
+                writeln!(f, "Error::GroupCreationFailed: {}", name)?;
             }
 
             H5ErrorType::DataSpaceGetDimensionsFail => {

@@ -3,9 +3,10 @@ use hdf5_rs::{
     error::H5Error,
     h5sys::CStr,
     types::{
-        AttrOpener, AttributeFillable, DataSet, DataSetWriter, DataSpaceOwner,
-        DatasetFillable, DatasetOwner, File, FileOpenAccess, Group,
-        GroupOpener,
+        AttrOpener, AttributeFillable, CreateDataSetOptions,
+        CreateGroupOptions, DataSet, DataSetWriter, DataSpace, DataSpaceOwner,
+        DataSpaceType, DatasetFillable, DatasetOwner, File, FileOpenAccess,
+        Group, GroupOpener, IntoDataType,
     },
 };
 use info_channel::CInfoChannel;
@@ -213,6 +214,7 @@ impl EventStream {
 
 #[derive(Debug)]
 pub struct PhaseH5 {
+    pub file: File,
     pub timestamp: u64,
     pub date: String,
     pub raw_data: AnalogStream,
@@ -226,6 +228,7 @@ pub struct PhaseH5 {
 impl PhaseH5 {
     pub fn open(filepath: &str) -> Result<Self, SpikeH5Error> {
         hdf5_rs::init()?;
+
         // read the timestamp of the file
         // for future use in ordering the phase without parsing the name of the file
         let timestamp;
@@ -340,6 +343,7 @@ impl PhaseH5 {
         }
 
         Ok(Self {
+            file,
             timestamp,
             date,
             raw_data: raw_data.unwrap(),
@@ -349,6 +353,125 @@ impl PhaseH5 {
             sampling_frequency: raw_data_sf as f32,
             datalen: raw_data_duration as usize,
         })
+    }
+
+    fn insert_peak_train(
+        &mut self,
+        channel: &str,
+        data: (Vec<usize>, Vec<f32>),
+    ) -> Result<(), SpikeError> {
+        let spike_group = match self.file.create_group(CreateGroupOptions {
+            loc_id: self.file.fid,
+            path: "/Data/Recording_0/Peak_Train".to_string(),
+            link_creation_properties: None,
+            group_creation_properties: None,
+            group_access_properties: None,
+        }) {
+            Ok(group) => group,
+            Err(err) => {
+                eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                return Err(SpikeError::LabelNotFound);
+            }
+        };
+
+        let mut times_ds =
+            match spike_group.create_dataset(CreateDataSetOptions {
+                name: "samples",
+                link_plist: None,
+                create_plist: None,
+                access_plist: None,
+                dtype: match usize::into_datatype() {
+                    Ok(dt) => dt,
+                    Err(err) => {
+                        eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                        return Err(SpikeError::OperationFailed);
+                    }
+                },
+                dspace: match DataSpace::create_dataspace(
+                    DataSpaceType::Simple,
+                    &[data.0.len() as u64],
+                ) {
+                    Ok(ds) => ds,
+                    Err(err) => {
+                        eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                        return Err(SpikeError::OperationFailed);
+                    }
+                },
+            }) {
+                Ok(ds) => ds,
+                Err(err) => {
+                    eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                    return Err(SpikeError::OperationFailed);
+                }
+            };
+
+        let mut values_ds =
+            match spike_group.create_dataset(CreateDataSetOptions {
+                name: "values",
+                link_plist: None,
+                create_plist: None,
+                access_plist: None,
+                dtype: match f32::into_datatype() {
+                    Ok(dt) => dt,
+                    Err(err) => {
+                        eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                        return Err(SpikeError::OperationFailed);
+                    }
+                },
+                dspace: match DataSpace::create_dataspace(
+                    DataSpaceType::Simple,
+                    &[data.0.len() as u64],
+                ) {
+                    Ok(ds) => ds,
+                    Err(err) => {
+                        eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                        return Err(SpikeError::OperationFailed);
+                    }
+                },
+            }) {
+                Ok(ds) => ds,
+                Err(err) => {
+                    eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                    return Err(SpikeError::OperationFailed);
+                }
+            };
+
+        if data.0[..].as_ref().to_dataset(&mut times_ds, None).is_err() {
+            return Err(SpikeError::OperationFailed);
+        }
+        if data.1[..].as_ref().to_dataset(&mut values_ds, None).is_err() {
+            return Err(SpikeError::OperationFailed);
+        }
+
+        if self.peak_train.is_some() {
+            let train = self
+                .peak_train
+                .as_mut()
+                .unwrap()
+                .trains
+                .iter_mut()
+                .find(|v| v.0 == channel);
+
+            match train {
+                Some(train) => {
+                    // update the existing train
+                    train.1.delete();
+                    train.2.delete();
+
+                    train.1 = times_ds;
+                    train.2 = values_ds;
+                }
+                None => {
+                    // insert a new item in the vec of trains
+                    self.peak_train.as_mut().unwrap().trains.push((
+                        channel.to_string(),
+                        times_ds,
+                        values_ds,
+                    ));
+                }
+            };
+        }
+        Ok(())
     }
 }
 
@@ -610,10 +733,13 @@ impl PhaseHandler for PhaseH5 {
         end: Option<usize>,
         data: (Vec<usize>, Vec<f32>),
     ) -> Result<(), SpikeError> {
+        // if no spike train is saved yet just fill the dataspace with the data
         if self.peak_train.is_none() {
-            return Err(SpikeError::NoSpikeTrainsAvailable);
+            return self.insert_peak_train(channel, data);
         }
-        let mut train = match self
+
+        // else look for the peak of the selected channel
+        match self
             .peak_train
             .as_mut()
             .unwrap()
@@ -621,95 +747,91 @@ impl PhaseHandler for PhaseH5 {
             .iter_mut()
             .find(|v| v.0 == channel)
         {
-            Some(train) => train,
-            None => return Err(SpikeError::LabelNotFound),
-        };
-
-        let t_dataset = &mut train.1;
-        let v_dataset = &mut train.2;
-
-        let times = {
-            match usize::from_dataset(t_dataset, None) {
-                Ok(data) => data,
-                Err(_err) => {
-                    return Err(SpikeError::OperationFailed);
-                }
+            None => {
+                // if the channel is not saved yet just fill the dataspace with the data
+                return self.insert_peak_train(channel, data);
             }
-        };
+            Some(train) => {
+                // if there are some data for the selected channel place the new data in the
+                // correct place and replace the datasets
+                let t_dataset = &mut train.1;
+                let v_dataset = &mut train.2;
 
-        let values = {
-            match f32::from_dataset(v_dataset, None) {
-                Ok(data) => data,
-                Err(_err) => {
-                    return Err(SpikeError::OperationFailed);
-                }
-            }
-        };
-
-        if times.len() != values.len() {
-            Err(SpikeError::OperationFailed)
-        } else {
-            if times.len() == 0 {
-                // just set data as the new dataset
-                if let Err(_e) = data.0[..].as_ref().to_dataset(t_dataset, None)
-                {
-                    return Err(SpikeError::OperationFailed);
-                }
-                if let Err(_e) = data.1[..].as_ref().to_dataset(v_dataset, None)
-                {
-                    return Err(SpikeError::OperationFailed);
-                }
-                Ok(())
-            } else {
-                let start = start.unwrap_or(times[0]);
-                let end = end.unwrap_or(times[times.len() - 1]);
-                let mut i_start = 0;
-                let mut i_end = times.len() - 1;
-                for (i, val) in times.iter().enumerate() {
-                    if *val >= start {
-                        i_start = i;
-                        break;
+                let times = {
+                    match usize::from_dataset(t_dataset, None) {
+                        Ok(data) => data,
+                        Err(_err) => {
+                            return Err(SpikeError::OperationFailed);
+                        }
                     }
-                }
-                for (i, val) in times.iter().enumerate() {
-                    if *val >= end {
-                        i_end = i;
-                        break;
+                };
+
+                let values = {
+                    match f32::from_dataset(v_dataset, None) {
+                        Ok(data) => data,
+                        Err(_err) => {
+                            return Err(SpikeError::OperationFailed);
+                        }
                     }
-                }
+                };
 
-                // get all values before start
-                let before_start_times = times[0..i_start].to_vec();
-                let before_start_values = values[0..i_start].to_vec();
-
-                // get all values after end
-                let after_end_times = times[i_end..].to_vec();
-                let after_end_values = values[i_end..].to_vec();
-
-                // join the values with data
-                let mut new_times = vec![];
-                let mut new_values = vec![];
-                new_times.extend_from_slice(before_start_times.as_slice());
-                new_times.extend_from_slice(data.0.as_slice());
-                new_times.extend_from_slice(after_end_times.as_slice());
-
-                new_values.extend_from_slice(before_start_values.as_slice());
-                new_values.extend_from_slice(data.1.as_slice());
-                new_values.extend_from_slice(after_end_values.as_slice());
-
-                // set it as the new dataset
-                if let Err(_e) =
-                    new_times[..].as_ref().to_dataset(t_dataset, None)
-                {
+                if times.len() != values.len() {
                     return Err(SpikeError::OperationFailed);
-                }
-                if let Err(_e) =
-                    new_values[..].as_ref().to_dataset(v_dataset, None)
-                {
-                    return Err(SpikeError::OperationFailed);
-                }
+                } else {
+                    if times.len() == 0 {
+                        // the spikes train is present but empty so just set data as the new
+                        // dataset
+                        return self.insert_peak_train(channel, data);
+                    } else {
+                        // the spikes train in present and contains data so the new data must be
+                        // inserted between start and stop positions
+                        let start = start.unwrap_or(times[0]);
+                        let end = end.unwrap_or(times[times.len() - 1]);
+                        let mut i_start = 0;
+                        let mut i_end = times.len() - 1;
+                        for (i, val) in times.iter().enumerate() {
+                            if *val >= start {
+                                i_start = i;
+                                break;
+                            }
+                        }
+                        for (i, val) in times.iter().enumerate() {
+                            if *val >= end {
+                                i_end = i;
+                                break;
+                            }
+                        }
 
-                Ok(())
+                        // get all values before start
+                        let before_start_times = times[0..i_start].to_vec();
+                        let before_start_values = values[0..i_start].to_vec();
+
+                        // get all values after end
+                        let after_end_times = times[i_end..].to_vec();
+                        let after_end_values = values[i_end..].to_vec();
+
+                        // join the values with data
+                        let mut new_times = vec![];
+                        let mut new_values = vec![];
+
+                        new_times
+                            .extend_from_slice(before_start_times.as_slice());
+                        new_times.extend_from_slice(data.0.as_slice());
+                        new_times.extend_from_slice(after_end_times.as_slice());
+
+                        new_values
+                            .extend_from_slice(before_start_values.as_slice());
+                        new_values.extend_from_slice(data.1.as_slice());
+                        new_values
+                            .extend_from_slice(after_end_values.as_slice());
+
+                        // set it as the new dataset
+                        return self.insert_peak_train(
+                            channel,
+                            (new_times, new_values),
+                        );
+                    }
+                };
             }
         }
     }

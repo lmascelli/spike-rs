@@ -2,9 +2,9 @@ use crate::{
     error::H5Error,
     h5sys::*,
     types::{
-        link::exists,
         dataset::{CreateDataSetOptions, DataSet, DatasetOwner},
         group::{Group, GroupOpener},
+        link::exists,
         plist::PList,
     },
     utils::{get_group_names, str_to_cchar},
@@ -106,6 +106,36 @@ impl GroupOpener for File {
         Group::open(self.get_fid(), name)
     }
 
+    fn create_group(
+        &self,
+        options: super::CreateGroupOptions,
+    ) -> Result<Group, H5Error> {
+        let res = unsafe {
+            group::H5Gcreate2(
+                options.loc_id,
+                str_to_cchar!(&options.path),
+                match options.link_creation_properties {
+                    Some(prop) => prop.pid,
+                    None => plist::H5P_DEFAULT,
+                },
+                match options.group_creation_properties {
+                    Some(prop) => prop.pid,
+                    None => plist::H5P_DEFAULT,
+                },
+                match options.group_access_properties {
+                    Some(prop) => prop.pid,
+                    None => plist::H5P_DEFAULT,
+                },
+            )
+        };
+
+        if res > 0 {
+            return Ok(Group { path: options.path.clone(), gid: res });
+        } else {
+            return Err(H5Error::group_creation_failed(&options.path));
+        }
+    }
+
     fn list_groups(&self) -> Vec<String> {
         get_group_names(self.fid)
     }
@@ -116,7 +146,10 @@ impl DatasetOwner for File {
         DataSet::open(self.fid, name)
     }
 
-    fn create_dataset(&self, options: CreateDataSetOptions) -> Result<DataSet, H5Error> {
+    fn create_dataset(
+        &self,
+        options: CreateDataSetOptions,
+    ) -> Result<DataSet, H5Error> {
         let mut path = self.filename.clone();
         path.push_str("/");
         path.push_str(options.name);
@@ -135,11 +168,11 @@ impl DatasetOwner for File {
                         Some(plist) => plist.pid,
                         None => plist::H5P_DEFAULT,
                     },
-                    match options.create_plist{
+                    match options.create_plist {
                         Some(plist) => plist.pid,
                         None => plist::H5P_DEFAULT,
                     },
-                    match options.access_plist{
+                    match options.access_plist {
                         Some(plist) => plist.pid,
                         None => plist::H5P_DEFAULT,
                     },
