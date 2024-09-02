@@ -71,6 +71,8 @@ pub struct PeakTrain {
 
 impl PeakTrain {
     pub fn parse(group: Group) -> Result<Self, SpikeH5Error> {
+        // peak trains should be contained in a separated group for each channel
+        // each of which should contain a `sample` and a `value` dataset
         let mut trains = vec![];
         for label in group.list_groups() {
             let channel_group = group.open_group(&label)?;
@@ -339,7 +341,17 @@ impl PhaseH5 {
         if let Ok(peak_train_group) =
             file.open_group("/Data/Recording_0/Peak_Train")
         {
-            peak_train.replace(PeakTrain::parse(peak_train_group)?);
+            // peak_train.replace(PeakTrain::parse(peak_train_group)?);
+        } else {
+            if let Err(err) = file.create_group(CreateGroupOptions {
+                loc_id: file.fid,
+                path: "/Data/Recording_0/Peak_Train".to_string(),
+                link_creation_properties: None,
+                group_creation_properties: None,
+                group_access_properties: None,
+            }) {
+                return Err(SpikeH5Error::H5LibError(err));
+            }
         }
 
         Ok(Self {
@@ -360,20 +372,74 @@ impl PhaseH5 {
         channel: &str,
         data: (Vec<usize>, Vec<f32>),
     ) -> Result<(), SpikeError> {
-        let spike_group = match self.file.create_group(CreateGroupOptions {
-            loc_id: self.file.fid,
-            path: "/Data/Recording_0/Peak_Train".to_string(),
-            link_creation_properties: None,
-            group_creation_properties: None,
-            group_access_properties: None,
-        }) {
-            Ok(group) => group,
+        /*
+         * Questa funzione deve controllare se esiste il grouppo corrispondente al canale,
+         * se no crearlo. Poi deve eliminare i dataset del grouppo e sostituirli con i nuovi
+         * passati. Infine collegare i dataset creati nella struttura della fase
+         * */
+
+        // Check if the group `/Peak_Train/{channel}` exists and create it if not
+        let spike_group = match self.file.open_group("/Data/Recording_0/Peak_Train") {
+            Ok(channels_group) => {
+                if !channels_group.list_groups().contains(&format!("{channel}"))
+                {
+                    match channels_group.create_group(CreateGroupOptions {
+                        loc_id: self.file.fid,
+                        path: format!("/Data/Recording_0/Peak_Train/{channel}"),
+                        link_creation_properties: None,
+                        group_creation_properties: None,
+                        group_access_properties: None,
+                    }) {
+                        Err(err) => {
+                            eprintln!(
+                                "Error: SpikeH5::insert_peak_train {:?}",
+                                err
+                            );
+                            return Err(SpikeError::OperationFailed);
+                        }
+                        _ => (),
+                    }
+                }
+                self.file
+                    .open_group(&format!(
+                        "/Data/Recording_0/Peak_Train/{channel}"
+                    ))
+                    .unwrap()
+            }
             Err(err) => {
-                eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
-                return Err(SpikeError::LabelNotFound);
+                eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
+                return Err(SpikeError::OperationFailed);
             }
         };
 
+        // delete the old datasets and replace the new ones
+        match spike_group.get_dataset("samples") {
+            Ok(mut samples_ds) => {
+                samples_ds.delete();
+            },
+            Err(err) => {
+                eprintln!(
+                    "Error: SpikeH5::insert_peak_train {:?}",
+                    err
+                );
+                return Err(SpikeError::OperationFailed);
+            }
+        }
+
+        match spike_group.get_dataset("values") {
+            Ok(mut values_ds) => {
+                values_ds.delete();
+            },
+            Err(err) => {
+                eprintln!(
+                    "Error: SpikeH5::insert_peak_train {:?}",
+                    err
+                );
+                return Err(SpikeError::OperationFailed);
+            }
+        }
+
+        // Create the new datasets
         let mut times_ds =
             match spike_group.create_dataset(CreateDataSetOptions {
                 name: "samples",
@@ -383,7 +449,7 @@ impl PhaseH5 {
                 dtype: match usize::into_datatype() {
                     Ok(dt) => dt,
                     Err(err) => {
-                        eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                        eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
                         return Err(SpikeError::OperationFailed);
                     }
                 },
@@ -393,14 +459,14 @@ impl PhaseH5 {
                 ) {
                     Ok(ds) => ds,
                     Err(err) => {
-                        eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                        eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
                         return Err(SpikeError::OperationFailed);
                     }
                 },
             }) {
                 Ok(ds) => ds,
                 Err(err) => {
-                    eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                    eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
                     return Err(SpikeError::OperationFailed);
                 }
             };
@@ -414,7 +480,7 @@ impl PhaseH5 {
                 dtype: match f32::into_datatype() {
                     Ok(dt) => dt,
                     Err(err) => {
-                        eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                        eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
                         return Err(SpikeError::OperationFailed);
                     }
                 },
@@ -424,25 +490,37 @@ impl PhaseH5 {
                 ) {
                     Ok(ds) => ds,
                     Err(err) => {
-                        eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                        eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
                         return Err(SpikeError::OperationFailed);
                     }
                 },
             }) {
                 Ok(ds) => ds,
                 Err(err) => {
-                    eprintln!("Error: SpikeH5::set_peak_train {:?}", err);
+                    eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
                     return Err(SpikeError::OperationFailed);
                 }
             };
 
-        if data.0[..].as_ref().to_dataset(&mut times_ds, None).is_err() {
-            return Err(SpikeError::OperationFailed);
-        }
-        if data.1[..].as_ref().to_dataset(&mut values_ds, None).is_err() {
-            return Err(SpikeError::OperationFailed);
+        // Fill the new datasets with the data
+        match data.0[..].as_ref().to_dataset(&mut times_ds, None) {
+            Ok(()) => (),
+            Err(err) => {
+                eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
+                return Err(SpikeError::OperationFailed);
+            }
         }
 
+        match data.1[..].as_ref().to_dataset(&mut values_ds, None) {
+            Ok(()) => (),
+            Err(err) => {
+                eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
+                return Err(SpikeError::OperationFailed);
+            }
+        }
+
+        // If the vector of peak trains alredy contains the selected label
+        // update it, otherwise create a new entry
         if self.peak_train.is_some() {
             let train = self
                 .peak_train
@@ -454,10 +532,6 @@ impl PhaseH5 {
 
             match train {
                 Some(train) => {
-                    // update the existing train
-                    train.1.delete();
-                    train.2.delete();
-
                     train.1 = times_ds;
                     train.2 = values_ds;
                 }

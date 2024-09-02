@@ -265,6 +265,7 @@ impl PhaseHandler for PhaseMemory {
         end: Option<usize>,
         data: (Vec<f32>, Vec<usize>),
     ) -> Result<(), SpikeError> {
+
         if self.peaks_trains.contains_key(channel) {
             let start = start.unwrap_or(0);
             let end = end.unwrap_or(self.datalen);
@@ -279,6 +280,7 @@ impl PhaseHandler for PhaseMemory {
             // end check
 
             let (vals, samples) = self.peaks_trains.get(channel).unwrap();
+
             let array_start = *(*samples)
                 .iter()
                 .find(|x| **x >= start)

@@ -1,7 +1,9 @@
 use crate::types::{
     Attr, AttrOpener, CreateDataSetOptions, DataSet, DatasetOwner, PList,
 };
-use crate::{error::H5Error, utils::get_group_names};
+use crate::{
+    error::H5Error, utils::get_datasets_names, utils::get_group_names,
+};
 use crate::{h5sys::*, str_to_cchar};
 
 #[derive(Debug)]
@@ -150,7 +152,7 @@ impl DatasetOwner for Group {
     }
 
     fn list_datasets(&self) -> Vec<String> {
-        get_group_names(self.gid)
+        get_datasets_names(self.get_gid())
     }
 }
 

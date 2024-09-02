@@ -42,18 +42,25 @@ pub use crate::{cchar_to_string, str_to_cchar};
 //                                NAMES IN GROUPS
 
 extern "C" fn _get_group_name(
-    _group: i64,
+    group: i64,
     name: *const i8,
     _info: *const link::H5L_info2_t,
     data: *mut c_void,
 ) -> i32 {
+    let g_id;
     let name_v;
     let data_v;
     unsafe {
+        g_id = link::H5Oopen(group, name, plist::H5P_DEFAULT);
         data_v = &mut *(data as *mut Vec<String>);
         name_v = CStr::from_ptr(name).to_str().unwrap().to_string();
     }
-    data_v.push(name_v);
+
+    if let crate::types::LinkType::Group = crate::types::get_link_type(g_id)
+        .expect(&format!("Failed to retrieve the link time of {name_v}"))
+    {
+        data_v.push(name_v);
+    }
     0
 }
 
@@ -66,6 +73,44 @@ pub fn get_group_names(group: i64) -> Vec<String> {
             types::H5_iter_order_t_H5_ITER_INC,
             null_mut(),
             Some(_get_group_name),
+            &ret as *const Vec<String> as *const c_void as *mut c_void,
+        );
+    }
+    ret
+}
+
+extern "C" fn _get_dataset_name(
+    group: i64,
+    name: *const i8,
+    _info: *const link::H5L_info2_t,
+    data: *mut c_void,
+) -> i32 {
+    let g_id;
+    let name_v;
+    let data_v;
+    unsafe {
+        g_id = link::H5Oopen(group, name, plist::H5P_DEFAULT);
+        data_v = &mut *(data as *mut Vec<String>);
+        name_v = CStr::from_ptr(name).to_str().unwrap().to_string();
+    }
+
+    if let crate::types::LinkType::Dataset = crate::types::get_link_type(g_id)
+        .expect(&format!("Failed to retrieve the link time of {name_v}"))
+    {
+        data_v.push(name_v);
+    }
+    0
+}
+
+pub fn get_datasets_names(group: i64) -> Vec<String> {
+    let ret = vec![];
+    unsafe {
+        link::H5Literate2(
+            group,
+            types::H5_index_t_H5_INDEX_NAME,
+            types::H5_iter_order_t_H5_ITER_INC,
+            null_mut(),
+            Some(_get_dataset_name),
             &ret as *const Vec<String> as *const c_void as *mut c_void,
         );
     }

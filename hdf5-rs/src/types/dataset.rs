@@ -1,6 +1,6 @@
 use super::{
-    DataSpace, DataSpaceOwner, DataType, DataTypeL, DataTypeOwner, PList,
-    PListClass,
+    DataSpace, DataSpaceOwner, DataSpaceType, DataType, DataTypeL,
+    DataTypeOwner, PList, PListClass,
 };
 use crate::{
     cchar_to_string, error::H5Error, h5sys::*, identifiers::check_id,
@@ -104,7 +104,6 @@ pub trait DatasetOwner {
 }
 
 impl DataSet {
-    
     #[allow(unused_unsafe)]
     pub fn open(parent: i64, name: &str) -> Result<Self, H5Error> {
         let did;
@@ -779,13 +778,49 @@ impl DatasetFillable<f32> for f32 {
 impl DataSetWriter<f32> for &[f32] {
     fn to_dataset(
         &self,
-        _dataset: &mut DataSet,
+        dataset: &mut DataSet,
         _plist: Option<PList>,
     ) -> Result<(), H5Error> {
-        Err(H5Error::not_yet_implemented(Some(&format!(
-            "Dataset::to_dataset: cannot write the whole dataset for type {}",
-            type_name::<f32>()
-        ))))
+        match dataset.get_space() {
+            Ok(dataspace) => {
+                let dims = dataspace.get_dims();
+                if dims.iter().product::<u64>() != self.len() as u64 {
+                    Err(H5Error::dataset_write_to_dataset_different_lenght(
+                        dataspace.get_dims(),
+                        &[self.len() as u64],
+                    ))
+                } else {
+                    let memory_dataspace = DataSpace::create_dataspace(
+                        DataSpaceType::Simple,
+                        &[1, self.len() as u64],
+                    )?;
+
+                    let res = unsafe {
+                        sys::H5Dwrite(
+                            dataset.get_did(),
+                            datatype::H5T_NATIVE_FLOAT_g,
+                            memory_dataspace.get_did(),
+                            dataspace.get_did(),
+                            plist::H5P_DEFAULT,
+                            self.as_ptr().cast_mut().cast(),
+                        )
+                    };
+                    if res < 0 {
+                        Err(H5Error::dataset_write_fail(&dataset.path, "f32"))
+                    } else {
+                        Ok(())
+                    }
+                }
+            }
+            Err(err) => {
+                eprintln!(
+                    r#"Error::to_dataset<&[usize]>: Failed to retrieve "
+                "the dataspace of the dataset. {}"#,
+                    err
+                );
+                return Err(H5Error::dataset_has_no_dataspace(&dataset.path));
+            }
+        }
     }
 
     fn to_dataset_row(
@@ -855,13 +890,49 @@ impl DataSetWriter<f32> for &[f32] {
 impl DataSetWriter<usize> for &[usize] {
     fn to_dataset(
         &self,
-        _dataset: &mut DataSet,
+        dataset: &mut DataSet,
         _plist: Option<PList>,
     ) -> Result<(), H5Error> {
-        Err(H5Error::not_yet_implemented(Some(&format!(
-            "Dataset::to_dataset: cannot write the whole dataset for type {}",
-            type_name::<usize>()
-        ))))
+        match dataset.get_space() {
+            Ok(dataspace) => {
+                let dims = dataspace.get_dims();
+                if dims.iter().product::<u64>() != self.len() as u64 {
+                    Err(H5Error::dataset_write_to_dataset_different_lenght(
+                        dataspace.get_dims(),
+                        &[self.len() as u64],
+                    ))
+                } else {
+                    let memory_dataspace = DataSpace::create_dataspace(
+                        DataSpaceType::Simple,
+                        &[1, self.len() as u64],
+                    )?;
+
+                    let res = unsafe {
+                        sys::H5Dwrite(
+                            dataset.get_did(),
+                            datatype::H5T_NATIVE_ULLONG_g,
+                            memory_dataspace.get_did(),
+                            dataspace.get_did(),
+                            plist::H5P_DEFAULT,
+                            self.as_ptr().cast_mut().cast(),
+                        )
+                    };
+                    if res < 0 {
+                        Err(H5Error::dataset_write_fail(&dataset.path, "usize"))
+                    } else {
+                        Ok(())
+                    }
+                }
+            }
+            Err(err) => {
+                eprintln!(
+                    r#"Error::to_dataset<&[usize]>: Failed to retrieve "
+                "the dataspace of the dataset. {}"#,
+                    err
+                );
+                return Err(H5Error::dataset_has_no_dataspace(&dataset.path));
+            }
+        }
     }
 
     fn to_dataset_row(

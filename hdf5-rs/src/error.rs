@@ -27,6 +27,7 @@ pub enum H5ErrorType {
     DataSetFromSubspaceStartPointWrongDims,
     DataSetFromSubspaceStartAndOffsetHaveDifferentDims,
     DataSetWriteFail(String, String),
+    DataSetWriteToDataSetDifferentLength(u64, u64),
 
     FileCreate(String),
     FileOpen(String),
@@ -40,6 +41,8 @@ pub enum H5ErrorType {
     IdUnvalid,
 
     LibraryInitFail,
+
+    LinkGetTypeFailed,
 
     PListCreate,
     PListClassesDoNotMatch(String, String),
@@ -87,6 +90,12 @@ impl H5Error {
 
     pub fn id_unvalid() -> Self {
         Self { etype: H5ErrorType::IdUnvalid }
+    }
+
+    // LINK
+
+    pub fn link_get_type_failed() -> Self {
+        Self { etype: H5ErrorType::LinkGetTypeFailed }
     }
 
     // FILE ERRORS
@@ -244,6 +253,18 @@ impl H5Error {
         }
     }
 
+    pub fn dataset_write_to_dataset_different_lenght(
+        dataspace_shape: &[u64],
+        data_shape: &[u64],
+    ) -> Self {
+        Self {
+            etype: H5ErrorType::DataSetWriteToDataSetDifferentLength(
+                dataspace_shape.iter().product(),
+                data_shape.iter().product(),
+            ),
+        }
+    }
+
     // ATTRIBUTE ERRORS
 
     pub fn attribute_open(name: &str) -> Self {
@@ -318,6 +339,10 @@ impl std::fmt::Display for H5Error {
 
             H5ErrorType::IdUnvalid => {
                 writeln!(f, "ErrorType::IdUnvalid")?;
+            }
+
+            H5ErrorType::LinkGetTypeFailed => {
+                writeln!(f, "ErrorType::LinkGetTypeFailed")?;
             }
 
             H5ErrorType::FileCreate(ref filename) => {
@@ -441,7 +466,7 @@ impl std::fmt::Display for H5Error {
 
             H5ErrorType::DataSetUnvalidType(ref path, ref typename) => {
                 writeln!(f, "Error::DataSetUnvalidType: cannot read type {}, from dataset {}",
-                         typename, path)?;
+                    typename, path)?;
             }
 
             H5ErrorType::DataSetFillMemoryFail(ref path) => {
@@ -456,6 +481,18 @@ impl std::fmt::Display for H5Error {
                 writeln!(
                     f,
                     "Error::DataSetFromSubspaceStartAndOffsetHaveDifferentDims"
+                )?;
+            }
+
+            H5ErrorType::DataSetWriteToDataSetDifferentLength(
+                dataspace_shape,
+                data_shape,
+            ) => {
+                writeln!(
+                    f,
+                    r#"Error::DataSetWriteToDataSetDifferentShapes: the length of the DataSet {:?}, and the"
+                    "length of the data {:?} are different"#,
+                    dataspace_shape, data_shape,
                 )?;
             }
 
@@ -492,7 +529,7 @@ impl std::fmt::Display for H5Error {
             ) => {
                 writeln!(f,
                     "Error::PListClassesDoNotMatch: expected_class: {} --- actual_class: {}",
-                        expected_class, actual_class)?;
+                    expected_class, actual_class)?;
             }
 
             H5ErrorType::PListNotDatasetAccess => {

@@ -7,7 +7,7 @@ use crate::{
         link::exists,
         plist::PList,
     },
-    utils::{get_group_names, str_to_cchar},
+    utils::{get_group_names, str_to_cchar, get_datasets_names},
 };
 
 pub enum FileOpenAccess {
@@ -193,6 +193,6 @@ impl DatasetOwner for File {
     }
 
     fn list_datasets(&self) -> Vec<String> {
-        get_group_names(self.fid)
+        get_datasets_names(self.fid)
     }
 }
