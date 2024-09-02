@@ -599,6 +599,37 @@ impl DataSetWriter<i64> for &[i64] {
 }
 
 impl DatasetFillable<usize> for usize {
+    fn from_dataset(
+        dataset: &DataSet,
+        _plist: Option<&PList>,
+    ) -> Result<Vec<usize>, H5Error> {
+        let storage_dataspace = dataset.get_space()?;
+        let storage_size: u64 = storage_dataspace.get_dims().iter().product();
+        let memory_dataspace = DataSpace::create_dataspace(
+            DataSpaceType::Simple,
+            &[1, storage_size],
+        )?;
+
+        let ret = vec![0; storage_size as usize];
+
+        let res = unsafe {
+            dataset::H5Dread(
+                dataset.get_did(),
+                datatype::H5T_NATIVE_ULLONG_g,
+                memory_dataspace.get_did(),
+                storage_dataspace.get_did(),
+                plist::H5P_DEFAULT,
+                ret.as_ptr().cast_mut().cast(),
+            )
+        };
+
+        if res < 0 {
+            Err(H5Error::dataset_fill_memory_fail(&dataset.path))
+        } else {
+            Ok(ret)
+        }
+    }
+
     fn from_dataset_row(
         dataset: &DataSet,
         row: usize,
@@ -714,6 +745,37 @@ impl DatasetFillable<u64> for u64 {
 }
 
 impl DatasetFillable<f32> for f32 {
+    fn from_dataset(
+        dataset: &DataSet,
+        _plist: Option<&PList>,
+    ) -> Result<Vec<f32>, H5Error> {
+        let storage_dataspace = dataset.get_space()?;
+        let storage_size: u64 = storage_dataspace.get_dims().iter().product();
+        let memory_dataspace = DataSpace::create_dataspace(
+            DataSpaceType::Simple,
+            &[1, storage_size],
+        )?;
+
+        let ret = vec![0f32; storage_size as usize];
+
+        let res = unsafe {
+            dataset::H5Dread(
+                dataset.get_did(),
+                datatype::H5T_NATIVE_FLOAT_g,
+                memory_dataspace.get_did(),
+                storage_dataspace.get_did(),
+                plist::H5P_DEFAULT,
+                ret.as_ptr().cast_mut().cast(),
+            )
+        };
+
+        if res < 0 {
+            Err(H5Error::dataset_fill_memory_fail(&dataset.path))
+        } else {
+            Ok(ret)
+        }
+    }
+
     fn from_dataset_row(
         dataset: &DataSet,
         row: usize,

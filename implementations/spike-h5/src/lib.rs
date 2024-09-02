@@ -78,8 +78,8 @@ impl PeakTrain {
             let channel_group = group.open_group(&label)?;
             trains.push((
                 label.clone(),
-                channel_group.get_dataset("sample")?,
-                channel_group.get_dataset("value")?,
+                channel_group.get_dataset("samples")?,
+                channel_group.get_dataset("values")?,
             ));
         }
         Ok(Self { trains })
@@ -341,7 +341,7 @@ impl PhaseH5 {
         if let Ok(peak_train_group) =
             file.open_group("/Data/Recording_0/Peak_Train")
         {
-            // peak_train.replace(PeakTrain::parse(peak_train_group)?);
+            peak_train.replace(PeakTrain::parse(peak_train_group)?);
         } else {
             if let Err(err) = file.create_group(CreateGroupOptions {
                 loc_id: file.fid,
@@ -745,52 +745,56 @@ impl PhaseHandler for PhaseH5 {
                 .iter()
                 .find(|v| v.0 == channel)
             {
-                if let Ok(times) = usize::from_dataset(&train.1, None) {
-                    if let Ok(values) = f32::from_dataset(&train.2, None) {
-                        if times.len() != values.len() {
-                            Err(SpikeError::OperationFailed)
-                        } else {
-                            if times.len() == 0 {
-                                Ok((vec![], vec![]))
+                match usize::from_dataset(&train.1, None) {
+                    Ok(times) => {
+                        if let Ok(values) = f32::from_dataset(&train.2, None) {
+                            if times.len() != values.len() {
+                                Err(SpikeError::OperationFailed)
                             } else {
-                                if start.is_some() && end.is_none() {
-                                    Ok((times, values))
+                                if times.len() == 0 {
+                                    Ok((vec![], vec![]))
                                 } else {
-                                    let start = start.unwrap_or(times[0]);
-                                    let end =
-                                        end.unwrap_or(times[times.len() - 1]);
-                                    let mut i_start = 0;
-                                    let mut i_end = times.len() - 1;
-                                    for (i, val) in times.iter().enumerate() {
-                                        if *val >= start {
-                                            i_start = i;
-                                            break;
+                                    if start.is_some() && end.is_none() {
+                                        Ok((times, values))
+                                    } else {
+                                        let start = start.unwrap_or(times[0]);
+                                        let end =
+                                            end.unwrap_or(times[times.len() - 1]);
+                                        let mut i_start = 0;
+                                        let mut i_end = times.len() - 1;
+                                        for (i, val) in times.iter().enumerate() {
+                                            if *val >= start {
+                                                i_start = i;
+                                                break;
+                                            }
                                         }
-                                    }
-                                    for (i, val) in times.iter().enumerate() {
-                                        if *val >= end {
-                                            i_end = i;
-                                            break;
+                                        for (i, val) in times.iter().enumerate() {
+                                            if *val >= end {
+                                                i_end = i;
+                                                break;
+                                            }
                                         }
+                                        Ok((
+                                            times[i_start..i_end]
+                                                .iter()
+                                                .map(|x| *x)
+                                                .collect(),
+                                            values[i_start..i_end]
+                                                .iter()
+                                                .map(|x| *x)
+                                                .collect(),
+                                        ))
                                     }
-                                    Ok((
-                                        times[i_start..i_end]
-                                            .iter()
-                                            .map(|x| *x)
-                                            .collect(),
-                                        values[i_start..i_end]
-                                            .iter()
-                                            .map(|x| *x)
-                                            .collect(),
-                                    ))
                                 }
                             }
+                        } else {
+                            Err(SpikeError::OperationFailed)
                         }
-                    } else {
-                        Err(SpikeError::OperationFailed)
                     }
-                } else {
-                    Err(SpikeError::OperationFailed)
+                    Err(err) => {
+                        eprintln!("Error::peak_train: {err}");
+                        Err(SpikeError::OperationFailed)
+                    },
                 }
             } else {
                 Err(SpikeError::LabelNotFound)
