@@ -1,10 +1,11 @@
 use crate::types::{
-    Attr, AttrOpener, CreateDataSetOptions, DataSet, DatasetOwner, PList,
+    exists, Attr, AttrOpener, CreateDataSetOptions, DataSet, DatasetOwner,
+    PList,
 };
 use crate::{
     error::H5Error, utils::get_datasets_names, utils::get_group_names,
 };
-use crate::{h5sys::*, str_to_cchar};
+use crate::{h5sys::*, str_to_cchar, utils};
 
 #[derive(Debug)]
 pub struct Group {
@@ -165,7 +166,41 @@ impl GroupOpener for Group {
         &self,
         options: CreateGroupOptions,
     ) -> Result<Group, H5Error> {
-        todo!();
+        // Check if the group already exists
+        if exists(options.loc_id, &options.path) {
+            Err(H5Error::group_already_exists(&options.path))
+        } else {
+            Ok(Group {
+                path: options.path.clone(),
+                gid: {
+                    let res = unsafe {
+                        group::H5Gcreate2(
+                            self.gid,
+                            str_to_cchar!(options.path),
+                            match options.link_creation_properties {
+                                None => plist::H5P_DEFAULT,
+                                Some(plist) => plist.pid,
+                            },
+                            match options.group_creation_properties {
+                                None => plist::H5P_DEFAULT,
+                                Some(plist) => plist.pid,
+                            },
+                            match options.group_access_properties {
+                                None => plist::H5P_DEFAULT,
+                                Some(plist) => plist.pid,
+                            },
+                        )
+                    };
+                    if res <= 0 {
+                        return Err(H5Error::group_creation_failed(
+                            &options.path,
+                        ));
+                    } else {
+                        res
+                    }
+                },
+            })
+        }
     }
 
     fn list_groups(&self) -> Vec<String> {

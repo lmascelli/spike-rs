@@ -379,7 +379,10 @@ impl PhaseH5 {
          * */
 
         // Check if the group `/Peak_Train/{channel}` exists and create it if not
-        let spike_group = match self.file.open_group("/Data/Recording_0/Peak_Train") {
+        let spike_group = match self
+            .file
+            .open_group("/Data/Recording_0/Peak_Train")
+        {
             Ok(channels_group) => {
                 if !channels_group.list_groups().contains(&format!("{channel}"))
                 {
@@ -399,45 +402,53 @@ impl PhaseH5 {
                         }
                         _ => (),
                     }
+                    self.file
+                        .open_group(&format!(
+                            "/Data/Recording_0/Peak_Train/{channel}"
+                        ))
+                        .unwrap()
+                } else {
+                    let spike_group = self
+                        .file
+                        .open_group(&format!(
+                            "/Data/Recording_0/Peak_Train/{channel}"
+                        ))
+                        .unwrap();
+
+                    // delete the old datasets and replace the new ones
+                    match spike_group.get_dataset("samples") {
+                        Ok(mut samples_ds) => {
+                            samples_ds.delete();
+                        }
+                        Err(err) => {
+                            eprintln!(
+                                "Error: SpikeH5::insert_peak_train {:?}",
+                                err
+                            );
+                            return Err(SpikeError::OperationFailed);
+                        }
+                    }
+
+                    match spike_group.get_dataset("values") {
+                        Ok(mut values_ds) => {
+                            values_ds.delete();
+                        }
+                        Err(err) => {
+                            eprintln!(
+                                "Error: SpikeH5::insert_peak_train {:?}",
+                                err
+                            );
+                            return Err(SpikeError::OperationFailed);
+                        }
+                    }
+                    spike_group
                 }
-                self.file
-                    .open_group(&format!(
-                        "/Data/Recording_0/Peak_Train/{channel}"
-                    ))
-                    .unwrap()
             }
             Err(err) => {
                 eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
                 return Err(SpikeError::OperationFailed);
             }
         };
-
-        // delete the old datasets and replace the new ones
-        match spike_group.get_dataset("samples") {
-            Ok(mut samples_ds) => {
-                samples_ds.delete();
-            },
-            Err(err) => {
-                eprintln!(
-                    "Error: SpikeH5::insert_peak_train {:?}",
-                    err
-                );
-                return Err(SpikeError::OperationFailed);
-            }
-        }
-
-        match spike_group.get_dataset("values") {
-            Ok(mut values_ds) => {
-                values_ds.delete();
-            },
-            Err(err) => {
-                eprintln!(
-                    "Error: SpikeH5::insert_peak_train {:?}",
-                    err
-                );
-                return Err(SpikeError::OperationFailed);
-            }
-        }
 
         // Create the new datasets
         let mut times_ds =
@@ -449,7 +460,10 @@ impl PhaseH5 {
                 dtype: match usize::into_datatype() {
                     Ok(dt) => dt,
                     Err(err) => {
-                        eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
+                        eprintln!(
+                            "Error: SpikeH5::insert_peak_train {:?}",
+                            err
+                        );
                         return Err(SpikeError::OperationFailed);
                     }
                 },
@@ -459,7 +473,10 @@ impl PhaseH5 {
                 ) {
                     Ok(ds) => ds,
                     Err(err) => {
-                        eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
+                        eprintln!(
+                            "Error: SpikeH5::insert_peak_train {:?}",
+                            err
+                        );
                         return Err(SpikeError::OperationFailed);
                     }
                 },
@@ -480,7 +497,10 @@ impl PhaseH5 {
                 dtype: match f32::into_datatype() {
                     Ok(dt) => dt,
                     Err(err) => {
-                        eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
+                        eprintln!(
+                            "Error: SpikeH5::insert_peak_train {:?}",
+                            err
+                        );
                         return Err(SpikeError::OperationFailed);
                     }
                 },
@@ -490,7 +510,10 @@ impl PhaseH5 {
                 ) {
                     Ok(ds) => ds,
                     Err(err) => {
-                        eprintln!("Error: SpikeH5::insert_peak_train {:?}", err);
+                        eprintln!(
+                            "Error: SpikeH5::insert_peak_train {:?}",
+                            err
+                        );
                         return Err(SpikeError::OperationFailed);
                     }
                 },
@@ -758,17 +781,19 @@ impl PhaseHandler for PhaseH5 {
                                         Ok((times, values))
                                     } else {
                                         let start = start.unwrap_or(times[0]);
-                                        let end =
-                                            end.unwrap_or(times[times.len() - 1]);
+                                        let end = end
+                                            .unwrap_or(times[times.len() - 1]);
                                         let mut i_start = 0;
                                         let mut i_end = times.len() - 1;
-                                        for (i, val) in times.iter().enumerate() {
+                                        for (i, val) in times.iter().enumerate()
+                                        {
                                             if *val >= start {
                                                 i_start = i;
                                                 break;
                                             }
                                         }
-                                        for (i, val) in times.iter().enumerate() {
+                                        for (i, val) in times.iter().enumerate()
+                                        {
                                             if *val >= end {
                                                 i_end = i;
                                                 break;
@@ -794,7 +819,7 @@ impl PhaseHandler for PhaseH5 {
                     Err(err) => {
                         eprintln!("Error::peak_train: {err}");
                         Err(SpikeError::OperationFailed)
-                    },
+                    }
                 }
             } else {
                 Err(SpikeError::LabelNotFound)
