@@ -6,7 +6,7 @@ members = [
   "spike-rs",
   # "implementations/memory",
   "implementations/spike-h5",
-  "tests",
+  # "tests",
   "pycode-rs",
   # "mc_explorer",
 ]

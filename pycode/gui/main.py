@@ -1,148 +1,100 @@
-# -*- coding: utf-8 -*-
+from typing import Dict, List, Tuple, cast
+import sys
+from os import listdir
 
-################################################################################
-## Form generated from reading UI file 'main.ui'
-##
-## Created by: Qt User Interface Compiler version 6.7.2
-##
-## WARNING! All changes made in this file will be lost when recompiling UI file!
-################################################################################
+import PySide6.QtCore as qtc
+import PySide6.QtWidgets as qtw
+import PySide6.QtGui as qtg
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
-    QCursor, QFont, QFontDatabase, QGradient,
-    QIcon, QImage, QKeySequence, QLinearGradient,
-    QPainter, QPalette, QPixmap, QRadialGradient,
-    QTransform)
-from PySide6.QtWidgets import (QApplication, QGridLayout, QLabel, QMainWindow,
-    QMenu, QMenuBar, QSizePolicy, QStatusBar,
-    QTabWidget, QToolBar, QWidget)
+from gui.main import Ui_MainWindow
+from gui.project_view import Ui_ProjectView
+from pycode.project import Batch, Project
+from pathlib import Path
 
-class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
-        if not MainWindow.objectName():
-            MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(800, 600)
-        sizePolicy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
-        MainWindow.setSizePolicy(sizePolicy)
-        MainWindow.setAutoFillBackground(False)
-        self.action_Open_Project = QAction(MainWindow)
-        self.action_Open_Project.setObjectName(u"action_Open_Project")
-        self.actionExit = QAction(MainWindow)
-        self.actionExit.setObjectName(u"actionExit")
-        self.action_Add_batch = QAction(MainWindow)
-        self.action_Add_batch.setObjectName(u"action_Add_batch")
-        self.action_CloseTab = QAction(MainWindow)
-        self.action_CloseTab.setObjectName(u"action_CloseTab")
-        self.action_New_Project = QAction(MainWindow)
-        self.action_New_Project.setObjectName(u"action_New_Project")
-        self.centralwidget = QWidget(MainWindow)
-        self.centralwidget.setObjectName(u"centralwidget")
-        self.gridLayout = QGridLayout(self.centralwidget)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.w_tab = QTabWidget(self.centralwidget)
-        self.w_tab.setObjectName(u"w_tab")
-        self.w_tab.setTabPosition(QTabWidget.North)
-        self.w_tab.setTabShape(QTabWidget.Rounded)
-        self.w_tab.setElideMode(Qt.ElideNone)
-        self.w_tab.setDocumentMode(False)
-        self.w_tab.setTabsClosable(True)
-        self.w_tab.setMovable(True)
-        self.Welcome = QWidget()
-        self.Welcome.setObjectName(u"Welcome")
-        self.gridLayout_2 = QGridLayout(self.Welcome)
-        self.gridLayout_2.setObjectName(u"gridLayout_2")
-        self.label = QLabel(self.Welcome)
-        self.label.setObjectName(u"label")
-        self.label.setTextFormat(Qt.MarkdownText)
-        self.label.setAlignment(Qt.AlignCenter)
+BATCHES_DATA_INDEX = 1
 
-        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
+class ProjectView(qtw.QWidget):
+    def __init__(self, project: Project, project_index: int):
+        super().__init__()
+        self.project = project
+        self.pw = Ui_ProjectView()
+        self.pw.setupUi(self)
+        self.project_index = project_index
+        self.pw.batches_view.currentItemChanged.connect(self.update_phases)
 
-        self.w_tab.addTab(self.Welcome, "")
+    def update_lists(self):
+        self.pw.batches_view.clear()
+        for i, batch in enumerate(self.project.batches):
+            item = qtw.QListWidgetItem(listview=self.pw.batches_view)
+            item.setText(batch.name)
+            item.setData(qtc.Qt.ItemDataRole.UserRole, i)
 
-        self.gridLayout.addWidget(self.w_tab, 0, 0, 1, 1)
-
-        MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QMenuBar(MainWindow)
-        self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 22))
-        self.menuFIle = QMenu(self.menubar)
-        self.menuFIle.setObjectName(u"menuFIle")
-        self.menu = QMenu(self.menubar)
-        self.menu.setObjectName(u"menu")
-        self.menuProject = QMenu(self.menubar)
-        self.menuProject.setObjectName(u"menuProject")
-        MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QStatusBar(MainWindow)
-        self.statusbar.setObjectName(u"statusbar")
-        MainWindow.setStatusBar(self.statusbar)
-        self.toolBar = QToolBar(MainWindow)
-        self.toolBar.setObjectName(u"toolBar")
-        MainWindow.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.toolBar)
-
-        self.menubar.addAction(self.menuFIle.menuAction())
-        self.menubar.addAction(self.menuProject.menuAction())
-        self.menubar.addAction(self.menu.menuAction())
-        self.menuFIle.addAction(self.action_New_Project)
-        self.menuFIle.addAction(self.action_Open_Project)
-        self.menuFIle.addSeparator()
-        self.menuFIle.addAction(self.actionExit)
-        self.menuFIle.addSeparator()
-        self.menuProject.addAction(self.action_Add_batch)
-        self.menuProject.addAction(self.action_CloseTab)
-        self.toolBar.addAction(self.action_New_Project)
-        self.toolBar.addAction(self.action_Open_Project)
-        self.toolBar.addAction(self.action_Add_batch)
-        self.toolBar.addAction(self.action_CloseTab)
-
-        self.retranslateUi(MainWindow)
-
-        self.w_tab.setCurrentIndex(0)
+    def update_phases(self, current: qtw.QWidgetItem, previous: qtw.QWidgetItem):
+        batch_index = self.pw.batches_view.currentIndex().row()
+        for i, phase in enumerate(self.project.batches[batch_index].phases):
+            item = qtw.QListWidgetItem(listview=self.pw.phases_view)
+            item.setText(phase.name)
+            item.setData(qtc.Qt.ItemDataRole.UserRole, i)
 
 
-        QMetaObject.connectSlotsByName(MainWindow)
-    # setupUi
+class MainWindow(qtw.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.mw = Ui_MainWindow()
+        self.mw.setupUi(self)
+        self.tabs: Dict[int, Tuple[qtw.QWidget, int]] = {}
 
-    def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"PyCode", None))
-        self.action_Open_Project.setText(QCoreApplication.translate("MainWindow", u"&Open Project", None))
-#if QT_CONFIG(shortcut)
-        self.action_Open_Project.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+O", None))
-#endif // QT_CONFIG(shortcut)
-        self.actionExit.setText(QCoreApplication.translate("MainWindow", u"&Exit", None))
-        self.action_Add_batch.setText(QCoreApplication.translate("MainWindow", u"&Add batch folder", None))
-#if QT_CONFIG(shortcut)
-        self.action_Add_batch.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+B", None))
-#endif // QT_CONFIG(shortcut)
-        self.action_CloseTab.setText(QCoreApplication.translate("MainWindow", u"&CloseTab", None))
-#if QT_CONFIG(shortcut)
-        self.action_CloseTab.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+W", None))
-#endif // QT_CONFIG(shortcut)
-        self.action_New_Project.setText(QCoreApplication.translate("MainWindow", u"&New Project", None))
-#if QT_CONFIG(shortcut)
-        self.action_New_Project.setShortcut(QCoreApplication.translate("MainWindow", u"Ctrl+N", None))
-#endif // QT_CONFIG(shortcut)
-        self.label.setText(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"center\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:26pt;\">PyCode</span></p>\n"
-"<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:48pt;\"><br /></p>\n"
-"<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-"<p align=\"center\" style=\"-qt-paragraph-type:empty; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-ri"
-                        "ght:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-"<p align=\"center\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:11pt; color:#55aa00;\">Ctrl + N			      Create new project</span></p>\n"
-"<p align=\"center\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:11pt; color:#55aa00;\">Ctrl + O			 Open existing project</span></p></body></html>", None))
-        self.w_tab.setTabText(self.w_tab.indexOf(self.Welcome), QCoreApplication.translate("MainWindow", u"Welcome", None))
-        self.menuFIle.setTitle(QCoreApplication.translate("MainWindow", u"&File", None))
-        self.menu.setTitle(QCoreApplication.translate("MainWindow", u"?", None))
-        self.menuProject.setTitle(QCoreApplication.translate("MainWindow", u"Project", None))
-        self.toolBar.setWindowTitle(QCoreApplication.translate("MainWindow", u"toolBar", None))
-    # retranslateUi
+        self.project_counter = 0
 
+        self.projects: List[Project] = []
+        self.current_project = -1
+
+        # CONNECT MENU ACTIONS
+        self.mw.actionExit.triggered.connect(self.quit)
+        # self.mw.action_Open_Project.triggered.connect(self.openFolder)
+        self.mw.action_CloseTab.triggered.connect(self.closeTab)
+        self.mw.action_New_Project.triggered.connect(self.newProject)
+        self.mw.action_Add_batch.triggered.connect(self.addBatchFolder)
+        self.mw.w_tab.tabCloseRequested.connect(self.closeTab)
+
+    def newProject(self):
+        self.current_project = self.current_project + 1
+        self.projects.append(Project())
+        w_project = ProjectView(
+            self.projects[self.current_project], self.current_project
+        )
+        self.addTab(f"New Project {self.project_counter}", w_project)
+        self.project_counter = self.project_counter + 1
+
+    def addBatchFolder(self):
+        folder = Path(
+            qtw.QFileDialog.getExistingDirectory(caption="Select batch folder")
+        )
+        if folder.exists() and folder.is_dir():
+            batch = Batch(folder.name)
+            for file in listdir(folder):
+                if file.endswith(".h5"):
+                    batch.add_phase(folder.joinpath(file))
+            self.projects[self.current_project].batches.append(batch)
+            cast(ProjectView, self.tabs[self.current_project][0]).update_lists()
+        else:
+            pass
+
+    def addTab(self, name: str, widget: qtw.QWidget):
+        self.tabs[self.current_project] = (widget, self.mw.w_tab.currentIndex() + 1)
+        self.mw.w_tab.addTab(widget, name)
+        self.mw.w_tab.setCurrentIndex(self.tabs[self.current_project][1])
+
+    def closeTab(self):
+        ti = self.mw.w_tab.currentIndex()
+        self.mw.w_tab.removeTab(ti)
+
+    def quit(self):
+        self.close()
+
+
+def run():
+    app = qtw.QApplication(sys.argv)
+    win = MainWindow()
+    win.show()
+    exit(app.exec())

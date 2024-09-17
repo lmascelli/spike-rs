@@ -5,7 +5,7 @@ use crate::types::{
 use crate::{
     error::H5Error, utils::get_datasets_names, utils::get_group_names,
 };
-use crate::{h5sys::*, str_to_cchar, utils};
+use crate::{h5sys::*, str_to_cchar};
 
 #[derive(Debug)]
 pub struct Group {

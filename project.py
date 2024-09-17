@@ -1,7 +1,8 @@
 from os import environ, curdir, system
-from sys import path
+from sys import exit, path
 from shutil import copy
 from pathlib import Path
+from platform import system as detect_os
 import argparse
 
 # change the following variables with the correct directories for your system
@@ -63,25 +64,27 @@ gui_parser.add_argument(
 test_parser = subparsers.add_parser("test", help="Run the test.py file")
 
 
-def build(release: bool, win: bool = False):
-    if not win:
+def build(release: bool, cross: bool = False):
+    if not cross:
         print("============================================================")
         flags = "-r" if release else ""
         print("Building native pycode library")
         system(f"cargo build {flags}")
-        lib_path = f"target/{'release' if release else 'debug'}/libpycode_rs.so"
+        lib_output = None
+        install_output = None
+        match detect_os():
+            case "Windows":
+                lib_output = "pycode_rs.dll"
+                install_output = "pycode_rs.pyd"
+            case "Linux":
+                lib_output = "libpycode_rs.so"
+                install_output = "pycode_rs.so"
+        lib_path = f"target/{'release' if release else 'debug'}/{lib_output}"
         print("Coping to pycode package")
-        copy(lib_path, "pycode/pycode_rs.so")
+        copy(lib_path, f"pycode/{install_output}")
         print("============================================================")
     else:
-        print("============================================================")
-        flags = "-r" if release else ""
-        print("Building native pycode library")
-        system(f"cargo build {flags}")
-        lib_path = f"target/{'release' if release else 'debug'}/libpycode_rs.so"
-        print("Coping to pycode package")
-        copy(lib_path, "pycode/pycode_rs.so")
-        print("============================================================")
+        exit("Not yet implemented")
 
 
 def run(release: bool):

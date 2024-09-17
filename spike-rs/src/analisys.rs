@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use crate::{
     error::SpikeError,
-    operations::{compute_threshold, get_digital_intervals, spike_detection, subsample_range},
+    operations::{
+        compute_threshold, get_digital_intervals, spike_detection,
+        subsample_range,
+    },
     types::PhaseHandler,
 };
 
@@ -13,7 +16,8 @@ pub fn compute_peak_train(
     end: Option<usize>,
 ) -> Result<(), SpikeError> {
     let signal = phase.raw_data(label, start, end)?;
-    let threshold = compute_threshold(&signal[..], phase.sampling_frequency(), 8 as _)?;
+    let threshold =
+        compute_threshold(&signal[..], phase.sampling_frequency(), 8 as _)?;
     let peaks_train = spike_detection(
         &signal[..],
         phase.sampling_frequency(),
@@ -25,22 +29,25 @@ pub fn compute_peak_train(
     Ok(())
 }
 
+/// Count the number of spikes grouped for the duration of `bin_size`
+/// before, during and after the stimulus interval
 pub fn get_subsampled_pre_stim_post_from_intervals(
     phase: &mut impl PhaseHandler,
     intervals: &[(usize, usize)],
     bin_size: usize,
-) -> Result<HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>, SpikeError> {
+) -> Result<
+    HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>,
+    SpikeError,
+> {
     let n_intervals = intervals.len();
     let raw_data_len = phase.datalen();
     assert!(n_intervals != 0, "No intervals provided!!!");
 
-    // println!("n_intervals: {n_intervals}");
-    // println!("raw_data_len: {raw_data_len}");
-    // println!("bin_size: {bin_size}");
-
-    // get the intervals to subsample
     let mut scan_intervals = vec![];
 
+    // here we scan how much bins each interval contains
+    // before, during and after the stimulus and find the starting
+    // sample of each group (pre, stim, post)
     for i in 0..n_intervals {
         let start_pre;
         let n_pre;
@@ -49,6 +56,7 @@ pub fn get_subsampled_pre_stim_post_from_intervals(
         let start_post;
         let n_post;
         let mut data_len;
+        // if it's not the first or the last interval
         if i != 0 && i != n_intervals - 1 {
             // pre
             data_len = intervals[i].0 - intervals[i - 1].1;
@@ -64,7 +72,9 @@ pub fn get_subsampled_pre_stim_post_from_intervals(
             data_len = intervals[i + 1].0 - intervals[i].1;
             start_post = intervals[i].1;
             n_post = data_len / bin_size;
-        } else if i == 0 {
+        }
+        // if it's the first
+        else if i == 0 {
             // pre
             data_len = intervals[i].0;
             n_pre = data_len / bin_size;
@@ -79,7 +89,9 @@ pub fn get_subsampled_pre_stim_post_from_intervals(
             data_len = intervals[i + 1].0 - intervals[i].1;
             start_post = intervals[i].1;
             n_post = data_len / bin_size;
-        } else {
+        }
+        // else it's the last
+        else {
             // pre
             data_len = intervals[i].0 - intervals[i - 1].1;
             n_pre = data_len / bin_size;
@@ -96,7 +108,8 @@ pub fn get_subsampled_pre_stim_post_from_intervals(
             n_post = data_len / bin_size;
         }
 
-        scan_intervals.push((start_pre, n_pre, start_stim, n_stim, start_post, n_post));
+        scan_intervals
+            .push((start_pre, n_pre, start_stim, n_stim, start_post, n_post));
     }
 
     let mut ret = HashMap::new();
@@ -105,9 +118,24 @@ pub fn get_subsampled_pre_stim_post_from_intervals(
         let mut current_ret = vec![];
         for interval in &scan_intervals {
             current_ret.push((
-                subsample_range(&data_times[..], interval.0, bin_size, interval.1),
-                subsample_range(&data_times[..], interval.2, bin_size, interval.3),
-                subsample_range(&data_times[..], interval.4, bin_size, interval.5),
+                subsample_range(
+                    &data_times[..],
+                    interval.0,
+                    bin_size,
+                    interval.1,
+                ),
+                subsample_range(
+                    &data_times[..],
+                    interval.2,
+                    bin_size,
+                    interval.3,
+                ),
+                subsample_range(
+                    &data_times[..],
+                    interval.4,
+                    bin_size,
+                    interval.5,
+                ),
             ));
         }
         ret.insert(label.clone(), current_ret);
@@ -115,53 +143,95 @@ pub fn get_subsampled_pre_stim_post_from_intervals(
     Ok(ret)
 }
 
-pub fn psth(
+pub fn subsample_peak_trains(
     phase: &mut impl PhaseHandler,
     bin_size: usize,
+    digital_index: usize,
+) -> Result<
+    HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>,
+    SpikeError,
+> {
+    if digital_index >= phase.n_digitals() {
+        return Err(SpikeError::IndexOutOfRange);
+    }
+    let stim_intervals =
+        get_digital_intervals(&phase.digital(digital_index, None, None)?[..]);
+    get_subsampled_pre_stim_post_from_intervals(
+        phase,
+        &stim_intervals,
+        bin_size,
+    )
+}
+
+pub fn subsampled_post_stimulus_times(
+    phase: &mut impl PhaseHandler,
+    bin_size: usize,
+    n_bins_post_stim: usize,
     digital_index: usize,
 ) -> Result<Vec<Vec<usize>>, SpikeError> {
     if digital_index >= phase.n_digitals() {
         return Err(SpikeError::IndexOutOfRange);
     }
-    let stim_intervals = get_digital_intervals(&phase.digital(digital_index, None, None)?[..]);
-    let channel_histos =
-        get_subsampled_pre_stim_post_from_intervals(phase, &stim_intervals, bin_size)?;
+    let n_samples_req = n_bins_post_stim * bin_size;
+    //println!("N SAMPLES REQUIRED: {n_samples_req}");
 
-    let mut n_intervals = 0;
-    let mut max_pre = 0;
-    let mut max_stim = 0;
-    let mut max_post = 0;
+    let stim_intervals =
+        get_digital_intervals(&phase.digital(digital_index, None, None)?[..]);
 
-    for intervals in channel_histos.values() {
-        n_intervals = intervals.len();
-        for (pre, stim, post) in intervals {
-            if pre.len() > max_pre {
-                max_pre = pre.len();
-            }
-            if stim.len() > max_stim {
-                max_stim = stim.len();
-            }
-            if post.len() > max_post {
-                max_post = post.len();
+    // used to keep just the stimulation data that not started before or after
+    // the recording
+    let mut valid_intervals = vec![];
+
+    for interval in &stim_intervals {
+        let interval_length = interval.1 - interval.0;
+        //println!("interval: {interval:?} - interval_length: {}, n_samples: {}", interval_length, interval_length);
+        if interval_length > n_samples_req {
+            valid_intervals.push(interval);
+        }
+    }
+
+    //println!("INTERVALS -> {valid_intervals:?}");
+
+    let mut ret = vec![vec! {0; n_bins_post_stim}; valid_intervals.len()];
+
+    for label in phase.labels() {
+        let peaks_times = phase.peak_train(&label, None, None)?.0;
+
+        if peaks_times.len() == 0 {
+            return Ok(vec![]);
+        } else {
+            // assume that valid_intervals are sorted in increasing order
+            // and peaks are sorted in increasing order too
+            let mut sample_index = 0;
+            let mut interval_index = 0;
+            'cycle_intervals: loop {
+                if interval_index == valid_intervals.len() {
+                    break 'cycle_intervals;
+                }
+                let interval = valid_intervals[interval_index];
+
+                for bin in 0..n_bins_post_stim {
+                    let start = interval.0 + bin * bin_size;
+                    let end = interval.0 + (bin + 1) * bin_size;
+                    loop {
+                        if sample_index >= peaks_times.len() {
+                            break 'cycle_intervals;
+                        }
+                        if peaks_times[sample_index] > end {
+                            break;
+                        }
+                        if peaks_times[sample_index] >= start {
+                            ret[interval_index][bin] += 1;
+                        }
+                        sample_index += 1;
+                    }
+                }
+
+                interval_index += 1;
             }
         }
     }
 
-    let mut ret = vec![];
-    ret.resize(n_intervals, vec![0; max_pre + max_stim + max_post]);
-    for (i, (_, intervals)) in channel_histos.iter().enumerate() {
-        for (pre, stim, post) in intervals {
-            for (j, val) in pre.iter().enumerate() {
-                ret[i][j] += val;
-            }
-            for (j, val) in stim.iter().enumerate() {
-                ret[i][j + max_pre] += val;
-            }
-            for (j, val) in post.iter().enumerate() {
-                ret[i][j + max_pre + max_stim] += val;
-            }
-        }
-    }
     Ok(ret)
 }
 

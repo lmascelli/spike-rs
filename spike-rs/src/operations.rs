@@ -346,7 +346,7 @@ pub fn get_digital_intervals(digital: &[f32]) -> Vec<(usize, usize)> {
 /// sorted in an increasing order
 ///
 /// # Arguments
-/// * `range` -           a range that contains the times of the peaks
+/// * `peak_times` -      a range that contains the times of the peaks
 /// * `starting_sample` - the starting value of the samples range
 /// * `bin_size` -        the length of each bin
 /// * `n_bins` -          then total number of bins

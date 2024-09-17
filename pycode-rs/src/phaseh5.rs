@@ -4,7 +4,7 @@ use spike_rs::types::PhaseHandler;
 
 #[pyclass]
 pub struct PyPhaseH5 {
-    _phaseh5: Option<PhaseH5>,
+    pub _phaseh5: Option<PhaseH5>,
 }
 
 #[pymethods]
