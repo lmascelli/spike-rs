@@ -1,4 +1,4 @@
-from pycode.examples.psth import psth
+from pycode.operations import psth
 from pycode.handlers.phaseh5 import PhaseH5
 import matplotlib.pyplot as plt
 import numpy as np

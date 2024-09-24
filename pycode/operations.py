@@ -1,6 +1,5 @@
-from typing import List, Optional, Tuple
 import pycode_rs as pc
-from pycode.handlers.phaseh5 import PhaseH5
+from typing import List, Optional, Tuple
 import numpy as np
 
 
@@ -44,7 +43,7 @@ def subsample_range(
     return pc.subsample_range(peaks, starting_sample, bin_size, n_bins)
 
 
-def psth(phase: PhaseH5, bin_time_duration: float, psth_duration: float) -> List[int]:
+def psth(phase, bin_time_duration: float, psth_duration: float) -> List[int] | np.ndarray:
     """
     Compute the PSTH ociaoooooooo :):):)
     and returns a list with the count of the spikes in each bin.

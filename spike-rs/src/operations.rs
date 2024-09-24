@@ -388,3 +388,16 @@ pub fn subsample_range(
     }
     ret
 }
+
+
+/// Counts the spikes between the given start and end sample.
+/// It assumes that the spikes are sorted in increasing order.
+pub fn count_spikes_in_range(
+    peak_times: &[usize],
+    starting_sample: usize,
+    ending_sample: usize,
+) -> usize {
+    let mut total = 0;
+    todo!();
+    total
+}

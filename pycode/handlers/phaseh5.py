@@ -52,7 +52,9 @@ class PhaseH5:
         return self._phase.events(index)
 
     def peak_train(
-        self, channel: str, start: Optional[int], end: Optional[int]
+        self, channel: str,
+        start: Optional[int] = None,
+        end: Optional[int] = None
     ) -> Optional[Tuple[List[int], List[float]]]:
         return self._phase.peak_train(channel, start, end)
 
@@ -74,7 +76,7 @@ class PhaseH5:
         """
 
         labels = self.labels()
-        for (i, label) in enumerate(labels):
+        for i, label in enumerate(labels):
             print(f"{i}/{len(labels)} Computing peak trains for channel: {label}")
             data = self.raw_data(label)
             sf = self.sampling_frequency()
