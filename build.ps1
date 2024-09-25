@@ -10,6 +10,7 @@ COMMANDS:
 scoop         install scoop
 python        install python (scoop is required)
 rust          install the rust toolchain
+cmake         install cmake (scoop is required)
 
 ================================================================================
 "@
@@ -30,6 +31,10 @@ if ($IsWindows) {
     "rust" {
       Invoke-WebRequest -Uri https://static.rust-lang.org/rustup/dist/x86_64-pc-windows-msvc/rustup-init.exe -OutFile rustup-init.exe
       ./rustup-init.exe
+    }
+
+    "cmake" {
+      scoop install cmake
     }
 
     default {
