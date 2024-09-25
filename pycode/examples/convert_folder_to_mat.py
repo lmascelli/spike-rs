@@ -1,4 +1,3 @@
-from pycode.handlers.phaseh5 import PhaseH5
 from pycode.converting import rule2, convert_recording_folder_to_mat
 from pathlib import Path
 
