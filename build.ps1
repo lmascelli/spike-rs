@@ -9,6 +9,8 @@ COMMANDS:
 
 scoop         install scoop
 python        install python (scoop is required)
+llvm          install llvm
+perl          install perl
 rust          install the rust toolchain
 cmake         install cmake (scoop is required)
 
