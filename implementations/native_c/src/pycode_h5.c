@@ -117,14 +117,27 @@ phaseh5_error open_analog(AnalogStream *analog_stream,
   H5Tclose(info_channel_datatype);
   H5Sclose(info_channel_dataspace);
   H5Dclose(info_channel_dataset);
-  // ----------------------------------------------------------------------
 
+  // ----------------------------------------------------------------------
   // Get the handle for the ChannelData stream
   // ----------------------------------------------------------------------
   hid_t channel_data_dataset = H5Dopen2(analog_stream_group, "ChannelData", H5P_DEFAULT);
   if (channel_data_dataset <= 0) {
     return OPEN_CHANNEL_DATA_FAIL;
   }
+
+  hid_t channel_data_dataspace = H5Dget_space(channel_data_dataset);
+  if (channel_data_dataspace <= 0) {
+    return OPEN_CHANNEL_DATA_DATASPACE_FAIL;
+  }
+
+  hsize_t dims[2];
+  res = H5Sget_simple_extent_dims(channel_data_dataspace, dims, NULL);
+  if (res < 0) {
+    return GET_CHANNEL_DATA_DIMS_FAIL;
+  }
+
+  analog_stream->datalen = dims[1];
 
   analog_stream->channel_data_dataset = channel_data_dataset;
   return OK;
@@ -154,7 +167,8 @@ herr_t open_analogs_callback(hid_t group,
 }
 
 phaseh5_error close_analog(AnalogStream* analog_stream) {
-  H5Dclose(analog_stream->channel_data_dataset);
+  
+H5Dclose(analog_stream->channel_data_dataset);
   return OK;
 }
 
@@ -194,8 +208,8 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
 
   H5Tclose(date_datatype);
   H5Aclose(date_attribute);
-  // ----------------------------------------------------------------------
 
+  // ----------------------------------------------------------------------
   // PARSE THE ANALOG STREAMS
   // ----------------------------------------------------------------------
   hid_t analog_group =
@@ -226,6 +240,7 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
   long raw_data_index = -1;
   long digital_index = -1;
   float sampling_frequency = -1;
+  long datalen = -1;
 
   for (int i = 0; i<n_analogs; ++i) {
     // test that there is only a raw data stream and only a digital stream
@@ -258,8 +273,18 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
         }
       }
     }
-    phase->sampling_frequency = sampling_frequency;
-  };
+    // test that all the channels have the same datalen
+    if (datalen == -1) {
+      datalen = analog_streams[i].datalen;
+    } else {
+      if (datalen != analog_streams[i].datalen) {
+        return MULTIPLE_DATALENS;
+      }
+    }
+  }
+
+  phase->datalen = datalen;
+  phase->sampling_frequency = sampling_frequency;
 
   if (raw_data_index == -1) {
     return NO_RAW_DATA_STREAM;
@@ -296,9 +321,9 @@ phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, f
     return RAW_DATA_END_BEFORE_START;
   }
 
-  // if (end >= phase->datalen) {
-  //   return RAW_DATA_END_OUT_OF_BOUNDS;
-  // }
+  if (end >= phase->datalen) {
+    return RAW_DATA_END_OUT_OF_BOUNDS;
+  }
 
   size_t dims[] = {end - start};
   hid_t raw_data_dataspace = H5Dget_space(phase->raw_data.channel_data_dataset);
@@ -329,10 +354,17 @@ phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, f
     return RAW_DATA_READ_DATA_FAIL;
   }
 
-  for (int i=0; i<100; ++i) {
-    printf("%d ", buffer[i]);
-    printf("\n");
+  return OK;
+}
+
+phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, float *buf) {
+  if (end < start) {
+    return RAW_DATA_END_BEFORE_START;
   }
+
+  // if (end >= phase->datalen) {
+  //   return RAW_DATA_END_OUT_OF_BOUNDS;
+  // }
 
   return OK;
 }

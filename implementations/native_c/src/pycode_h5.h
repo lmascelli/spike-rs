@@ -24,7 +24,10 @@ typedef enum phaseh5_error {
   MULTIPLE_DIGITAL_STREAMS,
   MULTIPLE_RAW_DATA_STREAMS,
   MULTIPLE_SAMPLING_FREQUENCIES,
+  MULTIPLE_DATALENS,
   OPEN_CHANNEL_DATA_FAIL,
+  OPEN_CHANNEL_DATA_DATASPACE_FAIL,
+  GET_CHANNEL_DATA_DIMS_FAIL,
   NO_RAW_DATA_STREAM,
   RAW_DATA_END_BEFORE_START,
   RAW_DATA_END_OUT_OF_BOUNDS,
@@ -60,6 +63,7 @@ typedef struct AnalogStream {
   hsize_t n_channels;
   // ChannelData dataset
   hid_t channel_data_dataset;
+  size_t datalen;
   // InfoChannel data
   InfoChannel info_channels[MAX_CHANNELS];
 } AnalogStream;
@@ -105,3 +109,4 @@ phaseh5_error phase_close(PhaseH5* phase);
 
  */
 phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, float* buf);
+phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, float* buf);

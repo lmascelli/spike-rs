@@ -11,7 +11,8 @@ int main (int argc, char *argv[]) {
   } else {
     printf("%s -> %d\n", "ERROR", res);
   }
-  raw_data(&phase, 1, 0, 100, NULL);
+  /* raw_data(&phase, 1, 0, 100, NULL); */
+  printf("%ld\n", phase.datalen);
   phase_close(&phase);
   pycodeh5_close();
   return 0;
