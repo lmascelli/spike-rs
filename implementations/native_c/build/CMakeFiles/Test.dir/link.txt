@@ -1,1 +1,0 @@
-/usr/bin/cc CMakeFiles/Test.dir/test/main.c.o -o Test  libpycode_h5.a -lhdf5
