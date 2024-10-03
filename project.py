@@ -69,7 +69,7 @@ def build(release: bool, cross: bool = False):
         print("============================================================")
         flags = "-r" if release else ""
         print("Building native pycode library")
-        system(f"cargo build {flags}")
+        system(f"cargo build -vv {flags}")
         lib_output = None
         install_output = None
         match detect_os():

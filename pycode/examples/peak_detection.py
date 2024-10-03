@@ -9,7 +9,7 @@ REFRACTARY_TIME = 2e-3
 
 
 # SET THE PATH OF THE FOLDER CONTAINING THE DATA CONVERTED WITH MULTICHANNEL DATA MANAGER
-folder_path = "/home/leonardo/Documents/unige/data/18-07-2024/38894/raw/"
+folder_path = "/home/leonardo/Documents/unige/data/18-07-2024/38927/raw"
 
 # Convert it to a Path object
 folder_path = Path(folder_path)
