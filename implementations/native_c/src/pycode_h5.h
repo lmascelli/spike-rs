@@ -4,6 +4,7 @@
 #define CHANNEL_LABEL_STRING_LEN 32
 #define MAX_CHANNELS 60
 
+
 typedef enum phaseh5_error {
   OK,
   OPEN_FAIL,
@@ -35,6 +36,8 @@ typedef enum phaseh5_error {
   RAW_DATA_SELECT_HYPERSLAB_FAIL,
   RAW_DATA_CREATE_MEMORY_DATASPACE_FAIL,
   RAW_DATA_READ_DATA_FAIL,
+  SET_RAW_DATA_GET_DATASPACE_FAIL,
+  SET_RAW_DATA_SELECT_HYPERSLAB_FAIL,
 } phaseh5_error;
 
 typedef struct InfoChannel {
@@ -86,6 +89,7 @@ typedef struct PhaseH5 {
   To be called at the start of its use.
  */
 void pycodeh5_init();
+
 /*
   Finalize the library deleting the created handles.
   To bel called at the end of its use.

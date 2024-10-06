@@ -2,6 +2,9 @@
 name = "native_c"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 [build-dependencies]
 cmake = "*"
+bindgen = "*"
+git2 = "*"

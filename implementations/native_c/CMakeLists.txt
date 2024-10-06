@@ -5,7 +5,7 @@ project(pycode_h5 LANGUAGES C)
 add_library(pycode_h5
   "src/pycode_h5.h" "src/pycode_h5.c"
 )
-target_link_libraries(pycode_h5 PRIVATE hdf5)
+target_link_libraries(pycode_h5 PUBLIC hdf5)
 
 add_executable(Test
   "test/main.c"

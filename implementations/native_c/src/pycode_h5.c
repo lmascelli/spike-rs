@@ -362,9 +362,27 @@ phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t en
     return RAW_DATA_END_BEFORE_START;
   }
 
-  // if (end >= phase->datalen) {
-  //   return RAW_DATA_END_OUT_OF_BOUNDS;
-  // }
+  if (end >= phase->datalen) {
+    return RAW_DATA_END_OUT_OF_BOUNDS;
+  }
 
+  // get the ChannelData dataspace
+  hid_t channel_data_dataspace = H5Dget_space(phase->raw_data.channel_data_dataset);
+  if (channel_data_dataspace <= 0) {
+    return SET_RAW_DATA_GET_DATASPACE_FAIL;
+  }
+
+  hsize_t s_start[] = {index, start};
+  hsize_t s_count[] = {1, end-start};
+
+  // set the subspace of the dataspace where to write
+  herr_t res = H5Sselect_hyperslab(channel_data_dataspace, H5S_SELECT_SET,
+                                   s_start, NULL, s_count, NULL);
+
+  if (res < 0) {
+    return SET_RAW_DATA_SELECT_HYPERSLAB_FAIL;
+  }
+
+  /* res = H5Dwrite(); */
   return OK;
 }

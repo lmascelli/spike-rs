@@ -2,11 +2,12 @@
 resolver = "2"
 
 members = [
-  "hdf5-rs",
+  # "hdf5-rs",
   "spike-rs",
   # "implementations/memory",
-  "implementations/spike-h5",
-  # "tests",
-  "pycode-rs", "implementations/native_c",
+  # "implementations/spike-h5",
+  "implementations/native_c",
+  "tests",
+  # "pycode-rs",
   # "mc_explorer",
 ]
