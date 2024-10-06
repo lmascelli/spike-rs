@@ -7,6 +7,7 @@ pycode_h5/build/
 **/__pycache__/
 Cargo.lock
 tags
+TAGS
 temp
 test.h5
 test.py
