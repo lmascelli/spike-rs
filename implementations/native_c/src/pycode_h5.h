@@ -38,6 +38,15 @@ typedef enum phaseh5_error {
   RAW_DATA_READ_DATA_FAIL,
   SET_RAW_DATA_GET_DATASPACE_FAIL,
   SET_RAW_DATA_SELECT_HYPERSLAB_FAIL,
+  SET_RAW_DATA_CREATE_MEMORY_DATASPACE_FAIL,
+  SET_RAW_DATA_WRITE_DATASET_FAIL,
+  DIGITAL_NO_DIGITAL,
+  DIGITAL_END_BEFORE_START,
+  DIGITAL_END_OUT_OF_BOUNDS,
+  DIGITAL_GET_DATASPACE_FAIL,
+  DIGITAL_SELECT_HYPERSLAB_FAIL,
+  DIGITAL_CREATE_MEMORY_DATASPACE_FAIL,
+  DIGITAL_READ_DATA_FAIL,
 } phaseh5_error;
 
 typedef struct InfoChannel {
@@ -109,8 +118,6 @@ phaseh5_error phase_open(PhaseH5* phase, const char *filename);
  */
 phaseh5_error phase_close(PhaseH5* phase);
 
-/*
-
- */
-phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, float* buf);
-phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, float* buf);
+phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, int* buf);
+phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, int* buf);
+phaseh5_error digital(PhaseH5* phase, size_t start, size_t end, int* buf);

@@ -2,6 +2,10 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+    println!("cargo:rerun-if-changed=src/pycode_h5.c");
+    println!("cargo:rerun-if-changed=src/pycode_h5.h");
+    
     let mut build = cmake::Config::new(".");
     let native_c_location = build.build();
 

@@ -178,7 +178,7 @@ H5Dclose(analog_stream->channel_data_dataset);
 void init_phase(PhaseH5 *phase) { memset(phase, 0, sizeof(PhaseH5)); }
 
 phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
-  hid_t fid = H5Fopen(filename, H5P_DEFAULT, H5P_DEFAULT);
+  hid_t fid = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT);
   if (fid <= 0) {
     return OPEN_FAIL;
   }
@@ -316,7 +316,7 @@ phaseh5_error phase_close(PhaseH5* phase) {
 //==============================================================================
 //                      RAW DATA I/O FUNCTIONS 
 //==============================================================================
-phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, float* buf) {
+phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, int* buf) {
   if (end < start) {
     return RAW_DATA_END_BEFORE_START;
   }
@@ -333,7 +333,7 @@ phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, f
   }
   
   size_t _start[] = {index, start};
-  size_t _count[] = {index, end - start};
+  size_t _count[] = {1, end - start};
   herr_t res = H5Sselect_hyperslab(raw_data_dataspace, H5S_SELECT_SET, _start, NULL, _count, NULL);
 
   if (res < 0) {
@@ -345,11 +345,9 @@ phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, f
     return RAW_DATA_CREATE_MEMORY_DATASPACE_FAIL;
   }
 
-  int buffer[end-start];
-
   res = H5Dread(phase->raw_data.channel_data_dataset, H5T_NATIVE_INT, read_dataspace,
-          raw_data_dataspace, H5P_DEFAULT, buffer);
-
+          raw_data_dataspace, H5P_DEFAULT, buf);
+  
   if (res < 0) {
     return RAW_DATA_READ_DATA_FAIL;
   }
@@ -357,7 +355,7 @@ phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, f
   return OK;
 }
 
-phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, float *buf) {
+phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, int *buf) {
   if (end < start) {
     return RAW_DATA_END_BEFORE_START;
   }
@@ -375,6 +373,8 @@ phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t en
   hsize_t s_start[] = {index, start};
   hsize_t s_count[] = {1, end-start};
 
+  printf("index: %ld\nstart: %ld\nend: %ld\n", index, start, end);
+
   // set the subspace of the dataspace where to write
   herr_t res = H5Sselect_hyperslab(channel_data_dataspace, H5S_SELECT_SET,
                                    s_start, NULL, s_count, NULL);
@@ -383,6 +383,65 @@ phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t en
     return SET_RAW_DATA_SELECT_HYPERSLAB_FAIL;
   }
 
-  /* res = H5Dwrite(); */
+  hsize_t memory_dataspace_dims[] = {end-start};
+  hid_t memory_dataspace = H5Screate_simple(1, memory_dataspace_dims, NULL);
+  if (memory_dataspace <= 0) {
+    return SET_RAW_DATA_CREATE_MEMORY_DATASPACE_FAIL;
+  }
+
+  res = H5Dwrite(phase->raw_data.channel_data_dataset,
+                 H5T_NATIVE_INT,
+                 memory_dataspace,
+                 channel_data_dataspace,
+                 H5P_DEFAULT,
+                 buf);
+
+  if (res < 0) {
+    return SET_RAW_DATA_WRITE_DATASET_FAIL;
+  }
+  
+  return OK;
+}
+
+phaseh5_error digital(PhaseH5* phase, size_t start, size_t end, int* buf) {
+  if (!phase->has_digital) {
+    return DIGITAL_NO_DIGITAL;
+  }
+  
+  if (end < start) {
+    return DIGITAL_END_BEFORE_START;
+  }
+
+  if (end >= phase->datalen) {
+    return DIGITAL_END_OUT_OF_BOUNDS;
+  }
+
+  size_t dims[] = {end - start};
+  hid_t digital_dataspace = H5Dget_space(phase->digital.channel_data_dataset);
+
+  if (digital_dataspace <= 0) {
+    return DIGITAL_GET_DATASPACE_FAIL;
+  }
+  
+  size_t _start[] = {0, start};
+  size_t _count[] = {1, end - start};
+  herr_t res = H5Sselect_hyperslab(digital_dataspace, H5S_SELECT_SET, _start, NULL, _count, NULL);
+
+  if (res < 0) {
+    return DIGITAL_SELECT_HYPERSLAB_FAIL;
+  }
+
+  hid_t read_dataspace = H5Screate_simple(1, dims, NULL);
+  if (read_dataspace <= 0) {
+    return DIGITAL_CREATE_MEMORY_DATASPACE_FAIL;
+  }
+
+  res = H5Dread(phase->digital.channel_data_dataset, H5T_NATIVE_INT, read_dataspace,
+          digital_dataspace, H5P_DEFAULT, buf);
+  
+  if (res < 0) {
+    return DIGITAL_READ_DATA_FAIL;
+  }
+
   return OK;
 }
