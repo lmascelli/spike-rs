@@ -2,12 +2,12 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     println!("cargo:rerun-if-changed=src/pycode_h5.c");
     println!("cargo:rerun-if-changed=src/pycode_h5.h");
+    println!("cargo:rerun-if-changed=CMakeLists.txt");
     
     let mut build = cmake::Config::new(".");
-    let native_c_location = build.build();
+    let native_c_location = build.profile("Release").build();
 
     let bindings = bindgen::Builder::default()
         .header("src/pycode_h5.h")
@@ -22,6 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("cargo:rustc-link-search=native={}", format!("{}/lib", native_c_location.display()));
     println!("cargo:rustc-link-lib=static={}", "pycode_h5");
+    println!("cargo:rustc-link-search=native={}", format!("/home/leonardo/Documents/unige/hdf5/1.14.5/lib"));
     println!("cargo:rustc-link-lib={}", "hdf5");
     Ok(())
 }

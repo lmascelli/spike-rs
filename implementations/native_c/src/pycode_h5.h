@@ -2,6 +2,7 @@
 #define DATE_STRING_LEN 32
 #define ANALOG_LABEL_STRING_LEN 64
 #define CHANNEL_LABEL_STRING_LEN 32
+#define MAX_EVENT_STREAMS 16
 #define MAX_CHANNELS 60
 
 
@@ -30,12 +31,20 @@ typedef enum phaseh5_error {
   OPEN_CHANNEL_DATA_DATASPACE_FAIL,
   GET_CHANNEL_DATA_DIMS_FAIL,
   NO_RAW_DATA_STREAM,
+  OPEN_EVENT_STREAM_GROUP_LINK_FAIL,
+  OPEN_EVENT_STREAM_GROUP_FAIL,
+  OPEN_EVENT_STREAM_STREAM_0_GROUP_LINK_FAIL,
+  MAX_EVENT_STREAMS_EXCEEDED,
+  OPEN_ENTITY_DATASET_FAIL,
+  EVENT_ENTITY_DATASET_CLOSE_FAIL,
   RAW_DATA_END_BEFORE_START,
   RAW_DATA_END_OUT_OF_BOUNDS,
   RAW_DATA_GET_DATASPACE_FAIL,
   RAW_DATA_SELECT_HYPERSLAB_FAIL,
   RAW_DATA_CREATE_MEMORY_DATASPACE_FAIL,
   RAW_DATA_READ_DATA_FAIL,
+  SET_RAW_DATA_END_BEFORE_START,
+  SET_RAW_DATA_END_OUT_OF_BOUNDS,
   SET_RAW_DATA_GET_DATASPACE_FAIL,
   SET_RAW_DATA_SELECT_HYPERSLAB_FAIL,
   SET_RAW_DATA_CREATE_MEMORY_DATASPACE_FAIL,
@@ -47,6 +56,21 @@ typedef enum phaseh5_error {
   DIGITAL_SELECT_HYPERSLAB_FAIL,
   DIGITAL_CREATE_MEMORY_DATASPACE_FAIL,
   DIGITAL_READ_DATA_FAIL,
+  SET_DIGITAL_NO_DIGITAL,
+  SET_DIGITAL_END_BEFORE_START,
+  SET_DIGITAL_END_OUT_OF_BOUNDS,
+  SET_DIGITAL_GET_DATASPACE_FAIL,
+  SET_DIGITAL_SELECT_HYPERSLAB_FAIL,
+  SET_DIGITAL_CREATE_MEMORY_DATASPACE_FAIL,
+  SET_DIGITAL_WRITE_DATA_FAIL,
+  EVENTS_LEN_INDEX_OUT_OF_BOUNDS,
+  EVENTS_LEN_OPEN_EVENT_DATASPACE_FAIL,
+  EVENTS_INDEX_OUT_OF_BOUNDS,
+  EVENTS_LEN_GET_DIMS_FAIL,
+  EVENTS_GET_EVENTS_DATASPACE_FAIL,
+  EVENTS_SELECT_DATASPACE_HYPERSLAB_FAIL,
+  EVENTS_CREATE_MEMORY_DATASPACE_FAIL,
+  EVENTS_READ_DATASET_FAIL,
 } phaseh5_error;
 
 typedef struct InfoChannel {
@@ -80,8 +104,11 @@ typedef struct AnalogStream {
   InfoChannel info_channels[MAX_CHANNELS];
 } AnalogStream;
 
-/* phaseh5_error open_analog(AnalogStream* analog_stream, hid_t analog_stream_group); */
-/* phaseh5_error close_analog(AnalogStream* analog_stream); */
+typedef struct PeakTrain {
+  int n_peaks;
+  float* values;
+  long int* samples;
+} PeakTrain;
 
 typedef struct PhaseH5 {
   hid_t fid;
@@ -91,6 +118,8 @@ typedef struct PhaseH5 {
   AnalogStream raw_data;
   bool has_digital;
   AnalogStream digital;
+  int n_events;
+  hid_t event_entities[MAX_EVENT_STREAMS];
 } PhaseH5;
 
 /*
@@ -121,3 +150,8 @@ phaseh5_error phase_close(PhaseH5* phase);
 phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, int* buf);
 phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, int* buf);
 phaseh5_error digital(PhaseH5* phase, size_t start, size_t end, int* buf);
+phaseh5_error set_digital(PhaseH5* phase, size_t start, size_t end, int* buf);
+phaseh5_error events_len(PhaseH5* phase, size_t index, hsize_t *len);
+phaseh5_error events(PhaseH5* phase, size_t index, long int *buf);
+phaseh5_error peak_train(PhaseH5* phase, size_t index, size_t start, size_t end, PeakTrain* peak_train);
+phaseh5_error set_peak_train(PhaseH5* phase, size_t index, size_t start, size_t end, PeakTrain* peak_train);

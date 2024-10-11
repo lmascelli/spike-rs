@@ -43,12 +43,17 @@ pub enum Error {
     OpenChannelDataDataspace,
     GetChannelDataDims,
     NoRawDataStream,
+    OpenEventStreamGroupLink,
+    OpenEventStreamGroup,
+    OpenEventStreamStream0GroupLink,
     RawDataEndBeforeStart,
     RawDataEndOutOfBounds,
     RawDataGetDataspace,
     RawDataSelectHyperslab,
     RawDataCreateMemoryDataspace,
     RawDataReadData,
+    SetRawDataEndBeforeStart,
+    SetRawDataEndOutOfBounds,
     SetRawDataGetDataspace,
     SetRawDataSelectHyperslab,
     SetRawDataCreateMemoryDataspace,
@@ -60,12 +65,19 @@ pub enum Error {
     DigitalSelectHyperslabFail,
     DigitalCreateMemoryDataspaceFail,
     DigitalReadDataFail,
+    SetDigitalNoDigital,
+    SetDigitalEndBeforeStart,
+    SetDigitalEndOutOfBounds,
+    SetDigitalGetDataspaceFail,
+    SetDigitalSelectHyperslabFail,
+    SetDigitalCreateMemoryDataspaceFail,
+    SetDigitalWriteDataFail,
 }
 
-impl std::fmt::display for error {
+impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         writeln!(f, "{:?}", self)?;
-        Kk(())
+        Ok(())
     }
 }
 
@@ -98,6 +110,9 @@ impl Error {
             sys::phaseh5_error_OPEN_CHANNEL_DATA_DATASPACE_FAIL => Err(Error::OpenChannelDataDataspace),
             sys::phaseh5_error_GET_CHANNEL_DATA_DIMS_FAIL => Err(Error::GetChannelDataDims),
             sys::phaseh5_error_NO_RAW_DATA_STREAM => Err(Error::NoRawDataStream),
+            sys::phaseh5_error_OPEN_EVENT_STREAM_GROUP_FAIL => Err(Error::OpenEventStreamGroup),
+            sys::phaseh5_error_OPEN_EVENT_STREAM_GROUP_LINK_FAIL => Err(Error::OpenEventStreamGroupLink),
+            sys::phaseh5_error_OPEN_EVENT_STREAM_STREAM_0_GROUP_LINK_FAIL => Err(Error::OpenEventStreamStream0GroupLink),
             sys::phaseh5_error_RAW_DATA_END_BEFORE_START => Err(Error::RawDataEndBeforeStart),
             sys::phaseh5_error_RAW_DATA_END_OUT_OF_BOUNDS => Err(Error::RawDataEndOutOfBounds),
             sys::phaseh5_error_RAW_DATA_GET_DATASPACE_FAIL => Err(Error::RawDataGetDataspace),
@@ -115,6 +130,13 @@ impl Error {
             sys::phaseh5_error_DIGITAL_SELECT_HYPERSLAB_FAIL => Err(Error::DigitalSelectHyperslabFail),
             sys::phaseh5_error_DIGITAL_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::DigitalCreateMemoryDataspaceFail),
             sys::phaseh5_error_DIGITAL_READ_DATA_FAIL => Err(Error::DigitalReadDataFail),
+            sys::phaseh5_error_SET_DIGITAL_NO_DIGITAL => Err(Error::SetDigitalNoDigital),
+            sys::phaseh5_error_SET_DIGITAL_END_BEFORE_START => Err(Error::SetDigitalEndBeforeStart),
+            sys::phaseh5_error_SET_DIGITAL_END_OUT_OF_BOUNDS => Err(Error::SetDigitalEndOutOfBounds),
+            sys::phaseh5_error_SET_DIGITAL_GET_DATASPACE_FAIL => Err(Error::SetDigitalGetDataspaceFail),
+            sys::phaseh5_error_SET_DIGITAL_SELECT_HYPERSLAB_FAIL => Err(Error::SetDigitalSelectHyperslabFail),
+            sys::phaseh5_error_SET_DIGITAL_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::SetDigitalCreateMemoryDataspaceFail),
+            sys::phaseh5_error_SET_DIGITAL_WRITE_DATA_FAIL => Err(Error::SetDigitalWriteDataFail),
             _ => Err(Error::ErrorNotYetConverted),
         }
     }
@@ -182,6 +204,18 @@ impl Phase {
         }
     }
 
+    pub fn n_events(&self) -> usize {
+        self.phase.n_events as usize
+    }
+
+    pub fn events_len(&self, index: usize) -> usize {
+        let mut dims = 0u64;
+        unsafe {
+            sys::events_len(phase_ptr!(self), index, &mut dims as *mut _);
+        }
+        dims as usize
+    }
+
     pub fn raw_data(&self, label: &str, start: Option<usize>, end: Option<usize>) -> Vec<f32> {
         let actual_start = match start {
             Some(val) => val,
@@ -191,6 +225,10 @@ impl Phase {
             Some(val) => val,
             None => self.datalen() - 2,
         };
+
+        if actual_start >= actual_end {
+            panic!("raw_data: [start] is not before [end]");
+        }
 
         if !self.labels_map.contains_key(label) {
             panic!("raw_data: Label not found");
@@ -252,7 +290,7 @@ impl Phase {
             panic!("digital: no more than one index can be processed atm");
         }
 
-        if self.digital.has_digital == false {
+        if self.phase.has_digital == false {
             panic!("digital: no digital present");
         }
 
@@ -265,8 +303,65 @@ impl Phase {
             None => self.datalen() - 2,
         };
 
-        todo!()
+        if actual_start >= actual_end {
+            panic!("raw_data: [start] is not before [end]");
+        }
+
+        let mut buf = vec![0f32; actual_end-actual_start];
+
+        let res = unsafe { sys::digital(phase_ptr!(self), actual_start, actual_end, buf.as_mut_ptr().cast()) };
+        match Error::from_phaseh5_error(res) {
+            Ok(()) => buf,
+            Err(err) => {
+                panic!("{}", err);
+            }
+        }
     }
+
+    pub fn set_digital(&self, index: usize, start: Option<usize>, mut data: Vec<f32>) -> Result<(), Error> {
+        if index > 0 {
+            panic!("set_digital: no more than one index can be processed atm");
+        }
+
+        if self.phase.has_digital == false {
+            panic!("set_digital: no digital present");
+        }
+
+        let actual_start = match start {
+            Some(val) => val,
+            None => 0,
+        };
+        let actual_end = actual_start + data.len();
+
+        if actual_end >= self.datalen() {
+            panic!("set_digital: [end] is greater than [datalen]");
+        }
+
+        if actual_start >= actual_end {
+            panic!("set_digital: [start] is not before [end]");
+        }
+
+        let res = unsafe { sys::set_digital(phase_ptr!(self), actual_start, actual_end, data.as_mut_ptr().cast()) };
+
+        match Error::from_phaseh5_error(res) {
+            Ok(()) => Ok(()),
+            Err(err) => {
+                panic!("{}", err);
+            }
+        }
+    }
+
+    pub fn events(&self, index: usize) -> Vec<i64> {
+        let len = self.events_len(index);
+        let mut data = vec![0i64; len];
+
+        unsafe {
+            sys::events(phase_ptr!(self), index, data.as_mut_ptr());
+        }
+
+        data
+    }
+
 }
 
 impl Drop for Phase {
@@ -355,10 +450,11 @@ impl std::default::Default for Phase {
                         low_pass_filter_cutoff: std::ptr::null(),
                         low_pass_filter_order: 0,
                     };
-                    sys::MAX_CHANNELS as usize],
+                        sys::MAX_CHANNELS as usize],
                 },
+                n_events: 0,
+                event_entities: [0; sys::MAX_EVENT_STREAMS as usize],
             },
         }
     }
-
 }

@@ -1,0 +1,14 @@
+[package]
+name = "pycode-rs"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "pycode_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+spike-rs = { path = "../spike-rs" }
+# mc_explorer = { path = "../mc_explorer"}
+spike-h5 = { path = "../implementations/spike-h5" }
+pyo3 = { version = "*", features = ["extension-module"] }

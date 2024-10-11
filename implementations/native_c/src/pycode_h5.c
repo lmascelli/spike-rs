@@ -173,6 +173,46 @@ H5Dclose(analog_stream->channel_data_dataset);
 }
 
 //==============================================================================
+//                      EVENTS RELATED FUNCTIONS 
+//==============================================================================
+
+/// count the number of analog groups in the AnalogStreams group
+herr_t count_events_callback(hid_t group,
+                             const char *name,
+                             const H5L_info2_t *info,
+                             void *op_data) {
+  if (!strncmp(name, "EventEntity_", sizeof("EventEntity_")/sizeof(char)-1)) {
+    *((int *)op_data) += 1;
+  }
+  return 0;
+}
+
+typedef struct CallbackEventsRets {
+  int current_index;
+  hid_t* event_entities;
+} CallbackEventsRets;
+
+
+herr_t open_events_callback(hid_t group,
+                            const char *name,
+                            const H5L_info2_t *info,
+                            void *events_rets) {
+  if (!strncmp(name, "EventEntity_", sizeof("EventEntity_")/sizeof(char)-1)) {
+    CallbackEventsRets* events_rets_c = CAST(events_rets, CallbackEventsRets*);
+    if (events_rets_c->current_index == MAX_EVENT_STREAMS - 1) {
+      return MAX_EVENT_STREAMS_EXCEEDED;
+    }
+    hid_t entity_dataset = H5Dopen2(group, name, H5P_DEFAULT);
+    if (entity_dataset <= 0) {
+    return OPEN_ENTITY_DATASET_FAIL;
+    }
+    events_rets_c->event_entities[events_rets_c->current_index] = entity_dataset;
+    events_rets_c->current_index += 1;
+  }
+  return OK;
+}
+
+//==============================================================================
 //                      PHASE RELATED FUNCTIONS 
 //==============================================================================
 void init_phase(PhaseH5 *phase) { memset(phase, 0, sizeof(PhaseH5)); }
@@ -299,7 +339,62 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
   }
 
   H5Gclose(analog_group);
+  
   // ----------------------------------------------------------------------
+  // PARSE THE EVENT STREAMS
+  // ----------------------------------------------------------------------
+
+  res = H5Lexists(fid, "/Data/Recording_0/EventStream", H5P_DEFAULT);
+
+  if (res < 0) {
+    return OPEN_EVENT_STREAM_GROUP_LINK_FAIL;
+  } else if (res == 0) {
+    phase->n_events = 0;
+  } else {
+    hid_t event_stream = H5Gopen2(fid, "/Data/Recording_0/EventStream", H5P_DEFAULT);
+    if (event_stream <= 0) {
+      return OPEN_EVENT_STREAM_GROUP_FAIL;
+    }
+    res = H5Lexists(fid, "/Data/Recording_0/EventStream/Stream_0", H5P_DEFAULT);
+    if (res < 0) {
+      return OPEN_EVENT_STREAM_STREAM_0_GROUP_LINK_FAIL;
+    } else if (res == 0) {
+      phase->n_events = 0;
+      printf("Here 2\n");
+    } else {
+      hid_t events_group = H5Gopen2(fid, "/Data/Recording_0/EventStream/Stream_0", H5P_DEFAULT);
+      if (events_group <= 0) {
+        return OPEN_EVENT_STREAM_GROUP_FAIL;
+      }
+
+      res = H5Literate2(events_group,
+                        H5_INDEX_NAME,
+                        H5_ITER_NATIVE,
+                        NULL,
+                        count_events_callback,
+                        &phase->n_events);
+      if (res != OK) {
+        return res;
+      }
+
+      CallbackEventsRets events_rets;
+      events_rets.current_index = 0;
+      res = H5Literate2(events_group,
+                        H5_INDEX_NAME,
+                        H5_ITER_NATIVE,
+                        NULL,
+                        open_events_callback,
+                        &events_rets);
+
+      if (res != OK) {
+        return res;
+      }
+
+      for (int i=0; i<events_rets.current_index; ++i) {
+        phase->event_entities[i] = events_rets.event_entities[i];
+      }
+    }
+  }
 
   H5Fclose(fid);
   return OK;
@@ -309,6 +404,12 @@ phaseh5_error phase_close(PhaseH5* phase) {
   close_analog(&phase->raw_data);
   if (phase->has_digital) {
     close_analog(&phase->digital);
+  }
+  for (int i=0; i<phase->n_events; i++) {
+    herr_t res = H5Dclose(phase->event_entities[i]);
+    if (res < 0) {
+      return EVENT_ENTITY_DATASET_CLOSE_FAIL;
+    }
   }
   return OK;
 }
@@ -357,11 +458,11 @@ phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, i
 
 phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, int *buf) {
   if (end < start) {
-    return RAW_DATA_END_BEFORE_START;
+    return SET_RAW_DATA_END_BEFORE_START;
   }
 
   if (end >= phase->datalen) {
-    return RAW_DATA_END_OUT_OF_BOUNDS;
+    return SET_RAW_DATA_END_OUT_OF_BOUNDS;
   }
 
   // get the ChannelData dataspace
@@ -443,5 +544,124 @@ phaseh5_error digital(PhaseH5* phase, size_t start, size_t end, int* buf) {
     return DIGITAL_READ_DATA_FAIL;
   }
 
+  return OK;
+}
+
+phaseh5_error set_digital(PhaseH5* phase, size_t start, size_t end, int *buf) {
+  if (!phase->has_digital) {
+    return SET_DIGITAL_NO_DIGITAL;
+  }
+  
+  if (end < start) {
+    return SET_DIGITAL_END_BEFORE_START;
+  }
+
+  if (end >= phase->datalen) {
+    return SET_DIGITAL_END_OUT_OF_BOUNDS;
+  }
+
+  // get the ChannelData dataspace
+  hid_t channel_data_dataspace = H5Dget_space(phase->raw_data.channel_data_dataset);
+  if (channel_data_dataspace <= 0) {
+    return SET_DIGITAL_GET_DATASPACE_FAIL;
+  }
+
+  hsize_t s_start[] = {0, start};
+  hsize_t s_count[] = {1, end-start};
+
+  printf("index: %ld\nstart: %ld\nend: %ld\n", index, start, end);
+
+  // set the subspace of the dataspace where to write
+  herr_t res = H5Sselect_hyperslab(channel_data_dataspace, H5S_SELECT_SET,
+                                   s_start, NULL, s_count, NULL);
+
+  if (res < 0) {
+    return SET_DIGITAL_SELECT_HYPERSLAB_FAIL;
+  }
+
+  hsize_t memory_dataspace_dims[] = {end-start};
+  hid_t memory_dataspace = H5Screate_simple(1, memory_dataspace_dims, NULL);
+  if (memory_dataspace <= 0) {
+    return SET_DIGITAL_CREATE_MEMORY_DATASPACE_FAIL;
+  }
+
+  res = H5Dwrite(phase->raw_data.channel_data_dataset,
+                 H5T_NATIVE_INT,
+                 memory_dataspace,
+                 channel_data_dataspace,
+                 H5P_DEFAULT,
+                 buf);
+
+  if (res < 0) {
+    return SET_DIGITAL_WRITE_DATA_FAIL;
+  }
+  
+  return OK;
+}
+
+phaseh5_error events_len(PhaseH5* phase, size_t index, hsize_t *dim) {
+  if (index >= phase->n_events) {
+    return EVENTS_LEN_INDEX_OUT_OF_BOUNDS;
+  }
+  hid_t event_dataset = phase->event_entities[index];
+  hid_t event_dataspace = H5Dget_space(event_dataset);
+  if (event_dataspace <= 0) {
+    return EVENTS_LEN_OPEN_EVENT_DATASPACE_FAIL;
+  }
+  hsize_t dims[2];
+  herr_t res = H5Sget_simple_extent_dims(event_dataspace, dims, NULL);
+  if (res < 0 ) {
+    return EVENTS_LEN_GET_DIMS_FAIL;
+  }
+  *dim = dims[1];
+
+  return OK;
+}
+
+phaseh5_error events(PhaseH5* phase, size_t index, long int *buf) {
+  if (index >= phase->n_events) {
+    return EVENTS_INDEX_OUT_OF_BOUNDS;
+  }
+  hsize_t dim;
+  herr_t res = events_len(phase, index, &dim);
+  if (res != OK) {
+    return res;
+  }
+
+  hid_t events_dataset = phase->event_entities[index];
+  hid_t file_dataspace = H5Dget_space(events_dataset);
+  if (file_dataspace <= 0) {
+    return EVENTS_GET_EVENTS_DATASPACE_FAIL;
+  }
+  hsize_t start[] = {0, 0};
+  hsize_t count[] = {1, dim};
+  res = H5Sselect_hyperslab(file_dataspace,
+                            H5S_SELECT_SET,
+                            start,
+                            NULL,
+                            count,
+                            NULL);
+  if (res < 0) {
+    return EVENTS_SELECT_DATASPACE_HYPERSLAB_FAIL;
+  }
+
+  hsize_t memory_dim[] = {dim};
+
+  hid_t memory_dataspace = H5Screate_simple(1, memory_dim, NULL);
+  if (memory_dataspace <= 0) {
+    return EVENTS_CREATE_MEMORY_DATASPACE_FAIL;
+  }
+
+  res = H5Dread(events_dataset,
+                H5T_NATIVE_LONG,
+                memory_dataspace,
+                file_dataspace,
+                H5P_DEFAULT,
+                buf);
+
+  if (res < 0) {
+    return EVENTS_READ_DATASET_FAIL;
+  }
+  
   return OK;
 }

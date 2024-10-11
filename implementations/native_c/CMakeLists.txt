@@ -2,13 +2,10 @@ cmake_minimum_required(VERSION 3.23)
 
 project(pycode_h5 LANGUAGES C)
 
-add_library(pycode_h5
+add_library(pycode_h5 STATIC
   "src/pycode_h5.h" "src/pycode_h5.c"
 )
-target_link_libraries(pycode_h5 PUBLIC hdf5)
+set(HDF5_INCLUDE_DIR "/home/leonardo/Documents/unige/hdf5/1.14.5/include")
+target_include_directories(pycode_h5 PRIVATE ${HDF5_INCLUDE_DIR})
 
-add_executable(Test
-  "test/main.c"
-)
-target_link_libraries(Test PRIVATE pycode_h5)
-install(TARGETS pycode_h5 Test)
+install(TARGETS pycode_h5)
