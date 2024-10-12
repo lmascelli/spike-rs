@@ -222,6 +222,7 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
   if (fid <= 0) {
     return OPEN_FAIL;
   }
+  phase->fid = fid;
 
   hid_t data_group = H5Gopen2(fid, "/Data", H5P_DEFAULT);
   if (data_group <= 0) {
@@ -395,21 +396,44 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
       }
     }
   }
+  
+  // ----------------------------------------------------------------------
+  // PARSE THE PEAK_TRAIN GROUP
+  // ----------------------------------------------------------------------
 
-  H5Fclose(fid);
+  res = H5Lexists(fid, "/Data/Recording_0/Peak_Train", H5P_DEFAULT);
+
+  if (res < 0) {
+    phase->peaks_group = false;
+    return OPEN_PEAK_TRAIN_GROUP_FAIL;
+  } else if (res == 0) {
+    res = H5Gcreate(fid, "/Data/Recording_0/Peak_Train", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    if (res < 0) {
+      return CREATE_PEAK_GROUP_FAIL;
+    }
+    phase->peaks_group = true;
+  } else {
+    phase->peaks_group = true;
+  }
+
   return OK;
 }
 
 phaseh5_error phase_close(PhaseH5* phase) {
+  herr_t res;
   close_analog(&phase->raw_data);
   if (phase->has_digital) {
     close_analog(&phase->digital);
   }
   for (int i=0; i<phase->n_events; i++) {
-    herr_t res = H5Dclose(phase->event_entities[i]);
+    res = H5Dclose(phase->event_entities[i]);
     if (res < 0) {
       return EVENT_ENTITY_DATASET_CLOSE_FAIL;
     }
+  }
+  res = H5Fclose(phase->fid);
+  if (res < 0) {
+    return CLOSE_FILE_FAIL;
   }
   return OK;
 }
@@ -663,5 +687,110 @@ phaseh5_error events(PhaseH5* phase, size_t index, long int *buf) {
     return EVENTS_READ_DATASET_FAIL;
   }
   
+  return OK;
+}
+
+phaseh5_error open_peak_train_datasets(PhaseH5* phase, const char* label, hid_t* values, hid_t* samples) {
+  // Check if there are peak train data in the file
+  if (phase->peaks_group == 0) {
+    return PEAK_TRAIN_NO_PEAK_GROUP;
+  }
+
+  // Get the path of peak train datasets of that label
+  hsize_t values_len;
+  hsize_t samples_len;
+
+  size_t peaks_group_str_len = sizeof("/Data/Recording_0/Peak_Train/")/sizeof(char) + strlen(label);
+  size_t values_group_str_len = peaks_group_str_len + sizeof("/values")/sizeof(char);
+  size_t samples_group_str_len = peaks_group_str_len + sizeof("/samples")/sizeof(char);
+
+  char values_group_str[values_group_str_len];
+  char samples_group_str[samples_group_str_len];
+  
+  sprintf(values_group_str, "/Data/Recording_0/Peak_Train/%s/values", label);
+  sprintf(samples_group_str, "/Data/Recording_0/Peak_Train/%s/samples", label);
+
+  // Check if those links exist
+  herr_t res = H5Lexists(phase->fid, values_group_str, H5P_DEFAULT);
+  if (res < 0) {
+    return PEAK_TRAIN_VALUES_DATASET_LINK_FAIL;
+  } else if (res == 0) {
+    return PEAK_TRAIN_NO_VALUES_DATASET;
+  } 
+
+  res = H5Lexists(phase->fid, samples_group_str, H5P_DEFAULT);
+  if (res < 0 ) {
+    return PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL;
+  } else if (res == 0) {
+    return PEAK_TRAIN_NO_SAMPLES_DATASET;
+  }
+
+  // Open the datasets
+  hid_t values_ds = H5Dopen2(phase->fid, values_group_str, H5P_DEFAULT);
+  if (values_ds <= 0) {
+    return PEAK_TRAIN_OPEN_VALUES_DATASET_FAIL;
+  }
+  *values = values_ds;
+
+  hid_t samples_ds = H5Dopen2(phase->fid, samples_group_str, H5P_DEFAULT);
+  if (samples_ds <= 0) {
+    return PEAK_TRAIN_OPEN_SAMPLES_DATASET_FAIL;
+  }
+  *samples = samples_ds;
+
+  return OK;
+}
+
+phaseh5_error peak_train_len(PhaseH5* phase, const char* label, long int *len) {
+  hid_t values_ds;
+  hid_t samples_ds;
+  herr_t res = open_peak_train_datasets(phase, label, &values_ds, &samples_ds);
+  if (res != OK) {
+    return res;
+  }
+
+  hsize_t values_len[1];
+  hsize_t samples_len[1];
+  
+  hid_t values_dataspace = H5Dget_space(values_ds);
+  if (values_dataspace <= 0) {
+    return PEAK_TRAIN_LEN_OPEN_VALUES_DATASPACE_FAIL;
+  }
+
+  res = H5Sget_simple_extent_dims(values_dataspace, values_len, NULL);
+  if (res < 0) {
+    return PEAK_TRAIN_LEN_GET_VALUES_DATASPACE_DIM_FAIL;
+  }
+
+  hid_t samples_dataspace = H5Dget_space(samples_ds);
+  if (samples_dataspace <= 0) {
+    return PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL;
+  }
+
+  res = H5Sget_simple_extent_dims(samples_dataspace, samples_len, NULL);
+  if (res < 0) {
+    return PEAK_TRAIN_LEN_GET_SAMPLES_DATASPACE_DIM_FAIL;
+  }
+
+  if (values_len[0] != samples_len[0]) {
+    return PEAK_TRAIN_LEN_VALUES_SAMPLES_DIFFERENT;
+  }
+
+  *len = values_len[0];
+
+  res = H5Dclose(values_ds);
+  if (res < 0) {
+    return PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL;
+  }
+
+  res = H5Dclose(samples_ds);
+  if (res < 0) {
+    return PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL;
+  }
+
+  return OK;
+}
+
+phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train) {
   return OK;
 }

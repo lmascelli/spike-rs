@@ -21,6 +21,7 @@ pub fn spike_c_close() {
 pub enum Error {
     ErrorNotYetConverted,
     OpenFile,
+    CloseFile,
     OpenDataGroup,
     OpenDateAttribute,
     ReadDateAttribute,
@@ -49,13 +50,14 @@ pub enum Error {
     MaxEventStreamsExceeded,
     OpenEntityDataset,
     EventEntityDatasetClose,
+    OpenPeakTrainGroup,
+    CreatePeakGroup,
     RawDataEndBeforeStart,
     RawDataEndOutOfBounds,
     RawDataGetDataspace,
     RawDataSelectHyperslab,
     RawDataCreateMemoryDataspace,
     RawDataReadData,
-    SetRawDataEndBeforeStart,
     SetRawDataEndOutOfBounds,
     SetRawDataGetDataspace,
     SetRawDataSelectHyperslab,
@@ -83,6 +85,20 @@ pub enum Error {
     EventsSelectDataspaceHyperslab,
     EventsCreateMemoryDataspace,
     EventsReadDataset,
+    PeakTrainNoPeakGroup,
+    PeakTrainValuesDatasetLink,
+    PeakTrainNoValuesDataset,
+    PeakTrainSamplesDatasetLink,
+    PeakTrainNoSamplesDataset,
+    PeakTrainOpenValuesDataset,
+    PeakTrainOpenSamplesDataset,
+    PeakTrainLenOpenValuesDataspace,
+    PeakTrainLenGetValuesDataspace,
+    PeakTrainLenOpenSamplesDataspace,
+    PeakTrainLenGetSamplesDataspace,
+    PeakTrainLenValuesSamplesDifferent,
+    PeakTrainLenCloseValuesDataset,
+    PeakTrainLenCloseSamplesDataset,
 }
 
 impl std::fmt::Display for Error {
@@ -91,7 +107,6 @@ impl std::fmt::Display for Error {
         Ok(())
     }
 }
-
 impl std::error::Error for Error {}
 
 impl Error {
@@ -99,6 +114,7 @@ impl Error {
         match code {
             sys::phaseh5_error_OK => Ok(()),
             sys::phaseh5_error_OPEN_FAIL => Err(Error::OpenFile),
+            sys::phaseh5_error_CLOSE_FILE_FAIL => Err(Error::CloseFile),
             sys::phaseh5_error_OPEN_DATA_GROUP_FAIL => Err(Error::OpenDataGroup),
             sys::phaseh5_error_OPEN_DATE_ATTRIBUTE_FAIL => Err(Error::OpenDateAttribute),
             sys::phaseh5_error_READ_DATE_ATTRIBUTE_FAIL => Err(Error::ReadDateAttribute),
@@ -127,6 +143,8 @@ impl Error {
             sys::phaseh5_error_MAX_EVENT_STREAMS_EXCEEDED => Err(Error::MaxEventStreamsExceeded),
             sys::phaseh5_error_OPEN_ENTITY_DATASET_FAIL => Err(Error::OpenEntityDataset),
             sys::phaseh5_error_EVENT_ENTITY_DATASET_CLOSE_FAIL => Err(Error::EventEntityDatasetClose),
+            sys::phaseh5_error_OPEN_PEAK_TRAIN_GROUP_FAIL => Err(Error::OpenPeakTrainGroup),
+            sys::phaseh5_error_CREATE_PEAK_GROUP_FAIL => Err(Error::CreatePeakGroup),
             sys::phaseh5_error_RAW_DATA_END_BEFORE_START => Err(Error::RawDataEndBeforeStart),
             sys::phaseh5_error_RAW_DATA_END_OUT_OF_BOUNDS => Err(Error::RawDataEndOutOfBounds),
             sys::phaseh5_error_RAW_DATA_GET_DATASPACE_FAIL => Err(Error::RawDataGetDataspace),
@@ -159,6 +177,21 @@ impl Error {
             sys::phaseh5_error_EVENTS_SELECT_DATASPACE_HYPERSLAB_FAIL => Err(Error::EventsSelectDataspaceHyperslab),
             sys::phaseh5_error_EVENTS_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::EventsCreateMemoryDataspace),
             sys::phaseh5_error_EVENTS_READ_DATASET_FAIL => Err(Error::EventsReadDataset),
+            sys::phaseh5_error_PEAK_TRAIN_NO_PEAK_GROUP => Err(Error::PeakTrainNoPeakGroup),
+            sys::phaseh5_error_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL => Err(Error::PeakTrainValuesDatasetLink),
+            sys::phaseh5_error_PEAK_TRAIN_NO_VALUES_DATASET => Err(Error::PeakTrainNoValuesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL => Err(Error::PeakTrainSamplesDatasetLink),
+            sys::phaseh5_error_PEAK_TRAIN_NO_SAMPLES_DATASET => Err(Error::PeakTrainNoSamplesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_OPEN_VALUES_DATASET_FAIL => Err(Error::PeakTrainOpenValuesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_OPEN_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainOpenSamplesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenValuesDataspace), //
+            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenSamplesDataspace), //
+            sys::phaseh5_error_PEAK_TRAIN_LEN_GET_VALUES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetValuesDataspace),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenSamplesDataspace),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_GET_SAMPLES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetSamplesDataspace),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_VALUES_SAMPLES_DIFFERENT => Err(Error::PeakTrainLenValuesSamplesDifferent),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainLenCloseSamplesDataset),
             _ => Err(Error::ErrorNotYetConverted),
         }
     }
@@ -384,6 +417,17 @@ impl Phase {
         data
     }
 
+    pub fn peak_train_len(&self, label: &str) -> usize {
+        let label_c = CString::new(label).expect("peak_train_len: Failed to convert the CStr");
+        let mut len = 0i64;
+        let res = unsafe { sys::peak_train_len(phase_ptr!(self), label_c.as_ptr(), &mut len as *mut _) };
+
+        match Error::from_phaseh5_error(res) {
+            Ok(()) => len.try_into().unwrap(),
+            Err(err) => { panic!("{err:?}"); },
+        } 
+
+    }
 }
 
 impl Drop for Phase {
@@ -476,6 +520,7 @@ impl std::default::Default for Phase {
                 },
                 n_events: 0,
                 event_entities: [0; sys::MAX_EVENT_STREAMS as usize],
+                peaks_group: 0,
             },
         }
     }

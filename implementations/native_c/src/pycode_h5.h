@@ -9,6 +9,7 @@
 typedef enum phaseh5_error {
   OK,
   OPEN_FAIL,
+  CLOSE_FILE_FAIL,
   OPEN_DATA_GROUP_FAIL,
   OPEN_DATE_ATTRIBUTE_FAIL,
   READ_DATE_ATTRIBUTE_FAIL,
@@ -37,6 +38,8 @@ typedef enum phaseh5_error {
   MAX_EVENT_STREAMS_EXCEEDED,
   OPEN_ENTITY_DATASET_FAIL,
   EVENT_ENTITY_DATASET_CLOSE_FAIL,
+  OPEN_PEAK_TRAIN_GROUP_FAIL,
+  CREATE_PEAK_GROUP_FAIL,
   RAW_DATA_END_BEFORE_START,
   RAW_DATA_END_OUT_OF_BOUNDS,
   RAW_DATA_GET_DATASPACE_FAIL,
@@ -71,6 +74,18 @@ typedef enum phaseh5_error {
   EVENTS_SELECT_DATASPACE_HYPERSLAB_FAIL,
   EVENTS_CREATE_MEMORY_DATASPACE_FAIL,
   EVENTS_READ_DATASET_FAIL,
+  PEAK_TRAIN_NO_PEAK_GROUP,
+  PEAK_TRAIN_VALUES_DATASET_LINK_FAIL,
+  PEAK_TRAIN_NO_VALUES_DATASET,
+  PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL,
+  PEAK_TRAIN_NO_SAMPLES_DATASET,
+  PEAK_TRAIN_OPEN_VALUES_DATASET_FAIL,
+  PEAK_TRAIN_OPEN_SAMPLES_DATASET_FAIL,
+  PEAK_TRAIN_LEN_OPEN_VALUES_DATASPACE_FAIL,
+  PEAK_TRAIN_LEN_GET_VALUES_DATASPACE_DIM_FAIL,
+  PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL,
+  PEAK_TRAIN_LEN_GET_SAMPLES_DATASPACE_DIM_FAIL,
+  PEAK_TRAIN_LEN_VALUES_SAMPLES_DIFFERENT,
 } phaseh5_error;
 
 typedef struct InfoChannel {
@@ -120,6 +135,7 @@ typedef struct PhaseH5 {
   AnalogStream digital;
   int n_events;
   hid_t event_entities[MAX_EVENT_STREAMS];
+  hid_t peaks_group;
 } PhaseH5;
 
 /*
@@ -153,5 +169,6 @@ phaseh5_error digital(PhaseH5* phase, size_t start, size_t end, int* buf);
 phaseh5_error set_digital(PhaseH5* phase, size_t start, size_t end, int* buf);
 phaseh5_error events_len(PhaseH5* phase, size_t index, hsize_t *len);
 phaseh5_error events(PhaseH5* phase, size_t index, long int *buf);
-phaseh5_error peak_train(PhaseH5* phase, size_t index, size_t start, size_t end, PeakTrain* peak_train);
-phaseh5_error set_peak_train(PhaseH5* phase, size_t index, size_t start, size_t end, PeakTrain* peak_train);
+phaseh5_error peak_train_len(PhaseH5*, const char* label, long int *len);
+phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train);
+phaseh5_error set_peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train);
