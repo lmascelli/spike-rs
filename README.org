@@ -23,6 +23,7 @@ the rust development team as well, so it's hopefully going to be supported in th
 Also, for the creation of the Python wrapper an external dependency [[https://pyo3.rs][PyO3]] is being used.
 
 ** Build instruction
+*** Requirements
 To build the library you'll need:
 - the *rust* toolchain installed: [[https://www.rust-lang.org/tools/install][Rust download]]
 - the llvm toolchain installed (for bindgen automatic bindings generation)
@@ -39,3 +40,9 @@ it depends on you distro
 #+end_src
 - *hdf5* library
 [[https://github.com/HDFGroup/hdf5/releases/latest][hdf5 download]]
+
+*** Set the environment variables
+TODO
+
+*** Build the cargo project
+TODO
