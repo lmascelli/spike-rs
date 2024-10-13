@@ -3,39 +3,39 @@
 #+date: <2024-02-12 Mon> 
 
 * Introduction
-  The goal of this project is to provide a fast library for the computational part of the analysis, like
-  the conversion of the ADC data, the spikes detection and any sort of operation with data that requires
-  iterating through them.
-  The library is meant to hold the data and to be accessed via Python, requiring some operation and
-  getting back the results.
-  At the moment a GUI in Python is provided with the library so that the workflow can be managed easily
-  but in the future also a Python API is planned so that any user will be able to customize his analysis
-  the way he likes.
+The goal of this project is to provide a fast library for the computational part of the analysis, like
+the conversion of the ADC data, the spikes detection and any sort of operation with data that requires
+iterating through them.
+The library is meant to hold the data and to be accessed via Python, requiring some operation and
+getting back the results.
+At the moment a GUI in Python is provided with the library so that the workflow can be managed easily
+but in the future also a Python API is planned so that any user will be able to customize his analysis
+the way he likes.
 
 * Spike-rs
-  Spike-rs is the name of the core library. It's written in Rust, a modern and safe alternative to C/C++
-  that provide the same performance but also guards against some common mistakes and also provides nice
-  compilations error.
-  Almost all the code is (at the moment) build just on standard library. The only requirement are related
-  to the operations with hdf5 datas, for which a build type dependency
-  ([[https://github.com/rust-lang/rust-bindgen][bindgen.rs]]) is needed; anyway this tool is provided by
-  the rust development team as well, so it's hopefully going to be supported in the long time. 
-  Also, for the creation of the Python wrapper an external dependency [[https://pyo3.rs][PyO3]] is being used.
+Spike-rs is the name of the core library. It's written in Rust, a modern and safe alternative to C/C++
+that provide the same performance but also guards against some common mistakes and also provides nice
+compilations error.
+Almost all the code is (at the moment) build just on standard library. The only requirement are related
+to the operations with hdf5 datas, for which a build type dependency
+([[https://github.com/rust-lang/rust-bindgen][bindgen.rs]]) is needed; anyway this tool is provided by
+the rust development team as well, so it's hopefully going to be supported in the long time. 
+Also, for the creation of the Python wrapper an external dependency [[https://pyo3.rs][PyO3]] is being used.
 
 ** Build instruction
 To build the library you'll need:
-*** the *rust* toolchain installed: [[https://www.rust-lang.org/tools/install][Rust download]]
-*** the llvm toolchain installed (for bindgen automatic bindings generation)
-**** Windows 
+- the *rust* toolchain installed: [[https://www.rust-lang.org/tools/install][Rust download]]
+- the llvm toolchain installed (for bindgen automatic bindings generation)
+*Windows*
 #+begin_src shell
   winget install -e --id LLVM.LLVM
 #+end_src
-**** Linux
+*Linux*
 it depends on you distro
-*** *python*
-**** Windows
+- *python*
+/Windows/
 #+begin_src shell
   winget install -e --id Python.Python.3.11
 #+end_src
-*** *hdf5* library
+- *hdf5* library
 [[https://github.com/HDFGroup/hdf5/releases/latest][hdf5 download]]
