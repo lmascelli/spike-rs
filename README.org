@@ -23,29 +23,19 @@
   Also, for the creation of the Python wrapper an external dependency [[https://pyo3.rs][PyO3]] is being used.
 
 ** Build instruction
-   At the moment the only supported system is on Windows with the MinGW-w64 compiler, hdf5 library and
-   CPython. The quick instruction to get it works are:
-   - install [[https://www.msys2.org][Msys2]]
-   - open the Msys2-mingw64 terminal
-   - install the dependencies with
-   #+begin_src shell
-   pacman -Syyu
-   pacman -S mingw-w64-x86_64-rust mingw-w64-x86_64-clang mingw-w64-x86_64-hdf5 mingw-w64-x86_64-python \
-             mingw-w64-x86_64-python-matplotlib mingw-w64-x86_64-python-scipy mingw-w64-x86_64-pyside6
-             
-   #+end_src
-   - than you have to define the following environment variables to point the hdf5 libraries and headers.
-     For example in powershell:
-   #+begin_src shell
-   HDF5_LIB_DIR = "D:/msys64/mingw64/lib";
-   HDF5_INCLUDE_DIR = "D:/msys64/mingw64/include";
-   #+end_src
-   to point to the hdf5 library binaries and include
-   - in the end you should be able to build the library with
-   #+begin_src shell
-   cargo build
-   #+end_src
-   and lunch the GUI with
-   #+begin_src shell
-   python ./pycode/main.py
-   #+end_src
+To build the library you'll need:
+*** the *rust* toolchain installed: [[https://www.rust-lang.org/tools/install][Rust download]]
+*** the llvm toolchain installed (for bindgen automatic bindings generation)
+**** Windows 
+#+begin_src shell
+  winget install -e --id LLVM.LLVM
+#+end_src
+**** Linux
+it depends on you distro
+*** *python*
+**** Windows
+#+begin_src shell
+  winget install -e --id Python.Python.3.11
+#+end_src
+*** *hdf5* library
+[[https://github.com/HDFGroup/hdf5/releases/latest][hdf5 download]]
