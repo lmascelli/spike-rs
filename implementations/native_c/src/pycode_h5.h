@@ -86,6 +86,11 @@ typedef enum phaseh5_error {
   PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL,
   PEAK_TRAIN_LEN_GET_SAMPLES_DATASPACE_DIM_FAIL,
   PEAK_TRAIN_LEN_VALUES_SAMPLES_DIFFERENT,
+  PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL,
+  PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL,
+  PEAK_TRAIN_CREATE_MEMORY_DATASPACE_FAIL,
+  PEAK_TRAIN_READ_VALUES_DATASET_FAIL,
+  PEAK_TRAIN_READ_SAMPLES_DATASET_FAIL,
 } phaseh5_error;
 
 typedef struct InfoChannel {
@@ -169,6 +174,6 @@ phaseh5_error digital(PhaseH5* phase, size_t start, size_t end, int* buf);
 phaseh5_error set_digital(PhaseH5* phase, size_t start, size_t end, int* buf);
 phaseh5_error events_len(PhaseH5* phase, size_t index, hsize_t *len);
 phaseh5_error events(PhaseH5* phase, size_t index, long int *buf);
-phaseh5_error peak_train_len(PhaseH5*, const char* label, long int *len);
+phaseh5_error peak_train_len(PhaseH5*, const char* label, size_t *len);
 phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train);
 phaseh5_error set_peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train);

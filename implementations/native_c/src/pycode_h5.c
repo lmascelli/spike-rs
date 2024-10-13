@@ -741,7 +741,7 @@ phaseh5_error open_peak_train_datasets(PhaseH5* phase, const char* label, hid_t*
   return OK;
 }
 
-phaseh5_error peak_train_len(PhaseH5* phase, const char* label, long int *len) {
+phaseh5_error peak_train_len(PhaseH5* phase, const char* label, size_t *len) {
   hid_t values_ds;
   hid_t samples_ds;
   herr_t res = open_peak_train_datasets(phase, label, &values_ds, &samples_ds);
@@ -792,5 +792,42 @@ phaseh5_error peak_train_len(PhaseH5* phase, const char* label, long int *len) {
 }
 
 phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train) {
+  // Open peak dataset
+  hid_t values_ds;
+  hid_t samples_ds;
+  herr_t res = open_peak_train_datasets(phase, label, &values_ds, &samples_ds);
+  if (res != OK) {
+    return res;
+  }
+
+  // Create memory dataspace
+  hsize_t n_spikes[1] = {peak_train->n_peaks};
+  
+  hid_t memory_dataspace = H5Screate_simple(1, n_spikes, NULL);
+  if (memory_dataspace <= 0) {
+    return PEAK_TRAIN_CREATE_MEMORY_DATASPACE_FAIL;
+  }
+
+  // Read the datasets
+  res = H5Dread(values_ds, H5T_FLOAT, memory_dataspace, H5S_ALL, H5P_DEFAULT, peak_train->values);
+  if (res < 0) {
+    return PEAK_TRAIN_READ_VALUES_DATASET_FAIL;
+  }
+  res = H5Dread(samples_ds, H5T_FLOAT, memory_dataspace, H5S_ALL, H5P_DEFAULT, peak_train->samples);
+  if (res < 0) {
+    return PEAK_TRAIN_READ_SAMPLES_DATASET_FAIL;
+  }
+
+  // Close the datasets
+  res = H5Dclose(values_ds);
+  if (res < 0) {
+    return PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL;
+  }
+
+  res = H5Dclose(samples_ds);
+  if (res < 0) {
+    return PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL;
+  }
+
   return OK;
 }

@@ -99,6 +99,9 @@ pub enum Error {
     PeakTrainLenValuesSamplesDifferent,
     PeakTrainLenCloseValuesDataset,
     PeakTrainLenCloseSamplesDataset,
+    PeakTrainCreateMemoryDataspace,
+    PeakTrainReadValuesDataset,
+    PeakTrainReadSamplesDataset,
 }
 
 impl std::fmt::Display for Error {
@@ -192,7 +195,24 @@ impl Error {
             sys::phaseh5_error_PEAK_TRAIN_LEN_VALUES_SAMPLES_DIFFERENT => Err(Error::PeakTrainLenValuesSamplesDifferent),
             sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
             sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainLenCloseSamplesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::PeakTrainCreateMemoryDataspace),
+            sys::phaseh5_error_PEAK_TRAIN_READ_VALUES_DATASET_FAIL => Err(Error::PeakTrainReadValuesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_READ_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainReadSamplesDataset),
             _ => Err(Error::ErrorNotYetConverted),
+        }
+    }
+}
+
+pub struct PeakTrain {
+    samples: Vec<usize>,
+    values: Vec<f32>,
+}
+
+impl PeakTrain {
+    pub fn new(len: usize) -> Self {
+        PeakTrain {
+            samples: vec![0; len],
+            values: vec![0f32; len],
         }
     }
 }
@@ -419,14 +439,17 @@ impl Phase {
 
     pub fn peak_train_len(&self, label: &str) -> usize {
         let label_c = CString::new(label).expect("peak_train_len: Failed to convert the CStr");
-        let mut len = 0i64;
+        let mut len = 0usize;
         let res = unsafe { sys::peak_train_len(phase_ptr!(self), label_c.as_ptr(), &mut len as *mut _) };
 
         match Error::from_phaseh5_error(res) {
             Ok(()) => len.try_into().unwrap(),
-            Err(err) => { panic!("{err:?}"); },
+            Err(err) => { panic!("peak_train_len: {err:?}"); },
         } 
+    }
 
+    pub fn peak_train(&self, label: &str) -> (Vec<usize>, Vec<f32>) {
+        todo!()
     }
 }
 
