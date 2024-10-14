@@ -108,6 +108,10 @@ pub enum Error {
     PeakTrainCreateMemoryDataspace,
     PeakTrainReadValuesDataset,
     PeakTrainReadSamplesDataset,
+    SetPeakTrainCreateSamplesMemoryDataspace,
+    SetPeakTrainCreateValuesMemoryDataspace,
+    SetPeakTrainCreateSamplesMemoryDataset,
+    SetPeakTrainCreateValuesMemoryDataset,
 }
 
 impl std::fmt::Display for Error {
@@ -210,6 +214,10 @@ impl Error {
             sys::phaseh5_error_PEAK_TRAIN_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::PeakTrainCreateMemoryDataspace),
             sys::phaseh5_error_PEAK_TRAIN_READ_VALUES_DATASET_FAIL => Err(Error::PeakTrainReadValuesDataset),
             sys::phaseh5_error_PEAK_TRAIN_READ_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainReadSamplesDataset),
+            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_SAMPLES_MEMORY_DATASPACE_FAIL => Err(Error::SetPeakTrainCreateSamplesMemoryDataspace),
+            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_VALUES_MEMORY_DATASPACE_FAIL => Err(Error::SetPeakTrainCreateValuesMemoryDataspace),
+            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_SAMPLES_MEMORY_DATASET_FAIL => Err(Error::SetPeakTrainCreateSamplesMemoryDataset),
+            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_VALUES_MEMORY_DATASET_FAIL => Err(Error::SetPeakTrainCreateValuesMemoryDataset),
             _ => Err(Error::ErrorNotYetConverted),
         }
     }
