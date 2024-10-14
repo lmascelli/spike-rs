@@ -1,3 +1,6 @@
+$env:HDF5_INCLUDE_DIR = "/home/leonardo/Documents/unige/hdf5/1.14.5/include"
+$env:HDF5_LIB_DIR = "/home/leonardo/Documents/unige/hdf5/1.14.5/lib"
+
 $Script:HelpText = @"
 ================================================================================
 spike-rs build.ps1
@@ -47,6 +50,9 @@ if ($IsWindows) {
 
 if ($IsLinux) {
   switch ($args[0]) {
+    "run" {
+      cargo run
+    }
     default {
       Write-Host $Script:HelpText
     }

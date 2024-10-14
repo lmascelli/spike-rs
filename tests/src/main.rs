@@ -10,7 +10,6 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let labels = phase.labels();
 
     for label in labels {
-        println!("{} -> {}", label, phase.peak_train_len(&label));
     }
 
     spike_c_close();

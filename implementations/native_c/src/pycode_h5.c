@@ -741,6 +741,49 @@ phaseh5_error open_peak_train_datasets(PhaseH5* phase, const char* label, hid_t*
   return OK;
 }
 
+phaseh5_error delete_peak_train(PhaseH5* phase, const char* label) {
+  // Get the path of peak train datasets of that label
+  hsize_t values_len;
+  hsize_t samples_len;
+
+  size_t peaks_group_str_len = sizeof("/Data/Recording_0/Peak_Train/")/sizeof(char) + strlen(label);
+  size_t values_group_str_len = peaks_group_str_len + sizeof("/values")/sizeof(char);
+  size_t samples_group_str_len = peaks_group_str_len + sizeof("/samples")/sizeof(char);
+
+  char values_group_str[values_group_str_len];
+  char samples_group_str[samples_group_str_len];
+  
+  sprintf(values_group_str, "/Data/Recording_0/Peak_Train/%s/values", label);
+  sprintf(samples_group_str, "/Data/Recording_0/Peak_Train/%s/samples", label);
+
+  // Check if those links exist
+  herr_t res = H5Lexists(phase->fid, values_group_str, H5P_DEFAULT);
+  if (res < 0) {
+    return DELETE_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL;
+  } else if (res == 0) {
+    return DELETE_PEAK_TRAIN_NO_VALUES_DATASET;
+  } 
+
+  res = H5Lexists(phase->fid, samples_group_str, H5P_DEFAULT);
+  if (res < 0 ) {
+    return DELETE_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL;
+  } else if (res == 0) {
+    return DELETE_PEAK_TRAIN_NO_SAMPLES_DATASET;
+  }
+
+  res = H5Ldelete(phase->fid, values_group_str, H5P_DEFAULT);
+  if (res < 0) {
+    return DELETE_PEAK_TRAIN_VALUES_DATASET_FAIL;
+  }
+
+  res = H5Ldelete(phase->fid, samples_group_str, H5P_DEFAULT);
+  if (res < 0) {
+    return DELETE_PEAK_TRAIN_SAMPLES_DATASET_FAIL;
+  }
+
+  return OK;
+}
+
 phaseh5_error peak_train_len(PhaseH5* phase, const char* label, size_t *len) {
   hid_t values_ds;
   hid_t samples_ds;
@@ -809,11 +852,11 @@ phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_trai
   }
 
   // Read the datasets
-  res = H5Dread(values_ds, H5T_FLOAT, memory_dataspace, H5S_ALL, H5P_DEFAULT, peak_train->values);
+  res = H5Dread(values_ds, H5T_NATIVE_FLOAT, memory_dataspace, H5S_ALL, H5P_DEFAULT, peak_train->values);
   if (res < 0) {
     return PEAK_TRAIN_READ_VALUES_DATASET_FAIL;
   }
-  res = H5Dread(samples_ds, H5T_FLOAT, memory_dataspace, H5S_ALL, H5P_DEFAULT, peak_train->samples);
+  res = H5Dread(samples_ds, H5T_NATIVE_ULONG, memory_dataspace, H5S_ALL, H5P_DEFAULT, peak_train->samples);
   if (res < 0) {
     return PEAK_TRAIN_READ_SAMPLES_DATASET_FAIL;
   }
@@ -828,6 +871,29 @@ phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_trai
   if (res < 0) {
     return PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL;
   }
+
+  return OK;
+}
+
+phaseh5_error set_peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train) {
+  // Open peak dataset
+  hid_t values_ds;
+  hid_t samples_ds;
+  herr_t res = open_peak_train_datasets(phase, label, &values_ds, &samples_ds);
+  if (res != OK) {
+    return res;
+  }
+
+  // Delete old dataspaces (maybe close the identifiers)
+  res = delete_peak_train(phase, label);
+
+  // Create memory dataspace for the new values
+
+  // Create the new datasets
+
+  // Write the new values
+
+  // Close the datasets
 
   return OK;
 }

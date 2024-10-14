@@ -92,6 +92,12 @@ pub enum Error {
     PeakTrainNoSamplesDataset,
     PeakTrainOpenValuesDataset,
     PeakTrainOpenSamplesDataset,
+    DeletePeakTrainValuesDatasetLink,
+    DeletePeakTrainNoValuesDataset,
+    DeletePeakTrainSamplesDatasetLink,
+    DeletePeakTrainNoSamplesDataset,
+    DeletePeakTrainValuesDataset,
+    DeletePeakTrainSamplesDataset,
     PeakTrainLenOpenValuesDataspace,
     PeakTrainLenGetValuesDataspace,
     PeakTrainLenOpenSamplesDataspace,
@@ -187,8 +193,14 @@ impl Error {
             sys::phaseh5_error_PEAK_TRAIN_NO_SAMPLES_DATASET => Err(Error::PeakTrainNoSamplesDataset),
             sys::phaseh5_error_PEAK_TRAIN_OPEN_VALUES_DATASET_FAIL => Err(Error::PeakTrainOpenValuesDataset),
             sys::phaseh5_error_PEAK_TRAIN_OPEN_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainOpenSamplesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenValuesDataspace), //
-            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenSamplesDataspace), //
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL => Err(Error::DeletePeakTrainValuesDatasetLink),
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_NO_VALUES_DATASET => Err(Error::DeletePeakTrainNoValuesDataset),
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL => Err(Error::DeletePeakTrainSamplesDatasetLink),
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_NO_SAMPLES_DATASET => Err(Error::DeletePeakTrainNoSamplesDataset),
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_VALUES_DATASET_FAIL => Err(Error::DeletePeakTrainValuesDataset),
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_SAMPLES_DATASET_FAIL => Err(Error::DeletePeakTrainSamplesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenValuesDataspace),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenSamplesDataspace),
             sys::phaseh5_error_PEAK_TRAIN_LEN_GET_VALUES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetValuesDataspace),
             sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenSamplesDataspace),
             sys::phaseh5_error_PEAK_TRAIN_LEN_GET_SAMPLES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetSamplesDataspace),
@@ -204,7 +216,7 @@ impl Error {
 }
 
 pub struct PeakTrain {
-    samples: Vec<usize>,
+    samples: Vec<i64>,
     values: Vec<f32>,
 }
 
@@ -215,6 +227,18 @@ impl PeakTrain {
             values: vec![0f32; len],
         }
     }
+
+    pub fn as_c_repr(&mut self) -> sys::PeakTrain {
+        sys::PeakTrain {
+            n_peaks: self.samples.len(),
+            samples: self.samples.as_mut_ptr(),
+            values: self.values.as_mut_ptr(),
+        }
+    }
+}
+
+macro_rules! peak_train_ptr {
+    ($p:ident) => (&mut$p as *mut sys::PeakTrain)
 }
 
 pub struct Phase {
@@ -448,8 +472,24 @@ impl Phase {
         } 
     }
 
-    pub fn peak_train(&self, label: &str) -> (Vec<usize>, Vec<f32>) {
-        todo!()
+    pub fn peak_train(&self, label: &str) -> (Vec<i64>, Vec<f32>) {
+        let label_c = CString::new(label).expect("peak_train_len: Failed to convert the CStr");
+        let peak_train_len = self.peak_train_len(label);
+        let mut peak_train = PeakTrain::new(peak_train_len);
+        let mut peak_train_c = peak_train.as_c_repr();
+        let res = unsafe {
+            sys::peak_train(phase_ptr!(self), label_c.as_ptr(), peak_train_ptr!(peak_train_c))
+        };
+        match Error::from_phaseh5_error(res) {
+            Ok(()) => (peak_train.samples, peak_train.values),
+            Err(err) => {
+                panic!("{err}");
+            }
+        }
+    }
+
+    pub fn set_peak_train(&mut self, label: &str, peak_train: &PeakTrain) {
+        
     }
 }
 
