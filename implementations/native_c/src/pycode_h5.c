@@ -762,6 +762,11 @@ phaseh5_error peak_train_len(PhaseH5* phase, const char* label, size_t *len) {
     return PEAK_TRAIN_LEN_GET_VALUES_DATASPACE_DIM_FAIL;
   }
 
+  res = H5Sclose(values_dataspace);
+  if (res < 0) {
+    return PEAK_TRAIN_LEN_CLOSE_VALUES_DATASPACE_FAIL;
+  }
+
   hid_t samples_dataspace = H5Dget_space(samples_ds);
   if (samples_dataspace <= 0) {
     return PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL;
@@ -770,6 +775,11 @@ phaseh5_error peak_train_len(PhaseH5* phase, const char* label, size_t *len) {
   res = H5Sget_simple_extent_dims(samples_dataspace, samples_len, NULL);
   if (res < 0) {
     return PEAK_TRAIN_LEN_GET_SAMPLES_DATASPACE_DIM_FAIL;
+  }
+
+  res = H5Sclose(samples_dataspace);
+  if (res < 0) {
+    return PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASPACE_FAIL;
   }
 
   if (values_len[0] != samples_len[0]) {
@@ -818,15 +828,20 @@ phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_trai
     return PEAK_TRAIN_READ_SAMPLES_DATASET_FAIL;
   }
 
-  // Close the datasets
+  // Close the opened identifiers
+  res = H5Sclose(memory_dataspace);
+  if (res < 0) {
+    return PEAK_TRAIN_CLOSE_MEMORY_DATASPACE_FAIL;
+  }
+
   res = H5Dclose(values_ds);
   if (res < 0) {
-    return PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL;
+    return PEAK_TRAIN_CLOSE_VALUES_DATASET_FAIL;
   }
 
   res = H5Dclose(samples_ds);
   if (res < 0) {
-    return PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL;
+    return PEAK_TRAIN_CLOSE_SAMPLES_DATASET_FAIL;
   }
 
   return OK;
@@ -882,8 +897,28 @@ phaseh5_error set_peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_
     return DELETE_PEAK_TRAIN_SAMPLES_DATASET_FAIL;
   }
 
+  res = H5Dclose(values_ds);
+  if (res < 0) {
+    return SET_PEAK_TRAIN_CLOSE_DELETED_VALUES_DATASET_FAIL;
+  }
+
+  res = H5Dclose(samples_ds);
+  if (res < 0) {
+    return SET_PEAK_TRAIN_CLOSE_DELETED_SAMPLES_DATASET_FAIL;
+  }
+
   // Create memory dataspace for the new values
   hsize_t memory_len[] = { peak_train->n_peaks };
+  hid_t samples_file_dataspace = H5Screate_simple(1, memory_len, NULL);
+  if (samples_file_dataspace <= 0) {
+    return SET_PEAK_TRAIN_CREATE_SAMPLES_FILE_DATASPACE_FAIL;
+  }
+
+  hid_t values_file_dataspace = H5Screate_simple(1, memory_len, NULL);
+  if (values_file_dataspace <= 0) {
+    return SET_PEAK_TRAIN_CREATE_VALUES_FILE_DATASPACE_FAIL;
+  }
+
   hid_t samples_memory_dataspace = H5Screate_simple(1, memory_len, NULL);
   if (samples_memory_dataspace <= 0) {
     return SET_PEAK_TRAIN_CREATE_SAMPLES_MEMORY_DATASPACE_FAIL;
@@ -898,28 +933,66 @@ phaseh5_error set_peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_
   hid_t new_samples_dataset = H5Dcreate2(phase->fid,
                                  samples_group_str,
                                  H5T_NATIVE_ULONG,
-                                 samples_memory_dataspace,
+                                 samples_file_dataspace,
                                  H5P_DEFAULT,
                                  H5P_DEFAULT,
                                  H5P_DEFAULT);
   if (new_samples_dataset <= 0) {
-    return SET_PEAK_TRAIN_CREATE_SAMPLES_MEMORY_DATASET_FAIL;
+    return SET_PEAK_TRAIN_CREATE_SAMPLES_FILE_DATASET_FAIL;
   }
 
-  hid_t new_values_dataset= H5Dcreate2(phase->fid,
+  hid_t new_values_dataset = H5Dcreate2(phase->fid,
                                  values_group_str,
                                  H5T_NATIVE_FLOAT,
-                                 values_memory_dataspace,
+                                 values_file_dataspace,
                                  H5P_DEFAULT,
                                  H5P_DEFAULT,
                                  H5P_DEFAULT);
   if (new_values_dataset <= 0) {
-    return SET_PEAK_TRAIN_CREATE_VALUES_MEMORY_DATASET_FAIL;
+    return SET_PEAK_TRAIN_CREATE_VALUES_FILE_DATASET_FAIL;
   }
 
   // Write the new values
+  res = H5Dwrite(new_samples_dataset, H5T_NATIVE_ULONG, samples_file_dataspace, samples_memory_dataspace, H5P_DEFAULT, peak_train->samples);
+  if (res < 0) {
+    return SET_PEAK_TRAIN_WRITE_SAMPLES_DATASET_FAIL;
+  }
 
-  // Close the datasets
+  res = H5Dwrite(new_values_dataset, H5T_NATIVE_FLOAT, values_file_dataspace, values_memory_dataspace, H5P_DEFAULT, peak_train->values);
+  if (res < 0) {
+    return SET_PEAK_TRAIN_WRITE_VALUES_DATASET_FAIL;
+  }
+
+  // Close the opened identifiers
+  res = H5Sclose(samples_file_dataspace);
+  if (res < 0) {
+    return SET_PEAK_TRAIN_CLOSE_SAMPLES_FILE_DATASPACE_FAIL;
+  }
+
+  res = H5Sclose(values_file_dataspace);
+  if (res < 0) {
+    return SET_PEAK_TRAIN_CLOSE_VALUES_FILE_DATASPACE_FAIL;
+  }
+
+  res = H5Sclose(samples_memory_dataspace);
+  if (res < 0) {
+    return SET_PEAK_TRAIN_CLOSE_SAMPLES_MEMORY_DATASPACE_FAIL;
+  }
+
+  res = H5Sclose(values_memory_dataspace);
+  if (res < 0) {
+    return SET_PEAK_TRAIN_CLOSE_VALUES_MEMORY_DATASPACE_FAIL;
+  }
+
+  res = H5Dclose(new_samples_dataset);
+  if (res < 0) {
+    return SET_PEAK_TRAIN_CLOSE_SAMPLES_DATASET_FAIL;
+  }
+
+  res = H5Dclose(new_values_dataset);
+  if (res < 0) {
+    return SET_PEAK_TRAIN_CLOSE_VALUES_DATASET_FAIL;
+  }
 
   return OK;
 }
