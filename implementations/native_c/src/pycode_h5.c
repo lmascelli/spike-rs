@@ -4,7 +4,12 @@
 #include <stdlib.h>
 
 hid_t InfoChannelMemoryType;
-hid_t InfoChannelStringType;
+hid_t HDF5StringType;
+hid_t HDF5IntType;
+hid_t HDF5LongType;
+hid_t HDF5ULongType;
+hid_t HDF5LLongType;
+hid_t HDF5FloatType;
 
 #define CAST(X, Y) (Y)(X)
 
@@ -14,33 +19,38 @@ hid_t InfoChannelStringType;
 void pycodeh5_init() {
   H5open();
   InfoChannelMemoryType = H5Tcreate(H5T_COMPOUND, sizeof(InfoChannel));
-  InfoChannelStringType = H5Tcopy(H5T_C_S1);
-  H5Tset_size(InfoChannelStringType, SIZE_MAX);
-  H5Tset_strpad(InfoChannelStringType, H5T_STR_NULLPAD);
-  H5Tset_cset(InfoChannelStringType, H5T_CSET_ASCII);
+  HDF5StringType = H5Tcopy(H5T_C_S1);
+  H5Tset_size(HDF5StringType, SIZE_MAX);
+  H5Tset_strpad(HDF5StringType, H5T_STR_NULLPAD);
+  H5Tset_cset(HDF5StringType, H5T_CSET_ASCII);
   H5Tinsert(InfoChannelMemoryType, "ChannelID\0", offsetof(InfoChannel, channel_id), H5T_NATIVE_INT);
   H5Tinsert(InfoChannelMemoryType, "RowIndex\0", offsetof(InfoChannel, row_index), H5T_NATIVE_INT);
   H5Tinsert(InfoChannelMemoryType, "GroupId\0", offsetof(InfoChannel, group_id), H5T_NATIVE_INT);
   H5Tinsert(InfoChannelMemoryType, "ElectrodeGroup\0", offsetof(InfoChannel, electrode_group), H5T_NATIVE_INT);
-  H5Tinsert(InfoChannelMemoryType, "Label\0", offsetof(InfoChannel, label), InfoChannelStringType); 
-  H5Tinsert(InfoChannelMemoryType, "RawDataType\0", offsetof(InfoChannel, raw_data_type), InfoChannelStringType); 
-  H5Tinsert(InfoChannelMemoryType, "Unit\0", offsetof(InfoChannel, unit), InfoChannelStringType); 
+  H5Tinsert(InfoChannelMemoryType, "Label\0", offsetof(InfoChannel, label), HDF5StringType); 
+  H5Tinsert(InfoChannelMemoryType, "RawDataType\0", offsetof(InfoChannel, raw_data_type), HDF5StringType); 
+  H5Tinsert(InfoChannelMemoryType, "Unit\0", offsetof(InfoChannel, unit), HDF5StringType); 
   H5Tinsert(InfoChannelMemoryType, "Exponent\0", offsetof(InfoChannel, exponent), H5T_NATIVE_INT);
   H5Tinsert(InfoChannelMemoryType, "AdZero\0", offsetof(InfoChannel, ad_zero), H5T_NATIVE_INT);
   H5Tinsert(InfoChannelMemoryType, "Tick\0", offsetof(InfoChannel, tick), H5T_NATIVE_LLONG);
   H5Tinsert(InfoChannelMemoryType, "ConversionFactor\0", offsetof(InfoChannel, conversion_factor), H5T_NATIVE_LLONG);
   H5Tinsert(InfoChannelMemoryType, "ADCBits\0", offsetof(InfoChannel, adc_bits), H5T_NATIVE_INT);
-  H5Tinsert(InfoChannelMemoryType, "HighPassFilterType\0", offsetof(InfoChannel, high_pass_filter_type), InfoChannelStringType); 
-  H5Tinsert(InfoChannelMemoryType, "HighPassFilterCutOff\0", offsetof(InfoChannel, high_pass_filter_cutoff), InfoChannelStringType); 
+  H5Tinsert(InfoChannelMemoryType, "HighPassFilterType\0", offsetof(InfoChannel, high_pass_filter_type), HDF5StringType); 
+  H5Tinsert(InfoChannelMemoryType, "HighPassFilterCutOff\0", offsetof(InfoChannel, high_pass_filter_cutoff), HDF5StringType); 
   H5Tinsert(InfoChannelMemoryType, "HighPassFilterOrder\0", offsetof(InfoChannel, high_pass_filter_order), H5T_NATIVE_INT);
-  H5Tinsert(InfoChannelMemoryType, "LowPassFilterType\0", offsetof(InfoChannel, low_pass_filter_type), InfoChannelStringType); 
-  H5Tinsert(InfoChannelMemoryType, "LowPassFilterCutOff\0", offsetof(InfoChannel, low_pass_filter_cutoff), InfoChannelStringType); 
+  H5Tinsert(InfoChannelMemoryType, "LowPassFilterType\0", offsetof(InfoChannel, low_pass_filter_type), HDF5StringType); 
+  H5Tinsert(InfoChannelMemoryType, "LowPassFilterCutOff\0", offsetof(InfoChannel, low_pass_filter_cutoff), HDF5StringType); 
   H5Tinsert(InfoChannelMemoryType, "LowPassFilterOrder\0", offsetof(InfoChannel, low_pass_filter_order), H5T_NATIVE_INT);
 }
 
 void pycodeh5_close() {
   H5Tclose(InfoChannelMemoryType);
-  H5Tclose(InfoChannelStringType);
+  H5Tclose(HDF5StringType);
+  // H5Tclose(HDF5IntType);
+  // H5Tclose(HDF5LongType);
+  // H5Tclose(HDF5ULongType);
+  // H5Tclose(HDF5LLongType);
+  // H5Tclose(HDF5FloatType);
 }
 
 //==============================================================================
@@ -608,8 +618,6 @@ phaseh5_error set_digital(PhaseH5* phase, size_t start, size_t end, const int *b
 
   hsize_t s_start[] = {0, start};
   hsize_t s_count[] = {1, end-start};
-
-  printf("index: %ld\nstart: %ld\nend: %ld\n", index, start, end);
 
   // set the subspace of the dataspace where to write
   herr_t res = H5Sselect_hyperslab(channel_data_dataspace, H5S_SELECT_SET,
