@@ -13,14 +13,6 @@ mod sys {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
-pub fn spike_c_init() {
-    unsafe { sys::pycodeh5_init() };
-}
-
-pub fn spike_c_close() {
-    unsafe { sys::pycodeh5_close() };
-}
-
 #[derive(Debug)]
 pub enum Error {
     ErrorNotYetConverted(i32),
@@ -245,6 +237,14 @@ impl Error {
             _ => Err(Error::ErrorNotYetConverted(code.try_into().unwrap())),
         }
     }
+}
+
+pub fn spike_c_init() -> Result<(), Error> {
+    Ok(Error::from_phaseh5_error(unsafe { sys::pycodeh5_init() })?)
+}
+
+pub fn spike_c_close() {
+    unsafe { sys::pycodeh5_close() };
 }
 
 pub struct PeakTrain {

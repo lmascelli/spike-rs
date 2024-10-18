@@ -7,17 +7,25 @@ use spike_rs::{
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let filename = "/home/leonardo/Documents/unige/data/test.h5";
     
-    spike_c_init();
+    match spike_c_init() {
+        Ok(()) => {
+            println!("OK");
+            let mut phase = Phase::open(filename)?;
 
-    let mut phase = Phase::open(filename)?;
+            let labels = phase.labels();
+            for label in labels {
+                println!("{label}");
+            }
 
-    let labels = phase.labels();
-    for label in labels {
-        println!("{label}");
+            println!("{}", phase.datalen());
+            println!("{}", phase.sampling_frequency());
+
+            spike_c_close();
+            Ok(())
+        },
+        Err(err) => {
+            println!("{err:?}");
+            Ok(())
+        }
     }
-    println!("{}", phase.datalen());
-    println!("{}", phase.sampling_frequency());
-
-    spike_c_close();
-    Ok(())
 }

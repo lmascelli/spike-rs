@@ -18,6 +18,11 @@
 
 typedef enum phaseh5_error {
   OK,
+
+  // pycodeh5_init
+
+  INIT_CREATE_STRING_TYPE_FAIL,
+
   OPEN_FAIL,
   CLOSE_FILE_FAIL,
   OPEN_DATA_GROUP_FAIL,
@@ -185,7 +190,7 @@ typedef struct PhaseH5 {
   Initialize the library creating the needed custom datatypes.
   To be called at the start of its use.
  */
-void pycodeh5_init();
+phaseh5_error pycodeh5_init();
 
 /*
   Finalize the library deleting the created handles.

@@ -5,18 +5,13 @@
 
 hid_t InfoChannelMemoryType;
 hid_t HDF5StringType;
-hid_t HDF5IntType;
-hid_t HDF5LongType;
-hid_t HDF5ULongType;
-hid_t HDF5LLongType;
-hid_t HDF5FloatType;
 
 #define CAST(X, Y) (Y)(X)
 
 //==============================================================================
 //                      LIBRARY INITIALIZATION AND CLOSING
 //==============================================================================
-void pycodeh5_init() {
+phaseh5_error pycodeh5_init() {
   H5open();
   InfoChannelMemoryType = H5Tcreate(H5T_COMPOUND, sizeof(InfoChannel));
   HDF5StringType = H5Tcopy(H5T_C_S1);
@@ -41,16 +36,13 @@ void pycodeh5_init() {
   H5Tinsert(InfoChannelMemoryType, "LowPassFilterType\0", offsetof(InfoChannel, low_pass_filter_type), HDF5StringType); 
   H5Tinsert(InfoChannelMemoryType, "LowPassFilterCutOff\0", offsetof(InfoChannel, low_pass_filter_cutoff), HDF5StringType); 
   H5Tinsert(InfoChannelMemoryType, "LowPassFilterOrder\0", offsetof(InfoChannel, low_pass_filter_order), H5T_NATIVE_INT);
+
+  return OK;
 }
 
 void pycodeh5_close() {
   H5Tclose(InfoChannelMemoryType);
   H5Tclose(HDF5StringType);
-  // H5Tclose(HDF5IntType);
-  // H5Tclose(HDF5LongType);
-  // H5Tclose(HDF5ULongType);
-  // H5Tclose(HDF5LLongType);
-  // H5Tclose(HDF5FloatType);
 }
 
 //==============================================================================
