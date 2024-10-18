@@ -266,6 +266,7 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
   }
 
   AnalogStream *analog_streams = (AnalogStream*)calloc(n_analogs, sizeof(AnalogStream));
+  // AnalogStream analog_streams[MAX_ANALOG_STREAMS] = {0};
   if (analog_streams == NULL) {
     return OPEN_ALLOCATE_ANALOGS_FAIL;
   }
@@ -377,7 +378,6 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
       return OPEN_EVENT_STREAM_STREAM_0_GROUP_LINK_FAIL;
     } else if (res == 0) {
       phase->n_events = 0;
-      printf("Here 2\n");
     } else {
       hid_t events_group = H5Gopen2(fid, "/Data/Recording_0/EventStream/Stream_0", H5P_DEFAULT);
       if (events_group <= 0) {
@@ -396,7 +396,6 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
 
       CallbackEventsRets events_rets;
       events_rets.current_index = 0;
-      printf("------> 1c\n");
       res = H5Literate2(events_group,
                         H5_INDEX_NAME,
                         H5_ITER_NATIVE,
@@ -432,7 +431,6 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
   } else {
     phase->peaks_group = true;
   }
-  printf("------> 2c\n");
 
   return OK;
 }
