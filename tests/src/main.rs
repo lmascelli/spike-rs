@@ -5,7 +5,7 @@ use spike_rs::{
 };
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let filename = "/home/leonardo/Documents/unige/data/test.h5";
+    let filename = "C:/Users/Leonardo/Desktop/18-07-2024/38927/raw/38927/2024-07-18T15-36-4438927_100E_DIV70_Stim70_0002_E-00155.h5";
     
     match spike_c_init() {
         Ok(()) => {

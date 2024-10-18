@@ -1,3 +1,7 @@
+#ifdef _WIN32
+#define H5_BUILT_AS_DYNAMIC_LIB
+#endif
+
 #include <hdf5.h>
 #define DATE_STRING_LEN 32
 #define ANALOG_LABEL_STRING_LEN 64

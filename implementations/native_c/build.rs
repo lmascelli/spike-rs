@@ -27,6 +27,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rustc-link-search=native={}", format!("{}/lib", native_c_location.display()));
     println!("cargo:rustc-link-lib=static={}", "pycode_h5");
     println!("cargo:rustc-link-search=native={}", format!("{hdf5_lib_dir}"));
-    println!("cargo:rustc-link-lib={}", "hdf5");
+    println!("cargo:rustc-link-lib=dylib={}", "hdf5");
     Ok(())
 }
