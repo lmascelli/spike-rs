@@ -23,7 +23,7 @@ pub fn spike_c_close() {
 
 #[derive(Debug)]
 pub enum Error {
-    ErrorNotYetConverted(u32),
+    ErrorNotYetConverted(i32),
     OpenFile,
     CloseFile,
     OpenDataGroup,
@@ -524,9 +524,9 @@ impl PhaseHandler for Phase {
         self.phase.n_events as usize
     }
 
-    fn events(&self, index: usize) -> Result<Vec<i64>, SpikeError> { 
+    fn events(&self, index: usize) -> Result<Vec<i32>, SpikeError> { 
         let len = self.events_len(index);
-        let mut data = vec![0i64; len];
+        let mut data = vec![0i32; len];
 
         let res = unsafe {
             sys::events(phase_ptr!(self), index, data.as_mut_ptr())
