@@ -76,7 +76,7 @@ pub trait PhaseHandler {
     fn n_events(&self) -> usize;
 
     /// Returns the selected events array, if exists.
-    fn events(&self, index: usize) -> Result<Vec<i32>, SpikeError>;
+    fn events(&self, index: usize) -> Result<Vec<i64>, SpikeError>;
 
     //--------------------------------------------------------------------------
     // PEAK TRAINS

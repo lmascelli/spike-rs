@@ -242,7 +242,7 @@ impl Error {
             sys::phaseh5_error_SET_PEAK_TRAIN_WRITE_VALUES_DATASET_FAIL => Err(Error::SetPeakTrainWriteValuesDataset),
             sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::SetPeakTrainCloseSamplesDataset),
             sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_VALUES_DATASET_FAIL => Err(Error::SetPeakTrainCloseValuesDataset),
-            _ => Err(Error::ErrorNotYetConverted(code)),
+            _ => Err(Error::ErrorNotYetConverted(code.try_into().unwrap())),
         }
     }
 }
@@ -524,9 +524,9 @@ impl PhaseHandler for Phase {
         self.phase.n_events as usize
     }
 
-    fn events(&self, index: usize) -> Result<Vec<i32>, SpikeError> { 
+    fn events(&self, index: usize) -> Result<Vec<i64>, SpikeError> { 
         let len = self.events_len(index);
-        let mut data = vec![0i32; len];
+        let mut data = vec![0i64; len];
 
         let res = unsafe {
             sys::events(phase_ptr!(self), index, data.as_mut_ptr())
@@ -536,7 +536,6 @@ impl PhaseHandler for Phase {
             Ok(()) => Ok(data),
             Err(err) => Err(err.into())
         }
-
     }
 
     fn peak_train(&self, label: &str, start: Option<usize>, end: Option<usize>) -> Result<(Vec<usize>, Vec<f32>), SpikeError> {
