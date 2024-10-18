@@ -1,5 +1,9 @@
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
+use spike_rs::{
+    error::SpikeError,
+    types::PhaseHandler,
+};
 
 mod sys {
     #![allow(non_upper_case_globals)]
@@ -19,7 +23,7 @@ pub fn spike_c_close() {
 
 #[derive(Debug)]
 pub enum Error {
-    ErrorNotYetConverted,
+    ErrorNotYetConverted(u32),
     OpenFile,
     CloseFile,
     OpenDataGroup,
@@ -98,13 +102,16 @@ pub enum Error {
     DeletePeakTrainNoSamplesDataset,
     DeletePeakTrainValuesDataset,
     DeletePeakTrainSamplesDataset,
+    PeakTrainLenOpenValuesDataset,
+    PeakTrainLenOpenSamplesDataset,
+    PeakTrainLenOpenSamplesDataspace,
     PeakTrainLenOpenValuesDataspace,
     PeakTrainLenGetValuesDataspace,
-    PeakTrainLenOpenSamplesDataspace,
     PeakTrainLenGetSamplesDataspace,
     PeakTrainLenValuesSamplesDifferent,
     PeakTrainLenCloseValuesDataset,
     PeakTrainLenCloseSamplesDataset,
+    PeakTrainLenCloseValuesDataspace,
     PeakTrainCreateMemoryDataspace,
     PeakTrainReadValuesDataset,
     PeakTrainReadSamplesDataset,
@@ -127,6 +134,12 @@ impl std::fmt::Display for Error {
     }
 }
 impl std::error::Error for Error {}
+
+impl From<Error> for SpikeError {
+    fn from(err: Error) -> Self {
+        SpikeError::Implementation(format!("{:?}", err))
+    }
+}
 
 impl Error {
     fn from_phaseh5_error(code: sys::phaseh5_error) -> Result<(), Self> {
@@ -209,16 +222,13 @@ impl Error {
             sys::phaseh5_error_DELETE_PEAK_TRAIN_NO_SAMPLES_DATASET => Err(Error::DeletePeakTrainNoSamplesDataset),
             sys::phaseh5_error_DELETE_PEAK_TRAIN_VALUES_DATASET_FAIL => Err(Error::DeletePeakTrainValuesDataset),
             sys::phaseh5_error_DELETE_PEAK_TRAIN_SAMPLES_DATASET_FAIL => Err(Error::DeletePeakTrainSamplesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenValuesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenSamplesDataspace),
             sys::phaseh5_error_PEAK_TRAIN_LEN_GET_VALUES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetValuesDataspace),
             sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenCloseValuesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenSamplesDataspace),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenValuesDataspace),
             sys::phaseh5_error_PEAK_TRAIN_LEN_GET_SAMPLES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetSamplesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenCloseValuesDataspace),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
             sys::phaseh5_error_PEAK_TRAIN_LEN_VALUES_SAMPLES_DIFFERENT => Err(Error::PeakTrainLenValuesSamplesDifferent),
             sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenCloseSamplesDataset),
             sys::phaseh5_error_PEAK_TRAIN_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::PeakTrainCreateMemoryDataspace),
             sys::phaseh5_error_PEAK_TRAIN_READ_VALUES_DATASET_FAIL => Err(Error::PeakTrainReadValuesDataset),
             sys::phaseh5_error_PEAK_TRAIN_READ_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainReadSamplesDataset),
@@ -232,13 +242,13 @@ impl Error {
             sys::phaseh5_error_SET_PEAK_TRAIN_WRITE_VALUES_DATASET_FAIL => Err(Error::SetPeakTrainWriteValuesDataset),
             sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::SetPeakTrainCloseSamplesDataset),
             sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_VALUES_DATASET_FAIL => Err(Error::SetPeakTrainCloseValuesDataset),
-            _ => Err(Error::ErrorNotYetConverted),
+            _ => Err(Error::ErrorNotYetConverted(code)),
         }
     }
 }
 
 pub struct PeakTrain {
-    samples: Vec<i64>,
+    samples: Vec<usize>,
     values: Vec<f32>,
 }
 
@@ -253,7 +263,7 @@ impl PeakTrain {
     pub fn as_c_repr(&mut self) -> sys::PeakTrain {
         sys::PeakTrain {
             n_peaks: self.samples.len(),
-            samples: self.samples.as_mut_ptr(),
+            samples: self.samples.as_mut_ptr().cast(),
             values: self.values.as_mut_ptr(),
         }
     }
@@ -264,9 +274,9 @@ macro_rules! peak_train_ptr {
 }
 
 pub struct Phase {
+    phase: sys::PhaseH5,
     pub filename: String,
     pub labels_map: HashMap<String, usize>,
-    phase: sys::PhaseH5,
 }
 
 macro_rules! phase_ptr  {
@@ -278,6 +288,7 @@ impl Phase {
         let mut phase = Self::default();
         phase.filename = filename.to_string();
         let cfilename = CString::new(filename).unwrap();
+
         let res = unsafe {
            sys::phase_open(
                 phase_ptr!(phase),
@@ -295,38 +306,11 @@ impl Phase {
                 }
                 Ok(phase)
             },
-            Err(err) => Err(err),
+            Err(err) => {
+                eprintln!("{err:?}");
+                Err(err)   
+            }
         }
-    }
-
-    pub fn datalen(&self) -> usize {
-        return self.phase.datalen;
-    }
-
-    pub fn sampling_frequency(&self) -> f32 {
-        return self.phase.sampling_frequency;
-    }
-
-    pub fn labels(&self) -> Vec<String> {
-        let mut ret = vec![];
-
-        for (label, _index) in &self.labels_map {
-            ret.push(label.clone());
-        }
-
-        ret
-    }
-
-    pub fn n_digitals(&self) -> usize {
-        if self.phase.has_digital {
-            1
-        } else {
-            0
-        }
-    }
-
-    pub fn n_events(&self) -> usize {
-        self.phase.n_events as usize
     }
 
     pub fn events_len(&self, index: usize) -> usize {
@@ -337,7 +321,43 @@ impl Phase {
         dims as usize
     }
 
-    pub fn raw_data(&self, label: &str, start: Option<usize>, end: Option<usize>) -> Vec<f32> {
+    pub fn peak_train_len(&self, label: &str) -> usize {
+        let label_c = CString::new(label).expect("peak_train_len: Failed to convert the CStr");
+        let mut len = 0usize;
+        let res = unsafe { sys::peak_train_len(phase_ptr!(self), label_c.as_ptr(), &mut len as *mut _) };
+
+        match Error::from_phaseh5_error(res) {
+            Ok(()) => len,
+            Err(err) => { panic!("peak_train_len: {err:?}"); },
+        } 
+    }
+}
+
+impl PhaseHandler for Phase {
+    fn sampling_frequency(&self) -> f32 {
+        return self.phase.sampling_frequency;
+    }
+
+    fn datalen(&self) -> usize {
+        return self.phase.datalen;
+    }
+
+    fn labels(&self) -> Vec<String> {
+        let mut ret = vec![];
+
+        for (label, _index) in &self.labels_map {
+            ret.push(label.clone());
+        }
+
+        ret
+    }
+
+    fn raw_data(
+        &self,
+        channel: &str,
+        start: Option<usize>,
+        end: Option<usize>
+    ) -> Result<Vec<f32>, SpikeError> {
         let actual_start = match start {
             Some(val) => val,
             None => 0,
@@ -348,13 +368,18 @@ impl Phase {
         };
 
         if actual_start >= actual_end {
-            panic!("raw_data: [start] is not before [end]");
+            return Err(SpikeError::RawDataStartIsAfterEnd);
         }
 
-        if !self.labels_map.contains_key(label) {
-            panic!("raw_data: Label not found");
+        if actual_end >= self.datalen() {
+            return Err(SpikeError::RawDataOutOfBounds);
         }
-        let index = self.labels_map[label];
+
+        if !self.labels_map.contains_key(channel) {
+            return Err(SpikeError::RawDataLabelNotFound);
+        }
+        
+        let index = self.labels_map[channel];
 
         let mut ret = vec![0; actual_end - actual_start];
         
@@ -366,80 +391,103 @@ impl Phase {
                     f32::powf(10f32, self.phase.raw_data.info_channels[index].exponent as f32);
                 let offset = self.phase.raw_data.info_channels[index].ad_zero;
 
-                ret.iter().map(|x| (*x - offset) as f32 * conversion_factor).collect()
+                Ok(ret.iter().map(|x| (*x - offset) as f32 * conversion_factor).collect())
             },
             Err(err) => {
-                println!("{:?}", err);
-                panic!("raw_data");
+                Err(err.into())
             }
         }
     }
 
-    pub fn set_raw_data(&mut self, label: &str, data: Vec<f32>, start: Option<usize>) {
+    fn set_raw_data(
+        &mut self,
+        channel: &str,
+        start: Option<usize>,
+        data: &[f32],
+    ) -> Result<(), SpikeError> {
         let actual_start = match start {
             Some(val) => val,
             None => 0,
         };
         
         let actual_end = actual_start + data.len();
+
         if actual_end >= self.datalen() {
-            panic!("set_raw_data: OutOfBounds");
+            return Err(SpikeError::SetRawDataOutOfBounds);
         }
 
-        if !self.labels_map.contains_key(label) {
-            panic!("set_raw_data: Label not found");
+        if !self.labels_map.contains_key(channel) {
+            return Err(SpikeError::SetRawDataLabelNotFound);
         }
-        let index = self.labels_map[label];
+
+        let index = self.labels_map[channel];
 
         let conversion_factor = self.phase.raw_data.info_channels[index].conversion_factor as f32 *
             f32::powf(10f32, self.phase.raw_data.info_channels[index].exponent as f32);
         let offset = self.phase.raw_data.info_channels[index].ad_zero;
-        let mut buf : Vec<i32> = data.iter().map(|x| (*x / conversion_factor) as i32 + offset).collect();
+        let buf : Vec<i32> = data.iter().map(|x| (*x / conversion_factor) as i32 + offset).collect();
 
         let res = unsafe {
-            sys::set_raw_data(phase_ptr!(self), index, actual_start, actual_end, buf.as_mut_ptr())
+            sys::set_raw_data(phase_ptr!(self), index, actual_start, actual_end, buf.as_ptr())
         };
 
-        match Error::from_phaseh5_error(res) {
-            Ok(()) => (),
-            Err(err) => {println!("{err:?}");}
+        Ok(Error::from_phaseh5_error(res)?)
+    }
+
+    fn n_digitals(&self) -> usize {
+        if self.phase.has_digital {
+            1
+        } else {
+            0
         }
     }
 
-    pub fn digital(&self, index: usize, start: Option<usize>, end: Option<usize>) -> Vec<f32> {
+    fn digital(
+        &self,
+        index: usize,
+        start: Option<usize>,
+        end: Option<usize>,
+    ) -> Result<Vec<f32>, SpikeError> {
         if index > 0 {
             panic!("digital: no more than one index can be processed atm");
         }
 
         if self.phase.has_digital == false {
-            panic!("digital: no digital present");
+            return Err(SpikeError::DigitalNoDigitalPresent);
         }
 
         let actual_start = match start {
             Some(val) => val,
             None => 0,
         };
+
         let actual_end = match end {
             Some(val) => val,
             None => self.datalen() - 2,
         };
 
         if actual_start >= actual_end {
-            panic!("raw_data: [start] is not before [end]");
+            return Err(SpikeError::DigitalStartIsAfterEnd);
         }
 
         let mut buf = vec![0f32; actual_end-actual_start];
 
         let res = unsafe { sys::digital(phase_ptr!(self), actual_start, actual_end, buf.as_mut_ptr().cast()) };
+
         match Error::from_phaseh5_error(res) {
-            Ok(()) => buf,
+            Ok(()) => Ok(buf),
             Err(err) => {
-                panic!("{}", err);
+                Err(err.into())
             }
         }
     }
 
-    pub fn set_digital(&self, index: usize, start: Option<usize>, mut data: Vec<f32>) -> Result<(), Error> {
+    fn set_digital(
+        &mut self,
+        index: usize,
+        start: Option<usize>,
+        data: &[f32],
+    ) -> Result<(), SpikeError> {
         if index > 0 {
             panic!("set_digital: no more than one index can be processed atm");
         }
@@ -462,39 +510,36 @@ impl Phase {
             panic!("set_digital: [start] is not before [end]");
         }
 
-        let res = unsafe { sys::set_digital(phase_ptr!(self), actual_start, actual_end, data.as_mut_ptr().cast()) };
+        let res = unsafe { sys::set_digital(phase_ptr!(self), actual_start, actual_end, data.as_ptr().cast()) };
 
         match Error::from_phaseh5_error(res) {
             Ok(()) => Ok(()),
             Err(err) => {
-                panic!("{}", err);
+                Err(err.into())
             }
         }
     }
 
-    pub fn events(&self, index: usize) -> Vec<i64> {
+    fn n_events(&self) -> usize {
+        self.phase.n_events as usize
+    }
+
+    fn events(&self, index: usize) -> Result<Vec<i64>, SpikeError> { 
         let len = self.events_len(index);
         let mut data = vec![0i64; len];
 
-        unsafe {
-            sys::events(phase_ptr!(self), index, data.as_mut_ptr());
+        let res = unsafe {
+            sys::events(phase_ptr!(self), index, data.as_mut_ptr())
+        };
+        
+        match Error::from_phaseh5_error(res) {
+            Ok(()) => Ok(data),
+            Err(err) => Err(err.into())
         }
 
-        data
     }
 
-    pub fn peak_train_len(&self, label: &str) -> usize {
-        let label_c = CString::new(label).expect("peak_train_len: Failed to convert the CStr");
-        let mut len = 0usize;
-        let res = unsafe { sys::peak_train_len(phase_ptr!(self), label_c.as_ptr(), &mut len as *mut _) };
-
-        match Error::from_phaseh5_error(res) {
-            Ok(()) => len.try_into().unwrap(),
-            Err(err) => { panic!("peak_train_len: {err:?}"); },
-        } 
-    }
-
-    pub fn peak_train(&self, label: &str) -> (Vec<i64>, Vec<f32>) {
+    fn peak_train(&self, label: &str, start: Option<usize>, end: Option<usize>) -> Result<(Vec<usize>, Vec<f32>), SpikeError> {
         let label_c = CString::new(label).expect("peak_train_len: Failed to convert the CStr");
         let peak_train_len = self.peak_train_len(label);
         let mut peak_train = PeakTrain::new(peak_train_len);
@@ -502,22 +547,29 @@ impl Phase {
         let res = unsafe {
             sys::peak_train(phase_ptr!(self), label_c.as_ptr(), peak_train_ptr!(peak_train_c))
         };
+
         match Error::from_phaseh5_error(res) {
-            Ok(()) => (peak_train.samples, peak_train.values),
+            Ok(()) => Ok((peak_train.samples, peak_train.values)),
             Err(err) => {
-                panic!("{err}");
+                Err(err.into())
             }
         }
     }
 
-    pub fn set_peak_train(&mut self, label: &str, peak_train: &PeakTrain) {
-        
+    fn set_peak_train(
+        &mut self,
+        channel: &str,
+        start: Option<usize>,
+        end: Option<usize>,
+        data: (Vec<usize>, Vec<f32>)
+    ) -> Result<(), SpikeError> {
+        todo!() 
     }
 }
 
 impl Drop for Phase {
     fn drop(&mut self) {
-        let _res = unsafe {
+        unsafe {
             sys::phase_close(phase_ptr!(self));
         };
     }

@@ -59,7 +59,6 @@ herr_t count_analogs_callback(hid_t group,
   *((int *)op_data) += 1;
   return 0;
 }
-//==============================================================================
 
 phaseh5_error open_analog(AnalogStream *analog_stream,
                            hid_t analog_stream_group) {
@@ -266,7 +265,11 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
     return res;
   }
 
-  AnalogStream analog_streams[n_analogs];
+  AnalogStream *analog_streams = (AnalogStream*)calloc(n_analogs, sizeof(AnalogStream));
+  if (analog_streams == NULL) {
+    return OPEN_ALLOCATE_ANALOGS_FAIL;
+  }
+
   CallbackAnalogsRets callback_ret = {
       .current_index = 0,
       .analog_streams = analog_streams,
@@ -278,16 +281,22 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
     return res;
   }
 
-  long raw_data_index = -1;
-  long digital_index = -1;
+  size_t raw_data_index;
+  size_t digital_index;
+  bool raw_data_set = false;
+  bool digital_set = false;
+
   float sampling_frequency = -1;
   long datalen = -1;
 
-  for (int i = 0; i<n_analogs; ++i) {
+  for (long int i = 0; i<n_analogs; ++i) {
     // test that there is only a raw data stream and only a digital stream
     // digital stream case
     if (analog_streams[i].n_channels == 1) {
-      if (digital_index == -1) digital_index = i;
+      if (digital_set == false) {
+        digital_index = i;
+        digital_set = true;
+      }
       else {
         return MULTIPLE_DIGITAL_STREAMS;
       }
@@ -299,7 +308,10 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
       }
     } else {
       // raw data stream case
-      if (raw_data_index == -1) raw_data_index = i;
+      if (raw_data_set == false) {
+        raw_data_index = i;
+        raw_data_set = true;
+      }
       else {
         return MULTIPLE_RAW_DATA_STREAMS; 
       }
@@ -314,6 +326,7 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
         }
       }
     }
+
     // test that all the channels have the same datalen
     if (datalen == -1) {
       datalen = analog_streams[i].datalen;
@@ -327,19 +340,22 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
   phase->datalen = datalen;
   phase->sampling_frequency = sampling_frequency;
 
-  if (raw_data_index == -1) {
+  // printf("raw DATA INDEX: %ld\nDIGITAL_INDEX: %ld\n", raw_data_index, digital_index);
+
+  if (raw_data_set == false) {
     return NO_RAW_DATA_STREAM;
   } else {
-    memcpy(&phase->raw_data, &analog_streams[raw_data_index], sizeof(AnalogStream));
+    memcpy(&phase->raw_data, analog_streams + raw_data_index, sizeof(AnalogStream));
   }
-  if (digital_index == -1) {
+  if (digital_set == false) {
     phase->has_digital = false;
   } else {
-    memcpy(&phase->digital, &analog_streams[digital_index], sizeof(AnalogStream));
+    memcpy(&phase->digital, analog_streams + digital_index, sizeof(AnalogStream));
     phase->has_digital = true;
   }
 
   H5Gclose(analog_group);
+  free(analog_streams);
   
   // ----------------------------------------------------------------------
   // PARSE THE EVENT STREAMS
@@ -380,6 +396,7 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
 
       CallbackEventsRets events_rets;
       events_rets.current_index = 0;
+      printf("------> 1c\n");
       res = H5Literate2(events_group,
                         H5_INDEX_NAME,
                         H5_ITER_NATIVE,
@@ -415,6 +432,7 @@ phaseh5_error phase_open(PhaseH5 *phase, const char *filename) {
   } else {
     phase->peaks_group = true;
   }
+  printf("------> 2c\n");
 
   return OK;
 }
@@ -480,7 +498,7 @@ phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, i
   return OK;
 }
 
-phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, int *buf) {
+phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, const int *buf) {
   if (end < start) {
     return SET_RAW_DATA_END_BEFORE_START;
   }
@@ -571,7 +589,7 @@ phaseh5_error digital(PhaseH5* phase, size_t start, size_t end, int* buf) {
   return OK;
 }
 
-phaseh5_error set_digital(PhaseH5* phase, size_t start, size_t end, int *buf) {
+phaseh5_error set_digital(PhaseH5* phase, size_t start, size_t end, const int *buf) {
   if (!phase->has_digital) {
     return SET_DIGITAL_NO_DIGITAL;
   }
@@ -700,12 +718,12 @@ phaseh5_error open_peak_train_datasets(PhaseH5* phase, const char* label, hid_t*
   hsize_t values_len;
   hsize_t samples_len;
 
-  size_t peaks_group_str_len = sizeof("/Data/Recording_0/Peak_Train/")/sizeof(char) + strlen(label);
-  size_t values_group_str_len = peaks_group_str_len + sizeof("/values")/sizeof(char);
-  size_t samples_group_str_len = peaks_group_str_len + sizeof("/samples")/sizeof(char);
+  // size_t peaks_group_str_len = sizeof("/Data/Recording_0/Peak_Train/")/sizeof(char) + strlen(label);
+  // size_t values_group_str_len = peaks_group_str_len + sizeof("/values")/sizeof(char);
+  // size_t samples_group_str_len = peaks_group_str_len + sizeof("/samples")/sizeof(char);
 
-  char values_group_str[values_group_str_len];
-  char samples_group_str[samples_group_str_len];
+  char values_group_str[MAX_GROUP_STRING_LEN] = {0};
+  char samples_group_str[MAX_GROUP_STRING_LEN] = {0};
   
   sprintf(values_group_str, "/Data/Recording_0/Peak_Train/%s/values", label);
   sprintf(samples_group_str, "/Data/Recording_0/Peak_Train/%s/samples", label);
@@ -847,7 +865,7 @@ phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_trai
   return OK;
 }
 
-phaseh5_error set_peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train) {
+phaseh5_error set_peak_train(PhaseH5* phase, const char* label, const PeakTrain* peak_train) {
   // Open peak dataset
   hid_t values_ds;
   hid_t samples_ds;
@@ -862,12 +880,12 @@ phaseh5_error set_peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_
   hsize_t values_len;
   hsize_t samples_len;
 
-  size_t peaks_group_str_len = sizeof("/Data/Recording_0/Peak_Train/")/sizeof(char) + strlen(label);
-  size_t values_group_str_len = peaks_group_str_len + sizeof("/values")/sizeof(char);
-  size_t samples_group_str_len = peaks_group_str_len + sizeof("/samples")/sizeof(char);
+  // size_t peaks_group_str_len = sizeof("/Data/Recording_0/Peak_Train/")/sizeof(char) + strlen(label);
+  // size_t values_group_str_len = peaks_group_str_len + sizeof("/values")/sizeof(char);
+  // size_t samples_group_str_len = peaks_group_str_len + sizeof("/samples")/sizeof(char);
 
-  char values_group_str[values_group_str_len];
-  char samples_group_str[samples_group_str_len];
+  char values_group_str[MAX_GROUP_STRING_LEN];
+  char samples_group_str[MAX_GROUP_STRING_LEN];
   
   sprintf(values_group_str, "/Data/Recording_0/Peak_Train/%s/values", label);
   sprintf(samples_group_str, "/Data/Recording_0/Peak_Train/%s/samples", label);

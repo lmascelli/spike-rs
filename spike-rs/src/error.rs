@@ -1,6 +1,13 @@
 #[derive(Debug)]
 pub enum SpikeError {
-    LabelNotFound,
+    Implementation(String),
+    RawDataStartIsAfterEnd,
+    RawDataLabelNotFound,
+    RawDataOutOfBounds,
+    SetRawDataOutOfBounds,
+    SetRawDataLabelNotFound,
+    DigitalNoDigitalPresent,
+    DigitalStartIsAfterEnd,
     IndexOutOfRange,
     ReplaceRangeError,
     ComputeThresholdTooFewSamples(usize, usize),

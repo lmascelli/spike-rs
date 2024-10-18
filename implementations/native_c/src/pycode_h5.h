@@ -4,6 +4,8 @@
 #define CHANNEL_LABEL_STRING_LEN 32
 #define MAX_EVENT_STREAMS 16
 #define MAX_CHANNELS 60
+#define MAX_ANALOG_STREAMS 4 
+#define MAX_GROUP_STRING_LEN 256
 
 
 typedef enum phaseh5_error {
@@ -14,6 +16,7 @@ typedef enum phaseh5_error {
   OPEN_DATE_ATTRIBUTE_FAIL,
   READ_DATE_ATTRIBUTE_FAIL,
   OPEN_DATE_DATATYPE_FAIL,
+  OPEN_ALLOCATE_ANALOGS_FAIL,
   OPEN_ANALOG_GROUP_FAIL,
   OPEN_INFO_CHANNEL_DATASET_FAIL,
   OPEN_INFO_CHANNEL_DATASPACE_FAIL,
@@ -196,11 +199,11 @@ phaseh5_error phase_open(PhaseH5* phase, const char *filename);
 phaseh5_error phase_close(PhaseH5* phase);
 
 phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, int* buf);
-phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, int* buf);
+phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, const int* buf);
 phaseh5_error digital(PhaseH5* phase, size_t start, size_t end, int* buf);
-phaseh5_error set_digital(PhaseH5* phase, size_t start, size_t end, int* buf);
+phaseh5_error set_digital(PhaseH5* phase, size_t start, size_t end, const int* buf);
 phaseh5_error events_len(PhaseH5* phase, size_t index, hsize_t *len);
 phaseh5_error events(PhaseH5* phase, size_t index, long int *buf);
 phaseh5_error peak_train_len(PhaseH5*, const char* label, size_t *len);
 phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train);
-phaseh5_error set_peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train);
+phaseh5_error set_peak_train(PhaseH5* phase, const char* label, const PeakTrain* peak_train);

@@ -9,8 +9,8 @@ Cargo.lock
 tags
 TAGS
 temp
-test.h5
 test.py
 .nvim.lua
 /.nvim
 .project.lua
+build.ps1
