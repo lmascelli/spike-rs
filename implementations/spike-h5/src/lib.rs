@@ -777,7 +777,7 @@ impl PhaseHandler for PhaseH5 {
                                 if times.len() == 0 {
                                     Ok((vec![], vec![]))
                                 } else {
-                                    if start.is_some() && end.is_none() {
+                                    if start.is_none() && end.is_none() {
                                         Ok((times, values))
                                     } else {
                                         let start = start.unwrap_or(times[0]);

@@ -1,3 +1,7 @@
+// TODO! complete the set_peak_train
+// TODO! add some functions error handling
+// TODO! python wrapper
+
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use spike_rs::{
@@ -283,6 +287,102 @@ macro_rules! phase_ptr  {
     ($p:ident) => (&$p.phase as *const sys::PhaseH5 as *mut sys::PhaseH5)
 }
 
+impl Drop for Phase {
+    fn drop(&mut self) {
+        unsafe {
+            sys::phase_close(phase_ptr!(self));
+        };
+    }
+}
+
+impl std::fmt::Debug for Phase {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        writeln!(f, "{{")?;
+        writeln!(f, "  file: {},", self.filename)?;
+        writeln!(f, "  datalen: {},", self.datalen())?;
+        writeln!(f, "  sampling frequency: {},", self.sampling_frequency())?;
+        writeln!(f, "  channels:")?;
+        for label in self.labels() {
+            writeln!(f, "    {}", label)?;
+        }
+        writeln!(f, "}}")?;
+        Ok(())
+    }
+}
+
+impl std::default::Default for Phase {
+    fn default() -> Self {
+        Self {
+            filename: String::new(),
+            labels_map: HashMap::new(),
+            phase: sys::PhaseH5 {
+                fid: 0,
+                date: [0; sys::DATE_STRING_LEN as usize],
+                datalen: 0,
+                sampling_frequency: 0f32,
+                raw_data: sys::AnalogStream {
+                    label: [0; sys::ANALOG_LABEL_STRING_LEN as usize],
+                    n_channels: 0,
+                    channel_data_dataset: 0,
+                    datalen: 0,
+                    info_channels: [sys::InfoChannel {
+                        channel_id: 0,
+                        row_index: 0,
+                        group_id: 0,
+                        electrode_group: 0,
+                        label: std::ptr::null(),
+                        raw_data_type: std::ptr::null(),
+                        unit: std::ptr::null(),
+                        exponent: 0,
+                        ad_zero: 0,
+                        tick: 0,
+                        conversion_factor: 0,
+                        adc_bits: 0,
+                        high_pass_filter_type: std::ptr::null(),
+                        high_pass_filter_cutoff: std::ptr::null(),
+                        high_pass_filter_order: 0,
+                        low_pass_filter_type: std::ptr::null(),
+                        low_pass_filter_cutoff: std::ptr::null(),
+                        low_pass_filter_order: 0,
+                    };
+                        sys::MAX_CHANNELS as usize],
+                },
+                has_digital: false,
+                digital: sys::AnalogStream {
+                    label: [0; sys::ANALOG_LABEL_STRING_LEN as usize],
+                    n_channels: 0,
+                    channel_data_dataset: 0,
+                    datalen: 0,
+                    info_channels: [sys::InfoChannel {
+                        channel_id: 0,
+                        row_index: 0,
+                        group_id: 0,
+                        electrode_group: 0,
+                        label: std::ptr::null(),
+                        raw_data_type: std::ptr::null(),
+                        unit: std::ptr::null(),
+                        exponent: 0,
+                        ad_zero: 0,
+                        tick: 0,
+                        conversion_factor: 0,
+                        adc_bits: 0,
+                        high_pass_filter_type: std::ptr::null(),
+                        high_pass_filter_cutoff: std::ptr::null(),
+                        high_pass_filter_order: 0,
+                        low_pass_filter_type: std::ptr::null(),
+                        low_pass_filter_cutoff: std::ptr::null(),
+                        low_pass_filter_order: 0,
+                    };
+                        sys::MAX_CHANNELS as usize],
+                },
+                n_events: 0,
+                event_entities: [0; sys::MAX_EVENT_STREAMS as usize],
+                peaks_group: 0,
+            },
+        }
+    }
+}
+
 impl Phase {
     pub fn open(filename: &str) -> Result<Self, Error> {
         let mut phase = Self::default();
@@ -538,17 +638,47 @@ impl PhaseHandler for Phase {
         }
     }
 
-    fn peak_train(&self, label: &str, start: Option<usize>, end: Option<usize>) -> Result<(Vec<usize>, Vec<f32>), SpikeError> {
-        let label_c = CString::new(label).expect("peak_train_len: Failed to convert the CStr");
-        let peak_train_len = self.peak_train_len(label);
+    fn peak_train(
+        &self,
+        channel: &str,
+        start: Option<usize>,
+        end: Option<usize>
+    ) -> Result<(Vec<usize>, Vec<f32>), SpikeError> {
+        let channel_c = CString::new(channel).expect("peak_train_len: Failed to convert the CStr");
+        let peak_train_len = self.peak_train_len(channel);
         let mut peak_train = PeakTrain::new(peak_train_len);
         let mut peak_train_c = peak_train.as_c_repr();
         let res = unsafe {
-            sys::peak_train(phase_ptr!(self), label_c.as_ptr(), peak_train_ptr!(peak_train_c))
+            sys::peak_train(phase_ptr!(self), channel_c.as_ptr(), peak_train_ptr!(peak_train_c))
         };
 
         match Error::from_phaseh5_error(res) {
-            Ok(()) => Ok((peak_train.samples, peak_train.values)),
+            Ok(()) => {
+                let (samples, values) = (peak_train.samples, peak_train.values);
+                if start.is_none() && end.is_none() {
+                    return Ok((samples, values));
+                } else {
+                    let start = start.unwrap_or(samples[0]);
+                    let end = end.unwrap_or(samples[samples.len() - 1]);
+                    let mut i_start = 0;
+                    let mut i_end = samples.len() - 1;
+
+                    for (i, val) in samples.iter().enumerate(){
+                        if *val >= start {
+                            i_start = i;
+                            break;
+                        }
+                    }
+                    for (i, val) in samples.iter().enumerate() {
+                        if *val >= end {
+                            i_end = i;
+                            break;
+                        }
+                    }
+                    Ok((samples[i_start..i_end].iter().map(|x| *x).collect(),
+                        values[i_start..i_end].iter().map(|x| *x).collect()))
+                }
+            },
             Err(err) => {
                 Err(err.into())
             }
@@ -562,102 +692,31 @@ impl PhaseHandler for Phase {
         end: Option<usize>,
         data: (Vec<usize>, Vec<f32>)
     ) -> Result<(), SpikeError> {
-        todo!() 
-    }
-}
-
-impl Drop for Phase {
-    fn drop(&mut self) {
-        unsafe {
-            sys::phase_close(phase_ptr!(self));
+        let channel_c = CString::new(channel).expect("peak_train_len: Failed to convert the CStr");
+        let peak_train_len = self.peak_train_len(channel);
+        let mut peak_train = PeakTrain::new(peak_train_len);
+        let mut peak_train_c = peak_train.as_c_repr();
+        let res = unsafe {
+            sys::peak_train(phase_ptr!(self), channel_c.as_ptr(), peak_train_ptr!(peak_train_c))
         };
-    }
-}
 
-impl std::fmt::Debug for Phase {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
-        writeln!(f, "{{")?;
-        writeln!(f, "  file: {},", self.filename)?;
-        writeln!(f, "  datalen: {},", self.datalen())?;
-        writeln!(f, "  sampling frequency: {},", self.sampling_frequency())?;
-        writeln!(f, "  channels:")?;
-        for label in self.labels() {
-            writeln!(f, "    {}", label)?;
-        }
-        writeln!(f, "}}")?;
-        Ok(())
-    }
-}
-
-impl std::default::Default for Phase {
-    fn default() -> Self {
-        Self {
-            filename: String::new(),
-            labels_map: HashMap::new(),
-            phase: sys::PhaseH5 {
-                fid: 0,
-                date: [0; sys::DATE_STRING_LEN as usize],
-                datalen: 0,
-                sampling_frequency: 0f32,
-                raw_data: sys::AnalogStream {
-                    label: [0; sys::ANALOG_LABEL_STRING_LEN as usize],
-                    n_channels: 0,
-                    channel_data_dataset: 0,
-                    datalen: 0,
-                    info_channels: [sys::InfoChannel {
-                        channel_id: 0,
-                        row_index: 0,
-                        group_id: 0,
-                        electrode_group: 0,
-                        label: std::ptr::null(),
-                        raw_data_type: std::ptr::null(),
-                        unit: std::ptr::null(),
-                        exponent: 0,
-                        ad_zero: 0,
-                        tick: 0,
-                        conversion_factor: 0,
-                        adc_bits: 0,
-                        high_pass_filter_type: std::ptr::null(),
-                        high_pass_filter_cutoff: std::ptr::null(),
-                        high_pass_filter_order: 0,
-                        low_pass_filter_type: std::ptr::null(),
-                        low_pass_filter_cutoff: std::ptr::null(),
-                        low_pass_filter_order: 0,
-                    };
-                        sys::MAX_CHANNELS as usize],
-                },
-                has_digital: false,
-                digital: sys::AnalogStream {
-                    label: [0; sys::ANALOG_LABEL_STRING_LEN as usize],
-                    n_channels: 0,
-                    channel_data_dataset: 0,
-                    datalen: 0,
-                    info_channels: [sys::InfoChannel {
-                        channel_id: 0,
-                        row_index: 0,
-                        group_id: 0,
-                        electrode_group: 0,
-                        label: std::ptr::null(),
-                        raw_data_type: std::ptr::null(),
-                        unit: std::ptr::null(),
-                        exponent: 0,
-                        ad_zero: 0,
-                        tick: 0,
-                        conversion_factor: 0,
-                        adc_bits: 0,
-                        high_pass_filter_type: std::ptr::null(),
-                        high_pass_filter_cutoff: std::ptr::null(),
-                        high_pass_filter_order: 0,
-                        low_pass_filter_type: std::ptr::null(),
-                        low_pass_filter_cutoff: std::ptr::null(),
-                        low_pass_filter_order: 0,
-                    };
-                        sys::MAX_CHANNELS as usize],
-                },
-                n_events: 0,
-                event_entities: [0; sys::MAX_EVENT_STREAMS as usize],
-                peaks_group: 0,
+        match Error::from_phaseh5_error(res) {
+            Ok(()) => {
+                // there is a group. Get the data and replace the new ones
+                let (samples, values) = (peak_train.samples, peak_train.values);
+                Ok(())
             },
+            Err(Error::PeakTrainNoPeakGroup) => {
+                // there is no group yet. Create it and fill the datasets
+
+                let res = unsafe {
+                    sys::set_peak_train(phase_ptr!(self), channel_c.as_ptr(), peak_train_ptr!(peak_train_c));
+                };
+                Ok(())
+            }
+            Err(err) => {
+                Err(err.into())
+            }
         }
     }
 }
