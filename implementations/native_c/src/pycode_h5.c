@@ -7,6 +7,13 @@ hid_t InfoChannelMemoryType;
 hid_t HDF5StringType;
 
 #define CAST(X, Y) (Y)(X)
+#define RES(F, E) {                             \
+  herr_t res = F;                               \
+  if (res < 0) {                                \ 
+    return E;                                   \
+  }                                             \               
+}
+
 
 //==============================================================================
 //                      LIBRARY INITIALIZATION AND CLOSING
@@ -863,65 +870,58 @@ phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_trai
   return OK;
 }
 
+/*
+TODO! restructure this function
+it must:
+- check if the group for the selected label already exists.
+- if exists:
+  - get and update the data
+  - delete the old dataset
+- create the new dataset
+- write into them
+ */
 phaseh5_error set_peak_train(PhaseH5* phase, const char* label, const PeakTrain* peak_train) {
-  // Open peak dataset
-  hid_t values_ds;
-  hid_t samples_ds;
-  herr_t res = open_peak_train_datasets(phase, label, &values_ds, &samples_ds);
-  if (res != OK) {
-    return res;
-  }
-
-  // Delete old dataspaces (maybe close the identifiers)
-  
-  //   Get the path of peak train datasets of that label
-  hsize_t values_len;
-  hsize_t samples_len;
-
-  // size_t peaks_group_str_len = sizeof("/Data/Recording_0/Peak_Train/")/sizeof(char) + strlen(label);
-  // size_t values_group_str_len = peaks_group_str_len + sizeof("/values")/sizeof(char);
-  // size_t samples_group_str_len = peaks_group_str_len + sizeof("/samples")/sizeof(char);
-
   char values_group_str[MAX_GROUP_STRING_LEN];
   char samples_group_str[MAX_GROUP_STRING_LEN];
-  
+
   sprintf(values_group_str, "/Data/Recording_0/Peak_Train/%s/values", label);
   sprintf(samples_group_str, "/Data/Recording_0/Peak_Train/%s/samples", label);
 
-  //   Check if those links exist
-  res = H5Lexists(phase->fid, values_group_str, H5P_DEFAULT);
+  // Delete old dataspaces if present (maybe close the identifiers)
+  // Check if the group exists
+  char label_group_str[MAX_GROUP_STRING_LEN];
+  sprintf(label_group_str, "/Data/Recording_0/Peak_Train/%s", label);
+  herr_t res = H5Lexists(phase->fid, label_group_str, H5P_DEFAULT);
   if (res < 0) {
-    return DELETE_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL;
-  } else if (res == 0) {
-    return DELETE_PEAK_TRAIN_NO_VALUES_DATASET;
+    return SET_PEAK_TRAIN_CHECK_LABEL_GROUP_FAIL;
+  } else if (res > 0) {
+    // the group exists. Delete the old datasets
+
+    //   Check if those links exist
+    res = H5Lexists(phase->fid, values_group_str, H5P_DEFAULT);
+    if (res < 0) {
+      return DELETE_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL;
+    } else if (res == 0) {
+      // return DELETE_PEAK_TRAIN_NO_VALUES_DATASET;
+    } else {
+      res = H5Ldelete(phase->fid, values_group_str, H5P_DEFAULT);
+      if (res < 0) {
+        return DELETE_PEAK_TRAIN_VALUES_DATASET_FAIL;
+      }
+    }
+
+    res = H5Lexists(phase->fid, samples_group_str, H5P_DEFAULT);
+    if (res < 0 ) {
+      return DELETE_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL;
+    } else if (res == 0) {
+      // return DELETE_PEAK_TRAIN_NO_SAMPLES_DATASET;
+    } else {
+      res = H5Ldelete(phase->fid, samples_group_str, H5P_DEFAULT);
+      if (res < 0) {
+        return DELETE_PEAK_TRAIN_SAMPLES_DATASET_FAIL;
+      }
+    }
   } 
-
-  res = H5Lexists(phase->fid, samples_group_str, H5P_DEFAULT);
-  if (res < 0 ) {
-    return DELETE_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL;
-  } else if (res == 0) {
-    return DELETE_PEAK_TRAIN_NO_SAMPLES_DATASET;
-  }
-
-  res = H5Ldelete(phase->fid, values_group_str, H5P_DEFAULT);
-  if (res < 0) {
-    return DELETE_PEAK_TRAIN_VALUES_DATASET_FAIL;
-  }
-
-  res = H5Ldelete(phase->fid, samples_group_str, H5P_DEFAULT);
-  if (res < 0) {
-    return DELETE_PEAK_TRAIN_SAMPLES_DATASET_FAIL;
-  }
-
-  res = H5Dclose(values_ds);
-  if (res < 0) {
-    return SET_PEAK_TRAIN_CLOSE_DELETED_VALUES_DATASET_FAIL;
-  }
-
-  res = H5Dclose(samples_ds);
-  if (res < 0) {
-    return SET_PEAK_TRAIN_CLOSE_DELETED_SAMPLES_DATASET_FAIL;
-  }
 
   // Create memory dataspace for the new values
   hsize_t memory_len[] = { peak_train->n_peaks };
