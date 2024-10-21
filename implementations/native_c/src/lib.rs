@@ -1,5 +1,3 @@
-// TODO! complete the set_peak_train
-// TODO! add some functions error handling
 // TODO! python wrapper
 
 use std::collections::HashMap;

@@ -1,3 +1,5 @@
+//TODO! adapt pycodeh5_init with RES macro
+
 #include "pycode_h5.h"
 #include <string.h>
 #include <stddef.h>
