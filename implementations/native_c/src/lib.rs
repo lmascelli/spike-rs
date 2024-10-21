@@ -729,16 +729,75 @@ impl PhaseHandler for Phase {
             Ok(()) => {
                 // there is a group. Get the data and replace the new ones
                 let (samples, values) = (peak_train.samples, peak_train.values);
-                Ok(())
+
+                // the spikes train in present and contains data so the new data must be
+                // inserted between start and stop positions
+                let start = start.unwrap_or(samples[0]);
+                let end = end.unwrap_or(samples[samples.len() - 1]);
+                let mut i_start = 0;
+                let mut i_end = samples.len() - 1;
+                for (i, val) in samples.iter().enumerate() {
+                    if *val >= start {
+                        i_start = i;
+                        break;
+                    }
+                }
+                for (i, val) in samples.iter().enumerate() {
+                    if *val >= end {
+                        i_end = i;
+                        break;
+                    }
+                }
+
+                // get all values before start
+                let before_start_samples = samples[0..i_start].to_vec();
+                let before_start_values = values[0..i_start].to_vec();
+
+                // get all values after end
+                let after_end_samples = samples[i_end..].to_vec();
+                let after_end_values = values[i_end..].to_vec();
+
+                // join the values with data
+                let mut new_samples = vec![];
+                let mut new_values = vec![];
+
+                new_samples
+                    .extend_from_slice(before_start_samples.as_slice());
+                new_samples.extend_from_slice(data.0.as_slice());
+                new_samples.extend_from_slice(after_end_samples.as_slice());
+
+                new_values
+                    .extend_from_slice(before_start_values.as_slice());
+                new_values.extend_from_slice(data.1.as_slice());
+                new_values
+                    .extend_from_slice(after_end_values.as_slice());
+
+                // create the new PeakTrain
+                let mut new_peak_train = PeakTrain::new(new_samples.len());
+                let mut new_peak_train_c = new_peak_train.as_c_repr();
+
+                // try to write it
+                let res = unsafe {
+                    sys::set_peak_train(phase_ptr!(self), channel_c.as_ptr(), peak_train_ptr!(new_peak_train_c))
+                };
+
+                match Error::from_phaseh5_error(res) {
+                    Ok(()) => Ok(()),
+                    Err(err) => Err(err.into()),
+                }
             },
+
             Err(Error::PeakTrainNoPeakGroup) => {
                 // there is no group yet. Just pass the new data
-
                 let res = unsafe {
-                    sys::set_peak_train(phase_ptr!(self), channel_c.as_ptr(), peak_train_ptr!(peak_train_c));
+                    sys::set_peak_train(phase_ptr!(self), channel_c.as_ptr(), peak_train_ptr!(peak_train_c))
                 };
-                Ok(())
-            }
+                match Error::from_phaseh5_error(res) {
+                    Ok(()) => Ok(()),
+                    Err(err) => Err(err.into()),
+                }
+            },
+
             Err(err) => {
                 Err(err.into())
             }
