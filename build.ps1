@@ -54,6 +54,10 @@ if ($IsLinux) {
             cargo run
         }
 
+        "build" {
+            cargo build
+        }
+
         "clippy" {
             cargo clippy
         }

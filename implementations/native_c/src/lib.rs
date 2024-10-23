@@ -6,6 +6,7 @@ use spike_rs::{
     error::SpikeError,
     types::PhaseHandler,
 };
+use pyo3::prelude::*;
 
 mod sys {
     #![allow(non_upper_case_globals)]
@@ -213,21 +214,8 @@ impl Error {
             sys::phaseh5_error_EVENTS_GET_EVENTS_DATASPACE_FAIL => Err(Error::EventsGetEventsDataspace),
             sys::phaseh5_error_EVENTS_SELECT_DATASPACE_HYPERSLAB_FAIL => Err(Error::EventsSelectDataspaceHyperslab),
             sys::phaseh5_error_PEAK_TRAIN_CLOSE_MEMORY_DATASPACE_FAIL => Err(Error::PeakTrainCloseMemoryDataspaceFail),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenCloseValuesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenCloseSamplesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainLenCloseSamplesDataset),
             sys::phaseh5_error_EVENTS_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::EventsCreateMemoryDataspace),
             sys::phaseh5_error_EVENTS_READ_DATASET_FAIL => Err(Error::EventsReadDataset),
-            sys::phaseh5_error_PEAK_TRAIN_NO_PEAK_GROUP => Err(Error::PeakTrainNoPeakGroup),
-            sys::phaseh5_error_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL => Err(Error::PeakTrainValuesDatasetLink),
-            sys::phaseh5_error_PEAK_TRAIN_NO_VALUES_DATASET => Err(Error::PeakTrainNoValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL => Err(Error::PeakTrainSamplesDatasetLink),
-            sys::phaseh5_error_PEAK_TRAIN_NO_SAMPLES_DATASET => Err(Error::PeakTrainNoSamplesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_OPEN_VALUES_DATASET_FAIL => Err(Error::PeakTrainOpenValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_OPEN_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainOpenSamplesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_CLOSE_VALUES_DATASET_FAIL => Err(Error::PeakTrainCloseValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainCloseSamplesDataset),
             sys::phaseh5_error_SET_PEAK_TRAIN_CHECK_LABEL_GROUP_FAIL => Err(Error::SetPeakTrainCheckLabelGroup),
             sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_DELETED_VALUES_DATASET_FAIL => Err(Error::SetPeakTrainCloseDeletedValuesDataset),
             sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_DELETED_SAMPLES_DATASET_FAIL => Err(Error::SetPeakTrainCloseDeletedSamplesDataset),
@@ -239,13 +227,23 @@ impl Error {
             sys::phaseh5_error_DELETE_PEAK_TRAIN_NO_SAMPLES_DATASET => Err(Error::DeletePeakTrainNoSamplesDataset),
             sys::phaseh5_error_DELETE_PEAK_TRAIN_VALUES_DATASET_FAIL => Err(Error::DeletePeakTrainValuesDataset),
             sys::phaseh5_error_DELETE_PEAK_TRAIN_SAMPLES_DATASET_FAIL => Err(Error::DeletePeakTrainSamplesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_GET_VALUES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetValuesDataspace),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
             sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenCloseValuesDataspace),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenCloseSamplesDataspace),
+            sys::phaseh5_error_PEAK_TRAIN_LEN_GET_VALUES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetValuesDataspace),
             sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenValuesDataspace),
             sys::phaseh5_error_PEAK_TRAIN_LEN_GET_SAMPLES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetSamplesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
             sys::phaseh5_error_PEAK_TRAIN_LEN_VALUES_SAMPLES_DIFFERENT => Err(Error::PeakTrainLenValuesSamplesDifferent),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_NO_PEAK_GROUP => Err(Error::PeakTrainNoPeakGroup),
+            sys::phaseh5_error_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL => Err(Error::PeakTrainValuesDatasetLink),
+            sys::phaseh5_error_PEAK_TRAIN_NO_VALUES_DATASET => Err(Error::PeakTrainNoValuesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL => Err(Error::PeakTrainSamplesDatasetLink),
+            sys::phaseh5_error_PEAK_TRAIN_NO_SAMPLES_DATASET => Err(Error::PeakTrainNoSamplesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_OPEN_VALUES_DATASET_FAIL => Err(Error::PeakTrainOpenValuesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_OPEN_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainOpenSamplesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_CLOSE_VALUES_DATASET_FAIL => Err(Error::PeakTrainCloseValuesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainCloseSamplesDataset),
             sys::phaseh5_error_PEAK_TRAIN_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::PeakTrainCreateMemoryDataspace),
             sys::phaseh5_error_PEAK_TRAIN_READ_VALUES_DATASET_FAIL => Err(Error::PeakTrainReadValuesDataset),
             sys::phaseh5_error_PEAK_TRAIN_READ_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainReadSamplesDataset),
@@ -802,3 +800,186 @@ impl PhaseHandler for Phase {
         }
     }
 }
+
+#[pyclass(unsendable)]
+pub struct PyPhase {
+    phase: Option<Phase>,
+}
+
+#[pymethods]
+impl PyPhase {
+    #[new]
+    pub fn new(filename: &str) -> Self {
+        PyPhase {
+            phase: Some(Phase::open(filename).expect(&format!("Failed to open {filename}"))),
+        }
+    }
+
+    pub fn datalen(&self) -> Option<usize> {
+        match &self.phase {
+            None => None,
+            Some(phase) => Some(phase.datalen()),
+        }
+    }
+
+    pub fn sampling_frequency(&self) -> Option<f32> {
+        match &self.phase {
+            None => None,
+            Some(phase) => Some(phase.sampling_frequency()),
+        }
+    }
+
+    pub fn labels(&self) -> Option<Vec<String>> {
+        match &self.phase {
+            None => None,
+            Some(phase) => Some(phase.labels()),
+        }
+    }
+
+    #[pyo3(signature = (channel, start=None, end=None))]
+    pub fn raw_data(
+        &self,
+        channel: &str,
+        start: Option<usize>,
+        end: Option<usize>,
+    ) -> Option<Vec<f32>> {
+        match &self.phase {
+            None => None,
+            Some(phase) => {
+                match phase.raw_data(channel, start, end) {
+                    Ok(res) => Some(res),
+                    Err(err) => {
+                        println!("{err:?}");
+                        None
+                    },
+                }
+            },
+        }
+    }
+    #[pyo3(signature = (channel, data, start=None))]
+    pub fn set_raw_data(
+        &mut self,
+        channel: &str,
+        data: Vec<f32>,
+        start: Option<usize>,
+    ) -> Option<bool> {
+        match &mut self.phase {
+            None => None,
+            Some(phase) => {
+                match phase.set_raw_data(channel, start, data[..].as_ref()) {
+                    Ok(()) => Some(true),
+                    Err(err) => {
+                        println!("{err:?}");
+                        Some(false)
+                    },
+                }
+            },
+        }
+    }
+
+    pub fn n_digitals(&self) -> Option<usize> {
+        match &self.phase {
+            None => None,
+            Some(phase) => Some(phase.n_digitals()),
+        }
+    }
+
+    #[pyo3(signature = (index, start=None, end=None))]
+    pub fn digital(
+        &self,
+        index: usize,
+        start: Option<usize>,
+        end: Option<usize>,
+    ) -> Option<Vec<f32>> {
+        match &self.phase {
+            None => None,
+            Some(phase) => {
+                match phase.digital(index, start, end) {
+                    Ok(ret) => Some(ret),
+                    Err(err) => {
+                        println!("{err:?}");
+                        None
+                    },
+                }
+            },
+        }
+    }
+
+    #[pyo3(signature = (index, data, start=None))]
+    pub fn set_digital(
+        &mut self,
+        index: usize,
+        data: Vec<f32>,
+        start: Option<usize>,
+    ) -> Option<bool> {
+        match &mut self.phase {
+            None => None,
+            Some(phase) => {
+                match phase.set_digital(index, start, data[..].as_ref()) {
+                    Ok(()) => Some(true),
+                    Err(err) => {
+                        println!("{err:?}");
+                        Some(false)
+                    },
+                }
+            },
+        }
+    }
+
+    pub fn n_events(&self) -> Option<usize> {
+        match &self.phase {
+            None => None,
+            Some(phase) => Some(phase.n_events()),
+        }
+    }
+
+    #[pyo3(signature = (channel, start=None, end=None))]
+    pub fn peak_train(
+        &self,
+        channel: &str,
+        start: Option<usize>,
+        end: Option<usize>,
+    ) -> Option<(Vec<usize>, Vec<f32>)> {
+        match &self.phase {
+            None => None,
+            Some(phase) => {
+                match phase.peak_train(channel, start, end) {
+                    Ok(ret) => Some(ret),
+                    Err(err) => {
+                        println!("{err:?}");
+                        None
+                    },
+                }
+            },
+        }
+    }
+
+    #[pyo3(signature = (channel, data, start=None, end=None))]
+    pub fn set_peak_train(
+        &mut self,
+        channel: &str,
+        data: (Vec<usize>, Vec<f32>),
+        start: Option<usize>,
+        end: Option<usize>
+    ) -> Option<bool> {
+        match &mut self.phase {
+            None => None,
+            Some(phase) => {
+                match phase.set_peak_train(channel, start, end, data) {
+                    Ok(()) => Some(true),
+                    Err(err) => {
+                        println!("{err:?}");
+                        Some(false)
+                    },
+                }
+            },
+        }
+    }
+}
+
+#[pymodule]
+fn native_c_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<PyPhase>()?;
+    Ok(())
+}
+

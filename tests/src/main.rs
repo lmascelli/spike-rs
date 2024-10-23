@@ -10,12 +10,6 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(()) => {
             println!("OK");
             let phase = Phase::open(filename)?;
-
-            let labels = phase.labels();
-            for label in labels {
-                println!("{label}");
-            }
-
             println!("{}", phase.datalen());
             println!("{}", phase.sampling_frequency());
 
