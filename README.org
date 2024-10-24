@@ -48,6 +48,7 @@ To compile the library the path of the hdf5 binaries and include files are neede
 to set those environment variables
 
   *HDF5_LIB_DIR*
+
   *HDF5_INCLUDE_DIR*
 
 and point that variables to the /lib/ and /include/ directories of the previously unzipped hdf5 archive.
