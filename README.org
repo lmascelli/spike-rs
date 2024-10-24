@@ -60,5 +60,11 @@ code.
   cargo build --release
 #+end_src
 
+or, if you want to use the Powershell script
+
+#+begin_src 
+  ./build.ps1 build
+#+end_src
+
 ** Install instructions
 TODO

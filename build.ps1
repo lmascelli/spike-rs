@@ -25,6 +25,10 @@ if ($IsWindows) {
             cargo run --release
         }
 
+        "build" {
+            cargo build --release 
+        }
+
         "install-python" {
             winget install -e --id Python.Python.3.12
         }
