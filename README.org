@@ -28,6 +28,7 @@ To build the library you'll need:
 - the *rust* toolchain installed: [[https://www.rust-lang.org/tools/install][Rust download]]
 - the llvm toolchain installed (for bindgen automatic bindings generation)
 *Windows*
+run this command on a shell (i.e. Powershell)
 #+begin_src shell
   winget install -e --id LLVM.LLVM
 #+end_src
@@ -40,9 +41,23 @@ it depends on you distro
 #+end_src
 - *hdf5* library
 [[https://github.com/HDFGroup/hdf5/releases/latest][hdf5 download]]
+and unzip it in a folder (you'll need that path later)
 
 *** Set the environment variables
-TODO
+To compile the library the path of the hdf5 binaries and include files are needed. So you'll need
+to set those environment variables
+
+  *HDF5_LIB_DIR*
+  *HDF5_INCLUDE_DIR*
+
+and point that variables to the /lib/ and /include/ directories of the previously unzipped hdf5 archive.
+You can alternatively change the values of the /build.ps1/ script if you want to use it to build the
+code.
 
 *** Build the cargo project
+#+begin_src shell
+  cargo build --release
+#+end_src
+
+** Install instructions
 TODO
