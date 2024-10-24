@@ -9,12 +9,12 @@ hid_t InfoChannelMemoryType;
 hid_t HDF5StringType;
 
 #define CAST(X, Y) (Y)(X)
-#define RES(F, E) {                             \
-  herr_t res = F;                               \
-  if (res < 0) {                                \ 
-    return E;                                   \
-  }                                             \               
-}
+// #define RES(F, E) {                           \
+//   herr_t res = F;                               \
+//   if (res < 0) {                                \ 
+//     return E;                                   \
+//   }                                             \               
+// }
 
 
 //==============================================================================
