@@ -21,7 +21,7 @@
 
 
 typedef enum phaseh5_error {
-  OK,
+  OK = 0,
 
   // pycodeh5_init
 

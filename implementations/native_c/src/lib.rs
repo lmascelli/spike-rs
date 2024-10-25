@@ -977,9 +977,27 @@ impl PyPhase {
     }
 }
 
-#[pymodule]
+#[pyfunction(name = "init")]
+fn py_init() -> bool {
+    match spike_c_init() {
+        Ok(()) => true,
+        Err(err) => {
+            println!("{err:?}");
+            false
+        }
+    }
+}
+
+#[pyfunction(name = "close")]
+fn py_close() {
+    spike_c_close();
+}
+
+#[pymodule(name = "libnative_c")]
 fn native_c_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPhase>()?;
+    m.add_function(wrap_pyfunction!(py_init, m)?).unwrap();
+    m.add_function(wrap_pyfunction!(py_close, m)?).unwrap();
     Ok(())
 }
 

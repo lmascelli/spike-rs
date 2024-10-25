@@ -13,4 +13,3 @@ test.py
 .nvim.lua
 /.nvim
 .project.lua
-build.ps1

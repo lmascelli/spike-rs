@@ -29,15 +29,15 @@ class Phase:
 
     def datalen(self) -> Optional[int]:
         "Returns the number of samples in this phase recording"
-        return self.handler.datalen()
+        return self.handler.get().datalen()
 
     def sampling_frequency(self) -> Optional[float]:
         "Returns the sampling frequency used during the recording"
-        return self.handler.sampling_frequency()
+        return self.handler.get().sampling_frequency()
 
     def labels(self) -> Optional[List[str]]:
         "Return a list of all the channel labels contained in the recording"
-        return self.handler.labels()
+        return self.handler.get().labels()
 
     def raw_data(self,
                  channel: str,
@@ -45,7 +45,7 @@ class Phase:
                  end: Optional[int] = None
                  ) -> Optional[List[float]]:
         "Return the raw data between START and END"
-        return self.handler.raw_data(channel, start, end)
+        return self.handler.get().raw_data(channel, start, end)
 
     def set_raw_data(self,
                      channel: str,
@@ -53,4 +53,4 @@ class Phase:
                      start: Optional[int] = None
                      ) -> Optional[bool]:
         "Set the raw data of CHANNEL to DATA starting from START. Returns True if the operation succeded"
-        return self.handler.set_raw_data(channel, data, start)
+        return self.handler.get().set_raw_data(channel, data, start)
