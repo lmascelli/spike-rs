@@ -1,2 +1,0 @@
-/usr/bin/ar qc libpycode_h5.a CMakeFiles/pycode_h5.dir/src/pycode_h5.c.o
-/usr/bin/ranlib libpycode_h5.a

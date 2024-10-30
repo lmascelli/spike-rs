@@ -1,2 +1,0 @@
-cargo:rustc-link-search=native=C:/Users/Leonardo/Documents/unige/hdf5/1.14.5/lib
-cargo:rustc-link-lib=hdf5
