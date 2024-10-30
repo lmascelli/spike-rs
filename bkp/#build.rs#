@@ -1,0 +1,9 @@
+use std::error::error;
+
+pub fn main() -> result<(), dyn box<error>> {
+    println!("cargo:rustc-link-search={}", todo!());
+    println!("cargo:rustc-link-lib={}", "native_c");
+
+    let bindings = bindgen::builder::default();
+    return ok(());
+}

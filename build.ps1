@@ -1,68 +1,54 @@
-$env:HDF5_INCLUDE_DIR = "C:/Users/Leonardo/Documents/unige/hdf5/1.14.5/include"
-$env:HDF5_LIB_DIR = "C:/Users/Leonardo/Documents/unige/hdf5/1.14.5/lib"
+$env:HDF5_LIB_DIR = "~/Documents/unige/hdf5/1.14.5/lib"
+$env:HDF5_INCLUDE_DIR = "~/Documents/unige/hdf5/1.14.5/include"
 
-$Script:HelpText = @"
+function Script:PrintHelp {
+    $PrintText = @'
 ================================================================================
-spike-rs build.ps1
+                                    PYCODE
+================================================================================
 
 USAGE:
-./spike-rs.ps1 COMMAND
+./build.ps1 COMMAND
 
-COMMANDS:
+AVAILABLE COMMANDS:
 
-build              	build the release library
-debug               build the debug library
-clippy              run the clippy check analizer
+create-venv                   create a new virtual environment with the necessary
+                              packages installed
+
+develop                       build and install the library in the current venv
+
+build                         build the pycode library
+
+test                          run the test.py script in the current venv
 
 ================================================================================
-"@
+                                    
+================================================================================
+'@
 
-function Script:Install {
-    Remove-Item install -Force -Recurse -ErrorAction Ignore
-    Copy-Item pycode -Destination install/pycode -Recurse
-    Copy-Item -Path target/release/libnative_c.so -Destination install/pycode/handlers/libnative_c.so -Force
+Write-Host $PrintText
 }
 
-switch ($args[0]) {
-    "run" {
-        cargo run --release
+switch($args[0]) {
+
+    "create-venv" {
+        python -m venv .venv
+        .venv/bin/pip install maturin matplotlib
+    }
+
+    "develop" {
+        ./.venv/bin/maturin develop
     }
 
     "build" {
-        cargo build --release 
-    }
-
-    "debug" {
-        cargo build
-    }
-
-    "clippy" {
-        cargo clippy
-    }
-
-    "install" {
-       Script:Install 
+        ./.venv/bin/maturin build 
     }
 
     "test" {
-        Copy-Item test.py install
-
-        # Get the path of the current script
-        $scriptPath = $MyInvocation.MyCommand.Path
-
-        # Get the directory of the script
-        $scriptDir = Split-Path -Parent $scriptPath
-
-        # Concatenate with the "install" folder
-        $installPath = Join-Path $scriptDir "install"
-
-        # Add the install path to the python modules path
-        $env:PYTHONPATH += $installPath
-
-        python install/test.py
+        ./.venv/bin/python ./test.py
     }
 
     default {
-        Write-Host $Script:HelpText
+        Script:PrintHelp
     }
 }

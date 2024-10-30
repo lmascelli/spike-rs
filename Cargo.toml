@@ -1,13 +1,16 @@
-[workspace]
-resolver = "2"
+[package]
+name = "pycode"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
 
-members = [
-  "spike-rs",
-  "implementations/native_c",
-  # "implementations/memory",
-  # "hdf5-rs",
-  # "implementations/spike-h5",
-  # "tests",
-  # "pycode-rs",
-  # "mc_explorer",
-]
+[lib]
+name = "pycode"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.22.0"
+
+[build-dependencies]
+cmake = "*"
+bindgen = "*"

@@ -1,9 +1,34 @@
 use std::error::Error;
+use std::path::PathBuf;
+use std::env;
 
-pub fn main() -> Result<(), dyn Box<Error>> {
-    println!("cargo:rustc-link-search={}", todo!());
-    println!("cargo:rustc-link-lib={}", "native_c");
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let hdf5_include_dir = env::var("HDF5_INCLUDE_DIR").expect("Please set the `HDF5_INCLUDE_DIR` environment variable");
+    let hdf5_lib_dir = env::var("HDF5_LIB_DIR").expect("Please set the `HDF5_LIB_DIR` environment variable");
+    
+    println!("cargo:rerun-if-changed=pycode_c/pycode_h5.c");
+    println!("cargo:rerun-if-changed=pycode_c/pycode_h5.h");
+    println!("cargo:rerun-if-changed=pycode_c/CMakeLists.txt");
+    
+    let mut build = cmake::Config::new("./pycode_c");
+    let pycode_c_location = build.profile("Release").build();
 
-    let bindings = bindgen::Builder::default();
-    return Ok(());
+    let bindings = bindgen::Builder::default()
+        .header("pycode_c/pycode_h5.h")
+        .clang_arg(format!("-I{}", hdf5_include_dir))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
+        .generate()
+        .expect("Unable to generate bindings");
+
+    let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+
+    bindings
+        .write_to_file(out_path.join("bindings.rs"))
+        .expect("Couldn't write bindings");
+
+    println!("cargo:rustc-link-search=native={}", format!("{}/lib", pycode_c_location.display()));
+    println!("cargo:rustc-link-lib=static={}", "pycode_h5");
+    println!("cargo:rustc-link-search=native={}", format!("{hdf5_lib_dir}"));
+    println!("cargo:rustc-link-lib=dylib={}", "hdf5");
+    Ok(())
 }
