@@ -1,4 +1,4 @@
-use crate::spike_rs::error::SpikeError;
+use super::error::SpikeError;
 
 /// PhaseHandler
 ///

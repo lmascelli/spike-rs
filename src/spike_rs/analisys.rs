@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use crate::spike_rs::error::SpikeError;
-use crate::spike_rs::operations::{
+use super::error::SpikeError;
+use super::operations::{
         compute_threshold, get_digital_intervals, spike_detection,
         subsample_range,
     };
-use crate::spike_rs::types::PhaseHandler;
+use super::types::PhaseHandler;
 
 pub fn compute_peak_train(
     phase: &mut impl PhaseHandler,
