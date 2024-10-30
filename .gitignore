@@ -1,7 +1,7 @@
 implementations/native_c/build/
 pycode_h5/build/
 /install/
-/target
+**/target
 /pycode/pycode_rs.pyd
 /pycode/pycode_rs.so
 .venv/
