@@ -1,0 +1,3 @@
+RAW_DATA_COLOR = "blue"
+SPIKES_COLOR_LINE = "red"
+SPIKES_COLOR_HEAD = "red"

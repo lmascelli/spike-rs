@@ -485,7 +485,7 @@ impl PhaseHandler for Phase {
         };
         let actual_end = match end {
             Some(val) => val,
-            None => self.datalen() - 2,
+            None => self.datalen() - 1,
         };
 
         if actual_start >= actual_end {
@@ -584,7 +584,7 @@ impl PhaseHandler for Phase {
 
         let actual_end = match end {
             Some(val) => val,
-            None => self.datalen() - 2,
+            None => self.datalen() - 1,
         };
 
         if actual_start >= actual_end {

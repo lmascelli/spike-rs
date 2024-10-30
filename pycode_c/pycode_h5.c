@@ -479,6 +479,8 @@ phaseh5_error raw_data(PhaseH5* phase, size_t index, size_t start, size_t end, i
 
   size_t dims[] = {end - start};
   hid_t raw_data_dataspace = H5Dget_space(phase->raw_data.channel_data_dataset);
+  // TODO! fix one sample left over maybe here, maybe in the rust code but if
+  // you query for all the samples it gives you back all but one.
 
   if (raw_data_dataspace <= 0) {
     return RAW_DATA_GET_DATASPACE_FAIL;
