@@ -27,18 +27,23 @@ build                         build the pycode library
     Write-Host $PrintText
 }
 
+$bin_dir = "Scripts"
+if ($IsLinux) {
+    $bin_dir = "bin"
+}
+
 switch($args[0]) {
     "create-venv" {
         python -m venv .venv
-        .venv/bin/pip install maturin matplotlib
+        Invoke-Expression ".venv/$bin_dir/pip install maturin matplotlib"
     }
 
     "develop" {
-        ./.venv/bin/maturin develop
+        Invoke-Expression "./.venv/$bin_dir/maturin develop"
     }
 
     "build" {
-        ./.venv/bin/maturin build 
+        Invoke-Expression "./.venv/$bin_dir/maturin build"
     }
 
     default {
