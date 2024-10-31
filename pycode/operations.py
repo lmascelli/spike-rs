@@ -32,12 +32,18 @@ def get_digital_intervals(digital: List[int]) -> List[Tuple[int, int]]:
 
 
 def subsample_range(
-    peaks: List[int], starting_sample: int, bin_size: int, n_bins: int
+    peaks: List[int],
+    starting_sample: int,
+    bin_size: int,
+    n_bins: int
 ) -> List[int]:
     return py_subsample_range(peaks, starting_sample, bin_size, n_bins)
 
 
-def psth(phase: PyPhase, bin_time_duration: float, psth_duration: float) -> List[int] | np.ndarray:
+def psth(phase: PyPhase,
+         bin_time_duration: float,
+         psth_duration: float
+         ) -> List[int] | np.ndarray:
     """
     Compute the PSTH ociaoooooooo :):):)
     and returns a list with the count of the spikes in each bin.
@@ -47,11 +53,13 @@ def psth(phase: PyPhase, bin_time_duration: float, psth_duration: float) -> List
     - bin_time_duration: the duration of the bin IN SECONDS
     - psth_duration: the duration of the whole psth IN SECONDS
     """
+
     # OPEN THE PYCODE_RS HANDLER FOR THE DATA
     sampling_frequency = phase.sampling_frequency()
     bin_size = int(
         sampling_frequency * bin_time_duration
     )  # this round the size of a bin to the lower integer
+
     n_bins = int(psth_duration / bin_time_duration)  # number of bin after the stimulus
 
     channels = phase.labels()  # list of all the available channels
@@ -60,7 +68,7 @@ def psth(phase: PyPhase, bin_time_duration: float, psth_duration: float) -> List
     # during the recording phase
     n_digital = phase.n_digitals()
     if n_digital != 1:
-        exit(f"ERROR: the stimulation phase has {n_digital} digital channels")
+        exit(f"ERROR: the stimulation phase has {n_digital} digital channels (grazie MultiChannel)")
 
     res = [0] * n_bins  # variable to accumulate the psth
 
@@ -81,4 +89,4 @@ def psth(phase: PyPhase, bin_time_duration: float, psth_duration: float) -> List
                 ),
             )
 
-    return res
+    return res / (len(channels) * len(digital_intervals))

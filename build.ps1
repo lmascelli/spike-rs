@@ -30,7 +30,6 @@ Write-Host $PrintText
 }
 
 switch($args[0]) {
-
     "create-venv" {
         python -m venv .venv
         .venv/bin/pip install maturin matplotlib
