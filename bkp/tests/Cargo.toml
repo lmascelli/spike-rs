@@ -1,9 +1,0 @@
-[package]
-name = "tests"
-version = "0.1.0"
-edition = "2021"
-build = "build.rs"
-
-[dependencies]
-spike-rs = { path = "../spike-rs" }
-native_c = { path = "../implementations/native_c"}
