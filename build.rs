@@ -50,6 +50,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     {
         std::fs::copy(hdf5_bin_dir.join("libhdf5.so"), target_dir.join("pycode.libs/libhdf5.so")).expect("failed to copy libhdf5.so");
     }
-
     Ok(())
 }

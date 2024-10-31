@@ -3,7 +3,8 @@ Cargo.lock
 /pycode/*.pyd
 /pycode/*.so
 /pycode/*.dll
-/pycode.libs/*
+/pycode.libs/*.so
+/pycode.libs/*.dll
 **/__pycache__/
 **/target
 test.py
