@@ -19,14 +19,12 @@ develop                       build and install the library in the current venv
 
 build                         build the pycode library
 
-test                          run the test.py script in the current venv
-
 ================================================================================
                                     
 ================================================================================
 '@
 
-Write-Host $PrintText
+    Write-Host $PrintText
 }
 
 switch($args[0]) {
@@ -41,10 +39,6 @@ switch($args[0]) {
 
     "build" {
         ./.venv/bin/maturin build 
-    }
-
-    "test" {
-        ./.venv/bin/python ./test.py
     }
 
     default {
