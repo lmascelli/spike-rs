@@ -1,5 +1,10 @@
-$env:HDF5_LIB_DIR = "~/Documents/unige/hdf5/1.14.5/lib"
-$env:HDF5_INCLUDE_DIR = "~/Documents/unige/hdf5/1.14.5/include"
+$env:HDF5_LIB_DIR = "C:/Users/Leonardo/Documents/unige/hdf5/1.14.5/lib"
+$env:HDF5_INCLUDE_DIR = "C:/Users/Leonardo/Documents/unige/hdf5/1.14.5/include"
+
+if ($IsLinux) {
+    $env:HDF5_LIB_DIR = "~/Documents/unige/hdf5/1.14.5/lib"
+    $env:HDF5_INCLUDE_DIR = "~/Documents/unige/hdf5/1.14.5/include"
+}
 
 function Script:PrintHelp {
     $PrintText = @'

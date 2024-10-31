@@ -12,11 +12,11 @@
 #define MAX_GROUP_STRING_LEN 256
 
 #ifdef _WIN32
-#define EVENT_TYPE long long int
+#define LLONG_TYPE long long int
 #elif __linux__
-#define EVENT_TYPE long int
+#define LLONG_TYPE long int
 #elif __APPLE__
-#define EVENT_TYPE long int
+#define LLONG_TYPE long int
 #endif
 
 
@@ -151,8 +151,8 @@ typedef struct InfoChannel {
   const char *unit;
   int exponent;
   int ad_zero;
-  long int tick;
-  long int conversion_factor;
+  LLONG_TYPE tick;
+  LLONG_TYPE conversion_factor;
   int adc_bits;
   const char *high_pass_filter_type;
   const char *high_pass_filter_cutoff;
@@ -221,7 +221,7 @@ phaseh5_error set_raw_data(PhaseH5* phase, size_t index, size_t start, size_t en
 phaseh5_error digital(PhaseH5* phase, size_t start, size_t end, int* buf);
 phaseh5_error set_digital(PhaseH5* phase, size_t start, size_t end, const int* buf);
 phaseh5_error events_len(PhaseH5* phase, size_t index, hsize_t *len);
-phaseh5_error events(PhaseH5* phase, size_t index, EVENT_TYPE *buf);
+phaseh5_error events(PhaseH5* phase, size_t index, LLONG_TYPE *buf);
 phaseh5_error peak_train_len(PhaseH5*, const char* label, size_t *len);
 phaseh5_error peak_train(PhaseH5* phase, const char* label, PeakTrain* peak_train);
 phaseh5_error set_peak_train(PhaseH5* phase, const char* label, const PeakTrain* peak_train);

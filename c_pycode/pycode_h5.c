@@ -669,7 +669,7 @@ phaseh5_error events_len(PhaseH5* phase, size_t index, hsize_t *dim) {
   return OK;
 }
 
-phaseh5_error events(PhaseH5* phase, size_t index, EVENT_TYPE *buf) {
+phaseh5_error events(PhaseH5* phase, size_t index, LLONG_TYPE *buf) {
   if (index >= phase->n_events) {
     return EVENTS_INDEX_OUT_OF_BOUNDS;
   }
