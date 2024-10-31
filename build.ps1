@@ -1,9 +1,12 @@
-$env:HDF5_LIB_DIR = "C:/Users/Leonardo/Documents/unige/hdf5/1.14.5/lib"
-$env:HDF5_INCLUDE_DIR = "C:/Users/Leonardo/Documents/unige/hdf5/1.14.5/include"
-
+# PLEASE USE ABSOLUTE PATHS
 if ($IsLinux) {
-    $env:HDF5_LIB_DIR = "~/Documents/unige/hdf5/1.14.5/lib"
-    $env:HDF5_INCLUDE_DIR = "~/Documents/unige/hdf5/1.14.5/include"
+    $env:HDF5_LIB_DIR = "/home/leonardo/Documents/unige/hdf5/1.14.5/lib"
+    $env:HDF5_INCLUDE_DIR = "/home/leonardo/Documents/unige/hdf5/1.14.5/include"
+    $env:HDF5_BIN_DIR = "/home/leonardo/Documents/unige/hdf5/1.14.5/lib"
+} else {
+    $env:HDF5_LIB_DIR = "C:/Users/Leonardo/Documents/unige/hdf5/1.14.5/lib"
+    $env:HDF5_INCLUDE_DIR = "C:/Users/Leonardo/Documents/unige/hdf5/1.14.5/include"
+    $env:HDF5_BIN_DIR = "C:/Users/Leonardo/Documents/unige/hdf5/1.14.5/bin"
 }
 
 function Script:PrintHelp {

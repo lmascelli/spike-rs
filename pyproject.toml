@@ -13,3 +13,9 @@ classifiers = [
 dynamic = ["version"]
 [tool.maturin]
 features = ["pyo3/extension-module"]
+include = [
+        { path = "pycode.libs/hdf5.dll", format="sdist", when = "windows"},
+        { path = "pycode.libs/libhdf5.so", format="sdist", when = "linux"},
+        { path = "pycode.libs/hdf5.dll", format="wheel", when = "windows"},
+        { path = "pycode.libs/libhdf5.so", format="wheel", when = "linux"},
+]
