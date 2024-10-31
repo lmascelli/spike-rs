@@ -1,12 +1,19 @@
 from typing import List, Optional, Tuple
 import numpy as np
-from .pycode import PyPhase
+from .pycode import (
+    PyPhase,
+    compute_threshold as py_compute_threshold,
+    spike_detection as py_spike_detection,
+    get_digital_intervals as py_get_digital_intervals,
+    subsample_range as py_subsample_range
+)
 
+# TODO add those functions
 
 def compute_threshold(
     data: List[float], sampling_frequency: float, multiplier: float
 ) -> Optional[float]:
-    return pc.compute_threshold(data, sampling_frequency, multiplier)
+    return py_compute_threshold(data, sampling_frequency, multiplier)
 
 
 def spike_detection(
@@ -16,31 +23,18 @@ def spike_detection(
     peak_duration: float,
     refractory_time: float,
 ) -> Optional[Tuple[List[int], List[float]]]:
-    return pc.spike_detection(
+    return py_spike_detection(
         data, sampling_frequency, threshold, peak_duration, refractory_time
     )
 
-
-def subsample_peak_trains(phase, bin_size: int, digital_index: int):
-    return pc.subsample_peak_trains(phase._phase, bin_size, digital_index)
-
-
-def subsampled_post_stimulus_times(
-    phase, bin_size: int, n_bins_post_stim: int, digital_index: int
-):
-    return pc.subsampled_post_stimulus_times(
-        phase._phase, bin_size, int(n_bins_post_stim), digital_index
-    )
-
-
 def get_digital_intervals(digital: List[int]) -> List[Tuple[int, int]]:
-    return pc.get_digital_intervals(digital)
+    return py_get_digital_intervals(digital)
 
 
 def subsample_range(
     peaks: List[int], starting_sample: int, bin_size: int, n_bins: int
 ) -> List[int]:
-    return pc.subsample_range(peaks, starting_sample, bin_size, n_bins)
+    return py_subsample_range(peaks, starting_sample, bin_size, n_bins)
 
 
 def psth(phase: PyPhase, bin_time_duration: float, psth_duration: float) -> List[int] | np.ndarray:

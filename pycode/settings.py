@@ -1,3 +1,3 @@
-RAW_DATA_COLOR = "blue"
-SPIKES_COLOR_LINE = "red"
-SPIKES_COLOR_HEAD = "red"
+PyCode.set("RAW_DATA_COLOR", "blue")
+PyCode.set("SPIKES_COLOR_LINE", "red")
+PyCode.set("SPIKES_COLOR_HEAD", "red")

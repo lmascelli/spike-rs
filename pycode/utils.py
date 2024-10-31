@@ -1,6 +1,5 @@
 from typing import Optional
 from .pycode import PyPhase
-from . import settings
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -21,7 +20,7 @@ def plot_raw_with_spikes(phase: PyPhase,
 
     times = np.arange(x_start, x_end - 1, 1)
 
-    plt.plot(times, raw_data, color = settings.RAW_DATA_COLOR)
+    plt.plot(times, raw_data, color = PyCode.get("RAW_DATA_COLOR"))
     plt.stem(peaks[0], peaks[1],
-             linefmt=f"{settings.SPIKES_COLOR_LINE}",
-             markerfmt=f"{settings.SPIKES_COLOR_HEAD}")
+             linefmt=f"{PyCode.get('SPIKES_COLOR_LINE')}",
+             markerfmt=f"{PyCode.get('SPIKES_COLOR_HEAD')}")

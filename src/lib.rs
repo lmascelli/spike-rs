@@ -3,6 +3,7 @@ use std::ffi::{CStr, CString};
 
 pub mod spike_rs;
 use spike_rs::{
+    operations::self,
     error::SpikeError,
     types::PhaseHandler,
 };
@@ -993,10 +994,73 @@ fn py_close() {
     spike_c_close();
 }
 
+//        compute_threshold,
+//        spike_detection,
+//        get_digital_intervals,
+//        subsample_range,
+
+#[pyfunction]
+fn compute_threshold(
+    range: Vec<f32>,
+    sampling_frequency: f32,
+    multiplier: f32,
+) -> Option<f32> {
+    match operations::compute_threshold(range[..].as_ref(), sampling_frequency, multiplier) {
+        Ok(ret) => Some(ret),
+        Err(err) => {
+            eprintln!("compute_threshold: {err:?}");
+            None
+        },
+    }
+}
+
+#[pyfunction]
+fn spike_detection(
+    data: Vec<f32>, 
+    sampling_frequency: f32,
+    threshold: f32,
+    peak_duration: f32,
+    refractory_time: f32,
+) -> Option<(Vec<usize>, Vec<f32>)> {
+    match operations::spike_detection(data[..].as_ref(), sampling_frequency, threshold, peak_duration, refractory_time) {
+        Ok(ret) => Some(ret),
+        Err(err) => {
+            eprintln!("spike_detection: {err:?}");
+            None
+        },
+    }
+}
+
+#[pyfunction]
+fn get_digital_intervals(
+    digital: Vec<f32>, 
+) -> Option<Vec<(usize, usize)>> {
+    Some(operations::get_digital_intervals(digital[..].as_ref()))}
+
+#[pyfunction]
+pub fn subsample_range(
+    peak_times: Vec<usize>,
+    starting_sample: usize,
+    bin_size: usize,
+    n_bins: usize,
+) -> Option<Vec<usize>> {
+    Some(
+        operations::subsample_range(
+            peak_times[..].as_ref(),
+            starting_sample,
+            bin_size,
+            n_bins,
+        ))
+}
+
 #[pymodule(name = "pycode")]
 fn pycode_rs_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPhase>()?;
     m.add_function(wrap_pyfunction!(py_init, m)?)?;
     m.add_function(wrap_pyfunction!(py_close, m)?)?;
+    m.add_function(wrap_pyfunction!(compute_threshold, m)?)?;
+    m.add_function(wrap_pyfunction!(spike_detection, m)?)?;
+    m.add_function(wrap_pyfunction!(get_digital_intervals, m)?)?;
+    m.add_function(wrap_pyfunction!(subsample_range, m)?)?;
     Ok(())
 }
