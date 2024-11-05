@@ -1,10 +1,9 @@
-use std::collections::HashMap;
 use super::error::SpikeError;
 use super::operations::{
-        compute_threshold, get_digital_intervals, spike_detection,
-        subsample_range,
-    };
+    compute_threshold, get_digital_intervals, spike_detection, subsample_range,
+};
 use super::types::PhaseHandler;
+use std::collections::HashMap;
 
 pub fn compute_peak_train(
     phase: &mut impl PhaseHandler,
@@ -13,8 +12,7 @@ pub fn compute_peak_train(
     end: Option<usize>,
 ) -> Result<(), SpikeError> {
     let signal = phase.raw_data(label, start, end)?;
-    let threshold =
-        compute_threshold(&signal[..], phase.sampling_frequency(), 8 as _)?;
+    let threshold = compute_threshold(&signal[..], phase.sampling_frequency(), 8 as _)?;
     let peaks_train = spike_detection(
         &signal[..],
         phase.sampling_frequency(),
@@ -32,10 +30,7 @@ pub fn get_subsampled_pre_stim_post_from_intervals(
     phase: &mut impl PhaseHandler,
     intervals: &[(usize, usize)],
     bin_size: usize,
-) -> Result<
-    HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>,
-    SpikeError,
-> {
+) -> Result<HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>, SpikeError> {
     let n_intervals = intervals.len();
     let raw_data_len = phase.datalen();
     assert!(n_intervals != 0, "No intervals provided!!!");
@@ -105,8 +100,7 @@ pub fn get_subsampled_pre_stim_post_from_intervals(
             n_post = data_len / bin_size;
         }
 
-        scan_intervals
-            .push((start_pre, n_pre, start_stim, n_stim, start_post, n_post));
+        scan_intervals.push((start_pre, n_pre, start_stim, n_stim, start_post, n_post));
     }
 
     let mut ret = HashMap::new();
@@ -115,24 +109,9 @@ pub fn get_subsampled_pre_stim_post_from_intervals(
         let mut current_ret = vec![];
         for interval in &scan_intervals {
             current_ret.push((
-                subsample_range(
-                    &data_times[..],
-                    interval.0,
-                    bin_size,
-                    interval.1,
-                ),
-                subsample_range(
-                    &data_times[..],
-                    interval.2,
-                    bin_size,
-                    interval.3,
-                ),
-                subsample_range(
-                    &data_times[..],
-                    interval.4,
-                    bin_size,
-                    interval.5,
-                ),
+                subsample_range(&data_times[..], interval.0, bin_size, interval.1),
+                subsample_range(&data_times[..], interval.2, bin_size, interval.3),
+                subsample_range(&data_times[..], interval.4, bin_size, interval.5),
             ));
         }
         ret.insert(label.clone(), current_ret);
@@ -144,20 +123,12 @@ pub fn subsample_peak_trains(
     phase: &mut impl PhaseHandler,
     bin_size: usize,
     digital_index: usize,
-) -> Result<
-    HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>,
-    SpikeError,
-> {
+) -> Result<HashMap<String, Vec<(Vec<usize>, Vec<usize>, Vec<usize>)>>, SpikeError> {
     if digital_index >= phase.n_digitals() {
         return Err(SpikeError::IndexOutOfRange);
     }
-    let stim_intervals =
-        get_digital_intervals(&phase.digital(digital_index, None, None)?[..]);
-    get_subsampled_pre_stim_post_from_intervals(
-        phase,
-        &stim_intervals,
-        bin_size,
-    )
+    let stim_intervals = get_digital_intervals(&phase.digital(digital_index, None, None)?[..]);
+    get_subsampled_pre_stim_post_from_intervals(phase, &stim_intervals, bin_size)
 }
 
 pub fn subsampled_post_stimulus_times(
@@ -172,8 +143,7 @@ pub fn subsampled_post_stimulus_times(
     let n_samples_req = n_bins_post_stim * bin_size;
     //println!("N SAMPLES REQUIRED: {n_samples_req}");
 
-    let stim_intervals =
-        get_digital_intervals(&phase.digital(digital_index, None, None)?[..]);
+    let stim_intervals = get_digital_intervals(&phase.digital(digital_index, None, None)?[..]);
 
     // used to keep just the stimulation data that not started before or after
     // the recording

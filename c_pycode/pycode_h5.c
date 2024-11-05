@@ -727,18 +727,24 @@ phaseh5_error open_peak_train_datasets(PhaseH5* phase, const char* label, hid_t*
   hsize_t values_len;
   hsize_t samples_len;
 
-  // size_t peaks_group_str_len = sizeof("/Data/Recording_0/Peak_Train/")/sizeof(char) + strlen(label);
-  // size_t values_group_str_len = peaks_group_str_len + sizeof("/values")/sizeof(char);
-  // size_t samples_group_str_len = peaks_group_str_len + sizeof("/samples")/sizeof(char);
-
+  char peak_train_group_str[MAX_GROUP_STRING_LEN] = {0};
   char values_group_str[MAX_GROUP_STRING_LEN] = {0};
   char samples_group_str[MAX_GROUP_STRING_LEN] = {0};
+
+  sprintf(peak_train_group_str, "/Data/Recording_0/Peak_Train/%s/", label);
+
+  herr_t res = H5Lexists(phase->fid, peak_train_group_str, H5P_DEFAULT);
+  if (res < 0) {
+    return PEAK_TRAIN_GROUP_LINK_FAIL;
+  } else if (res == 0) {
+    return PEAK_TRAIN_NO_PEAK_GROUP;
+  }
   
   sprintf(values_group_str, "/Data/Recording_0/Peak_Train/%s/values", label);
   sprintf(samples_group_str, "/Data/Recording_0/Peak_Train/%s/samples", label);
 
   // Check if those links exist
-  herr_t res = H5Lexists(phase->fid, values_group_str, H5P_DEFAULT);
+  res = H5Lexists(phase->fid, values_group_str, H5P_DEFAULT);
   if (res < 0) {
     return PEAK_TRAIN_VALUES_DATASET_LINK_FAIL;
   } else if (res == 0) {
@@ -894,8 +900,9 @@ phaseh5_error set_peak_train(PhaseH5* phase, const char* label, const PeakTrain*
   // Delete old dataspaces if present (maybe close the identifiers)
   // Check if the group exists
   char label_group_str[MAX_GROUP_STRING_LEN];
-  sprintf(label_group_str, "/Data/Recording_0/Peak_Train/%s", label);
+  sprintf(label_group_str, "/Data/Recording_0/Peak_Train/%s/", label);
   herr_t res = H5Lexists(phase->fid, label_group_str, H5P_DEFAULT);
+
   if (res < 0) {
     return SET_PEAK_TRAIN_CHECK_LABEL_GROUP_FAIL;
   } else if (res > 0) {
@@ -924,6 +931,12 @@ phaseh5_error set_peak_train(PhaseH5* phase, const char* label, const PeakTrain*
       if (res < 0) {
         return DELETE_PEAK_TRAIN_SAMPLES_DATASET_FAIL;
       }
+    }
+  } else {
+    // There is no group. Create it.
+    res = H5Gcreate2(phase->fid, label_group_str, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    if (res <= 0) {
+      return SET_PEAK_TRAIN_CREATE_GROUP_FAIL;
     }
   } 
 

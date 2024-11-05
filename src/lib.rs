@@ -2,12 +2,8 @@ use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 
 pub mod spike_rs;
-use spike_rs::{
-    operations::self,
-    error::SpikeError,
-    types::PhaseHandler,
-};
 use pyo3::prelude::*;
+use spike_rs::{error::SpikeError, operations, types::PhaseHandler};
 
 mod sys {
     #![allow(non_upper_case_globals)]
@@ -20,6 +16,7 @@ mod sys {
 #[derive(Debug)]
 pub enum Error {
     ErrorNotYetConverted(i32),
+    CreatePeakTrainSamplesValuesDifferentLen,
     OpenFile,
     CloseFile,
     OpenDataGroup,
@@ -160,8 +157,12 @@ impl Error {
             sys::phaseh5_error_OPEN_DATE_DATATYPE_FAIL => Err(Error::OpenDateDatatype),
             sys::phaseh5_error_OPEN_ANALOG_GROUP_FAIL => Err(Error::OpenAnalogGroup),
             sys::phaseh5_error_OPEN_INFO_CHANNEL_DATASET_FAIL => Err(Error::OpenInfoChannelDataset),
-            sys::phaseh5_error_OPEN_INFO_CHANNEL_DATASPACE_FAIL => Err(Error::OpenInfoChannelDataspace),
-            sys::phaseh5_error_OPEN_INFO_CHANNEL_DATATYPE_FAIL => Err(Error::OpenInfoChannelDatatype),
+            sys::phaseh5_error_OPEN_INFO_CHANNEL_DATASPACE_FAIL => {
+                Err(Error::OpenInfoChannelDataspace)
+            }
+            sys::phaseh5_error_OPEN_INFO_CHANNEL_DATATYPE_FAIL => {
+                Err(Error::OpenInfoChannelDatatype)
+            }
             sys::phaseh5_error_OPEN_ANALOG_DATASET_FAIL => Err(Error::OpenAnalogDataset),
             sys::phaseh5_error_OPEN_LABEL_ATTRIBUTE_FAIL => Err(Error::OpenLabelAttribute),
             sys::phaseh5_error_READ_LABEL_ATTRIBUTE_FAIL => Err(Error::ReadLabelAttribute),
@@ -170,96 +171,222 @@ impl Error {
             sys::phaseh5_error_PARSE_ANALOG_STREAM_DIFFERENT_TICK => Err(Error::ParseAnalogStream),
             sys::phaseh5_error_MULTIPLE_DIGITAL_STREAMS => Err(Error::MultipleDigitalStreams),
             sys::phaseh5_error_MULTIPLE_RAW_DATA_STREAMS => Err(Error::MultipleRawDataStreams),
-            sys::phaseh5_error_MULTIPLE_SAMPLING_FREQUENCIES => Err(Error::MultipleSamplingFrequencies),
+            sys::phaseh5_error_MULTIPLE_SAMPLING_FREQUENCIES => {
+                Err(Error::MultipleSamplingFrequencies)
+            }
             sys::phaseh5_error_MULTIPLE_DATALENS => Err(Error::MultipleDatalens),
             sys::phaseh5_error_OPEN_CHANNEL_DATA_FAIL => Err(Error::OpenChannelData),
-            sys::phaseh5_error_OPEN_CHANNEL_DATA_DATASPACE_FAIL => Err(Error::OpenChannelDataDataspace),
+            sys::phaseh5_error_OPEN_CHANNEL_DATA_DATASPACE_FAIL => {
+                Err(Error::OpenChannelDataDataspace)
+            }
             sys::phaseh5_error_GET_CHANNEL_DATA_DIMS_FAIL => Err(Error::GetChannelDataDims),
             sys::phaseh5_error_NO_RAW_DATA_STREAM => Err(Error::NoRawDataStream),
             sys::phaseh5_error_OPEN_EVENT_STREAM_GROUP_FAIL => Err(Error::OpenEventStreamGroup),
-            sys::phaseh5_error_OPEN_EVENT_STREAM_GROUP_LINK_FAIL => Err(Error::OpenEventStreamGroupLink),
-            sys::phaseh5_error_OPEN_EVENT_STREAM_STREAM_0_GROUP_LINK_FAIL => Err(Error::OpenEventStreamStream0GroupLink),
+            sys::phaseh5_error_OPEN_EVENT_STREAM_GROUP_LINK_FAIL => {
+                Err(Error::OpenEventStreamGroupLink)
+            }
+            sys::phaseh5_error_OPEN_EVENT_STREAM_STREAM_0_GROUP_LINK_FAIL => {
+                Err(Error::OpenEventStreamStream0GroupLink)
+            }
             sys::phaseh5_error_MAX_EVENT_STREAMS_EXCEEDED => Err(Error::MaxEventStreamsExceeded),
             sys::phaseh5_error_OPEN_ENTITY_DATASET_FAIL => Err(Error::OpenEntityDataset),
-            sys::phaseh5_error_EVENT_ENTITY_DATASET_CLOSE_FAIL => Err(Error::EventEntityDatasetClose),
+            sys::phaseh5_error_EVENT_ENTITY_DATASET_CLOSE_FAIL => {
+                Err(Error::EventEntityDatasetClose)
+            }
             sys::phaseh5_error_OPEN_PEAK_TRAIN_GROUP_FAIL => Err(Error::OpenPeakTrainGroup),
             sys::phaseh5_error_CREATE_PEAK_GROUP_FAIL => Err(Error::CreatePeakGroup),
             sys::phaseh5_error_RAW_DATA_END_BEFORE_START => Err(Error::RawDataEndBeforeStart),
             sys::phaseh5_error_RAW_DATA_END_OUT_OF_BOUNDS => Err(Error::RawDataEndOutOfBounds),
             sys::phaseh5_error_RAW_DATA_GET_DATASPACE_FAIL => Err(Error::RawDataGetDataspace),
             sys::phaseh5_error_RAW_DATA_SELECT_HYPERSLAB_FAIL => Err(Error::RawDataSelectHyperslab),
-            sys::phaseh5_error_RAW_DATA_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::RawDataCreateMemoryDataspace),
+            sys::phaseh5_error_RAW_DATA_CREATE_MEMORY_DATASPACE_FAIL => {
+                Err(Error::RawDataCreateMemoryDataspace)
+            }
             sys::phaseh5_error_RAW_DATA_READ_DATA_FAIL => Err(Error::RawDataReadData),
-            sys::phaseh5_error_SET_RAW_DATA_GET_DATASPACE_FAIL => Err(Error::SetRawDataGetDataspace),
-            sys::phaseh5_error_SET_RAW_DATA_SELECT_HYPERSLAB_FAIL => Err(Error::SetRawDataSelectHyperslab),
-            sys::phaseh5_error_SET_RAW_DATA_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::SetRawDataCreateMemoryDataspace),
-            sys::phaseh5_error_SET_RAW_DATA_WRITE_DATASET_FAIL => Err(Error::SetRawDataWriteDataset),
+            sys::phaseh5_error_SET_RAW_DATA_GET_DATASPACE_FAIL => {
+                Err(Error::SetRawDataGetDataspace)
+            }
+            sys::phaseh5_error_SET_RAW_DATA_SELECT_HYPERSLAB_FAIL => {
+                Err(Error::SetRawDataSelectHyperslab)
+            }
+            sys::phaseh5_error_SET_RAW_DATA_CREATE_MEMORY_DATASPACE_FAIL => {
+                Err(Error::SetRawDataCreateMemoryDataspace)
+            }
+            sys::phaseh5_error_SET_RAW_DATA_WRITE_DATASET_FAIL => {
+                Err(Error::SetRawDataWriteDataset)
+            }
             sys::phaseh5_error_DIGITAL_NO_DIGITAL => Err(Error::DigitalNoDigital),
             sys::phaseh5_error_DIGITAL_END_BEFORE_START => Err(Error::DigitalEndBeforeStart),
             sys::phaseh5_error_DIGITAL_END_OUT_OF_BOUNDS => Err(Error::DigitalEndOutOfBounds),
             sys::phaseh5_error_DIGITAL_GET_DATASPACE_FAIL => Err(Error::DigitalGetDataspaceFail),
-            sys::phaseh5_error_DIGITAL_SELECT_HYPERSLAB_FAIL => Err(Error::DigitalSelectHyperslabFail),
-            sys::phaseh5_error_DIGITAL_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::DigitalCreateMemoryDataspaceFail),
+            sys::phaseh5_error_DIGITAL_SELECT_HYPERSLAB_FAIL => {
+                Err(Error::DigitalSelectHyperslabFail)
+            }
+            sys::phaseh5_error_DIGITAL_CREATE_MEMORY_DATASPACE_FAIL => {
+                Err(Error::DigitalCreateMemoryDataspaceFail)
+            }
             sys::phaseh5_error_DIGITAL_READ_DATA_FAIL => Err(Error::DigitalReadDataFail),
             sys::phaseh5_error_SET_DIGITAL_NO_DIGITAL => Err(Error::SetDigitalNoDigital),
             sys::phaseh5_error_SET_DIGITAL_END_BEFORE_START => Err(Error::SetDigitalEndBeforeStart),
-            sys::phaseh5_error_SET_DIGITAL_END_OUT_OF_BOUNDS => Err(Error::SetDigitalEndOutOfBounds),
-            sys::phaseh5_error_SET_DIGITAL_GET_DATASPACE_FAIL => Err(Error::SetDigitalGetDataspaceFail),
-            sys::phaseh5_error_SET_DIGITAL_SELECT_HYPERSLAB_FAIL => Err(Error::SetDigitalSelectHyperslabFail),
-            sys::phaseh5_error_SET_DIGITAL_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::SetDigitalCreateMemoryDataspaceFail),
+            sys::phaseh5_error_SET_DIGITAL_END_OUT_OF_BOUNDS => {
+                Err(Error::SetDigitalEndOutOfBounds)
+            }
+            sys::phaseh5_error_SET_DIGITAL_GET_DATASPACE_FAIL => {
+                Err(Error::SetDigitalGetDataspaceFail)
+            }
+            sys::phaseh5_error_SET_DIGITAL_SELECT_HYPERSLAB_FAIL => {
+                Err(Error::SetDigitalSelectHyperslabFail)
+            }
+            sys::phaseh5_error_SET_DIGITAL_CREATE_MEMORY_DATASPACE_FAIL => {
+                Err(Error::SetDigitalCreateMemoryDataspaceFail)
+            }
             sys::phaseh5_error_SET_DIGITAL_WRITE_DATA_FAIL => Err(Error::SetDigitalWriteDataFail),
-            sys::phaseh5_error_EVENTS_LEN_INDEX_OUT_OF_BOUNDS => Err(Error::EventsLenIndexOutOfBounds),
-            sys::phaseh5_error_EVENTS_LEN_OPEN_EVENT_DATASPACE_FAIL => Err(Error::EventsLenOpenEventDataspace),
+            sys::phaseh5_error_EVENTS_LEN_INDEX_OUT_OF_BOUNDS => {
+                Err(Error::EventsLenIndexOutOfBounds)
+            }
+            sys::phaseh5_error_EVENTS_LEN_OPEN_EVENT_DATASPACE_FAIL => {
+                Err(Error::EventsLenOpenEventDataspace)
+            }
             sys::phaseh5_error_EVENTS_INDEX_OUT_OF_BOUNDS => Err(Error::EventsIndexOutOfBounds),
             sys::phaseh5_error_EVENTS_LEN_GET_DIMS_FAIL => Err(Error::EventsLenGetDims),
-            sys::phaseh5_error_EVENTS_GET_EVENTS_DATASPACE_FAIL => Err(Error::EventsGetEventsDataspace),
-            sys::phaseh5_error_EVENTS_SELECT_DATASPACE_HYPERSLAB_FAIL => Err(Error::EventsSelectDataspaceHyperslab),
-            sys::phaseh5_error_PEAK_TRAIN_CLOSE_MEMORY_DATASPACE_FAIL => Err(Error::PeakTrainCloseMemoryDataspaceFail),
-            sys::phaseh5_error_EVENTS_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::EventsCreateMemoryDataspace),
+            sys::phaseh5_error_EVENTS_GET_EVENTS_DATASPACE_FAIL => {
+                Err(Error::EventsGetEventsDataspace)
+            }
+            sys::phaseh5_error_EVENTS_SELECT_DATASPACE_HYPERSLAB_FAIL => {
+                Err(Error::EventsSelectDataspaceHyperslab)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_CLOSE_MEMORY_DATASPACE_FAIL => {
+                Err(Error::PeakTrainCloseMemoryDataspaceFail)
+            }
+            sys::phaseh5_error_EVENTS_CREATE_MEMORY_DATASPACE_FAIL => {
+                Err(Error::EventsCreateMemoryDataspace)
+            }
             sys::phaseh5_error_EVENTS_READ_DATASET_FAIL => Err(Error::EventsReadDataset),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CHECK_LABEL_GROUP_FAIL => Err(Error::SetPeakTrainCheckLabelGroup),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_DELETED_VALUES_DATASET_FAIL => Err(Error::SetPeakTrainCloseDeletedValuesDataset),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_DELETED_SAMPLES_DATASET_FAIL => Err(Error::SetPeakTrainCloseDeletedSamplesDataset),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_SAMPLES_FILE_DATASPACE_FAIL => Err(Error::SetPeakTrainCloseSamplesFileDataspace),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_VALUES_FILE_DATASPACE_FAIL => Err(Error::SetPeakTrainCloseValuesFileDataspace),
-            sys::phaseh5_error_DELETE_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL => Err(Error::DeletePeakTrainValuesDatasetLink),
-            sys::phaseh5_error_DELETE_PEAK_TRAIN_NO_VALUES_DATASET => Err(Error::DeletePeakTrainNoValuesDataset),
-            sys::phaseh5_error_DELETE_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL => Err(Error::DeletePeakTrainSamplesDatasetLink),
-            sys::phaseh5_error_DELETE_PEAK_TRAIN_NO_SAMPLES_DATASET => Err(Error::DeletePeakTrainNoSamplesDataset),
-            sys::phaseh5_error_DELETE_PEAK_TRAIN_VALUES_DATASET_FAIL => Err(Error::DeletePeakTrainValuesDataset),
-            sys::phaseh5_error_DELETE_PEAK_TRAIN_SAMPLES_DATASET_FAIL => Err(Error::DeletePeakTrainSamplesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainLenCloseValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenCloseValuesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASPACE_FAIL => Err(Error::PeakTrainLenCloseSamplesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_GET_VALUES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetValuesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_VALUES_DATASPACE_FAIL => Err(Error::PeakTrainLenOpenValuesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_GET_SAMPLES_DATASPACE_DIM_FAIL => Err(Error::PeakTrainLenGetSamplesDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_LEN_VALUES_SAMPLES_DIFFERENT => Err(Error::PeakTrainLenValuesSamplesDifferent),
+            sys::phaseh5_error_SET_PEAK_TRAIN_CHECK_LABEL_GROUP_FAIL => {
+                Err(Error::SetPeakTrainCheckLabelGroup)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_DELETED_VALUES_DATASET_FAIL => {
+                Err(Error::SetPeakTrainCloseDeletedValuesDataset)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_DELETED_SAMPLES_DATASET_FAIL => {
+                Err(Error::SetPeakTrainCloseDeletedSamplesDataset)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_SAMPLES_FILE_DATASPACE_FAIL => {
+                Err(Error::SetPeakTrainCloseSamplesFileDataspace)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_VALUES_FILE_DATASPACE_FAIL => {
+                Err(Error::SetPeakTrainCloseValuesFileDataspace)
+            }
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL => {
+                Err(Error::DeletePeakTrainValuesDatasetLink)
+            }
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_NO_VALUES_DATASET => {
+                Err(Error::DeletePeakTrainNoValuesDataset)
+            }
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL => {
+                Err(Error::DeletePeakTrainSamplesDatasetLink)
+            }
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_NO_SAMPLES_DATASET => {
+                Err(Error::DeletePeakTrainNoSamplesDataset)
+            }
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_VALUES_DATASET_FAIL => {
+                Err(Error::DeletePeakTrainValuesDataset)
+            }
+            sys::phaseh5_error_DELETE_PEAK_TRAIN_SAMPLES_DATASET_FAIL => {
+                Err(Error::DeletePeakTrainSamplesDataset)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASET_FAIL => {
+                Err(Error::PeakTrainLenCloseValuesDataset)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASET_FAIL => {
+                Err(Error::PeakTrainLenCloseValuesDataset)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_VALUES_DATASPACE_FAIL => {
+                Err(Error::PeakTrainLenCloseValuesDataspace)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_LEN_CLOSE_SAMPLES_DATASPACE_FAIL => {
+                Err(Error::PeakTrainLenCloseSamplesDataspace)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_LEN_GET_VALUES_DATASPACE_DIM_FAIL => {
+                Err(Error::PeakTrainLenGetValuesDataspace)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_LEN_OPEN_VALUES_DATASPACE_FAIL => {
+                Err(Error::PeakTrainLenOpenValuesDataspace)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_LEN_GET_SAMPLES_DATASPACE_DIM_FAIL => {
+                Err(Error::PeakTrainLenGetSamplesDataspace)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_LEN_VALUES_SAMPLES_DIFFERENT => {
+                Err(Error::PeakTrainLenValuesSamplesDifferent)
+            }
             sys::phaseh5_error_PEAK_TRAIN_NO_PEAK_GROUP => Err(Error::PeakTrainNoPeakGroup),
-            sys::phaseh5_error_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL => Err(Error::PeakTrainValuesDatasetLink),
+            sys::phaseh5_error_PEAK_TRAIN_VALUES_DATASET_LINK_FAIL => {
+                Err(Error::PeakTrainValuesDatasetLink)
+            }
             sys::phaseh5_error_PEAK_TRAIN_NO_VALUES_DATASET => Err(Error::PeakTrainNoValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL => Err(Error::PeakTrainSamplesDatasetLink),
-            sys::phaseh5_error_PEAK_TRAIN_NO_SAMPLES_DATASET => Err(Error::PeakTrainNoSamplesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_OPEN_VALUES_DATASET_FAIL => Err(Error::PeakTrainOpenValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_OPEN_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainOpenSamplesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_CLOSE_VALUES_DATASET_FAIL => Err(Error::PeakTrainCloseValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainCloseSamplesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_CREATE_MEMORY_DATASPACE_FAIL => Err(Error::PeakTrainCreateMemoryDataspace),
-            sys::phaseh5_error_PEAK_TRAIN_READ_VALUES_DATASET_FAIL => Err(Error::PeakTrainReadValuesDataset),
-            sys::phaseh5_error_PEAK_TRAIN_READ_SAMPLES_DATASET_FAIL => Err(Error::PeakTrainReadSamplesDataset),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_SAMPLES_MEMORY_DATASPACE_FAIL => Err(Error::SetPeakTrainCreateSamplesMemoryDataspace),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_VALUES_MEMORY_DATASPACE_FAIL => Err(Error::SetPeakTrainCreateValuesMemoryDataspace),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_SAMPLES_FILE_DATASET_FAIL => Err(Error::SetPeakTrainCreateSamplesMemoryDataset),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_VALUES_FILE_DATASET_FAIL => Err(Error::SetPeakTrainCreateValuesMemoryDataset),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_SAMPLES_FILE_DATASPACE_FAIL => Err(Error::SetPeakTrainCreateSamplesFileDataspace),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_VALUES_FILE_DATASPACE_FAIL => Err(Error::SetPeakTrainCreateValuesFileDataspace),
-            sys::phaseh5_error_SET_PEAK_TRAIN_WRITE_SAMPLES_DATASET_FAIL => Err(Error::SetPeakTrainWriteSamplesDataset),
-            sys::phaseh5_error_SET_PEAK_TRAIN_WRITE_VALUES_DATASET_FAIL => Err(Error::SetPeakTrainWriteValuesDataset),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_SAMPLES_MEMORY_DATASPACE_FAIL => Err(Error::SetPeakTrainCloseSamplesMemoryDataspace),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_VALUES_MEMORY_DATASPACE_FAIL => Err(Error::SetPeakTrainCloseValuesMemoryDataspace),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_SAMPLES_DATASET_FAIL => Err(Error::SetPeakTrainCloseSamplesDataset),
-            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_VALUES_DATASET_FAIL => Err(Error::SetPeakTrainCloseValuesDataset),
+            sys::phaseh5_error_PEAK_TRAIN_SAMPLES_DATASET_LINK_FAIL => {
+                Err(Error::PeakTrainSamplesDatasetLink)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_NO_SAMPLES_DATASET => {
+                Err(Error::PeakTrainNoSamplesDataset)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_OPEN_VALUES_DATASET_FAIL => {
+                Err(Error::PeakTrainOpenValuesDataset)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_OPEN_SAMPLES_DATASET_FAIL => {
+                Err(Error::PeakTrainOpenSamplesDataset)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_CLOSE_VALUES_DATASET_FAIL => {
+                Err(Error::PeakTrainCloseValuesDataset)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_CLOSE_SAMPLES_DATASET_FAIL => {
+                Err(Error::PeakTrainCloseSamplesDataset)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_CREATE_MEMORY_DATASPACE_FAIL => {
+                Err(Error::PeakTrainCreateMemoryDataspace)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_READ_VALUES_DATASET_FAIL => {
+                Err(Error::PeakTrainReadValuesDataset)
+            }
+            sys::phaseh5_error_PEAK_TRAIN_READ_SAMPLES_DATASET_FAIL => {
+                Err(Error::PeakTrainReadSamplesDataset)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_SAMPLES_MEMORY_DATASPACE_FAIL => {
+                Err(Error::SetPeakTrainCreateSamplesMemoryDataspace)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_VALUES_MEMORY_DATASPACE_FAIL => {
+                Err(Error::SetPeakTrainCreateValuesMemoryDataspace)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_SAMPLES_FILE_DATASET_FAIL => {
+                Err(Error::SetPeakTrainCreateSamplesMemoryDataset)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_VALUES_FILE_DATASET_FAIL => {
+                Err(Error::SetPeakTrainCreateValuesMemoryDataset)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_SAMPLES_FILE_DATASPACE_FAIL => {
+                Err(Error::SetPeakTrainCreateSamplesFileDataspace)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CREATE_VALUES_FILE_DATASPACE_FAIL => {
+                Err(Error::SetPeakTrainCreateValuesFileDataspace)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_WRITE_SAMPLES_DATASET_FAIL => {
+                Err(Error::SetPeakTrainWriteSamplesDataset)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_WRITE_VALUES_DATASET_FAIL => {
+                Err(Error::SetPeakTrainWriteValuesDataset)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_SAMPLES_MEMORY_DATASPACE_FAIL => {
+                Err(Error::SetPeakTrainCloseSamplesMemoryDataspace)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_VALUES_MEMORY_DATASPACE_FAIL => {
+                Err(Error::SetPeakTrainCloseValuesMemoryDataspace)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_SAMPLES_DATASET_FAIL => {
+                Err(Error::SetPeakTrainCloseSamplesDataset)
+            }
+            sys::phaseh5_error_SET_PEAK_TRAIN_CLOSE_VALUES_DATASET_FAIL => {
+                Err(Error::SetPeakTrainCloseValuesDataset)
+            }
             _ => Err(Error::ErrorNotYetConverted(code.try_into().unwrap())),
         }
     }
@@ -286,6 +413,14 @@ impl PeakTrain {
         }
     }
 
+    pub fn from(samples: Vec<usize>, values: Vec<f32>) -> Result<Self, Error> {
+        if samples.len() != values.len() {
+            Err(Error::CreatePeakTrainSamplesValuesDifferentLen)
+        } else {
+            Ok(Self { samples, values })
+        }
+    }
+
     pub fn as_c_repr(&mut self) -> sys::PeakTrain {
         sys::PeakTrain {
             n_peaks: self.samples.len(),
@@ -296,7 +431,9 @@ impl PeakTrain {
 }
 
 macro_rules! peak_train_ptr {
-    ($p:ident) => (&mut$p as *mut sys::PeakTrain)
+    ($p:ident) => {
+        &mut$p as *mut sys::PeakTrain
+    };
 }
 
 pub struct Phase {
@@ -305,8 +442,10 @@ pub struct Phase {
     pub labels_map: HashMap<String, usize>,
 }
 
-macro_rules! phase_ptr  {
-    ($p:ident) => (&$p.phase as *const sys::PhaseH5 as *mut sys::PhaseH5)
+macro_rules! phase_ptr {
+    ($p:ident) => {
+        &$p.phase as *const sys::PhaseH5 as *mut sys::PhaseH5
+    };
 }
 
 impl Drop for Phase {
@@ -366,8 +505,7 @@ impl std::default::Default for Phase {
                         low_pass_filter_type: std::ptr::null(),
                         low_pass_filter_cutoff: std::ptr::null(),
                         low_pass_filter_order: 0,
-                    };
-                        sys::MAX_CHANNELS as usize],
+                    }; sys::MAX_CHANNELS as usize],
                 },
                 has_digital: false,
                 digital: sys::AnalogStream {
@@ -394,8 +532,7 @@ impl std::default::Default for Phase {
                         low_pass_filter_type: std::ptr::null(),
                         low_pass_filter_cutoff: std::ptr::null(),
                         low_pass_filter_order: 0,
-                    };
-                        sys::MAX_CHANNELS as usize],
+                    }; sys::MAX_CHANNELS as usize],
                 },
                 n_events: 0,
                 event_entities: [0; sys::MAX_EVENT_STREAMS as usize],
@@ -411,26 +548,26 @@ impl Phase {
         phase.filename = filename.to_string();
         let cfilename = CString::new(filename).unwrap();
 
-        let res = unsafe {
-           sys::phase_open(
-                phase_ptr!(phase),
-                cfilename.as_ptr(),
-            )
-        };
+        let res = unsafe { sys::phase_open(phase_ptr!(phase), cfilename.as_ptr()) };
 
-        match Error::from_phaseh5_error(res){
+        match Error::from_phaseh5_error(res) {
             Ok(()) => {
                 for i in 0..phase.phase.raw_data.n_channels as usize {
                     unsafe {
-                        phase.labels_map.insert(CStr::from_ptr(phase.phase.raw_data.info_channels[i].label)
-                            .to_str().expect("Failed to convert the CStr").to_string(), i);
+                        phase.labels_map.insert(
+                            CStr::from_ptr(phase.phase.raw_data.info_channels[i].label)
+                                .to_str()
+                                .expect("Failed to convert the CStr")
+                                .to_string(),
+                            i,
+                        );
                     }
                 }
                 Ok(phase)
-            },
+            }
             Err(err) => {
                 eprintln!("{err:?}");
-                Err(err)   
+                Err(err)
             }
         }
     }
@@ -446,12 +583,16 @@ impl Phase {
     pub fn peak_train_len(&self, label: &str) -> usize {
         let label_c = CString::new(label).expect("peak_train_len: Failed to convert the CStr");
         let mut len = 0usize;
-        let res = unsafe { sys::peak_train_len(phase_ptr!(self), label_c.as_ptr(), &mut len as *mut _) };
+        let res =
+            unsafe { sys::peak_train_len(phase_ptr!(self), label_c.as_ptr(), &mut len as *mut _) };
 
         match Error::from_phaseh5_error(res) {
             Ok(()) => len,
-            Err(err) => { panic!("peak_train_len: {err:?}"); },
-        } 
+            Err(Error::PeakTrainNoPeakGroup) => 0,
+            Err(err) => {
+                panic!("peak_train_len: {err:?}");
+            }
+        }
     }
 }
 
@@ -478,7 +619,7 @@ impl PhaseHandler for Phase {
         &self,
         channel: &str,
         start: Option<usize>,
-        end: Option<usize>
+        end: Option<usize>,
     ) -> Result<Vec<f32>, SpikeError> {
         let actual_start = match start {
             Some(val) => val,
@@ -500,24 +641,37 @@ impl PhaseHandler for Phase {
         if !self.labels_map.contains_key(channel) {
             return Err(SpikeError::RawDataLabelNotFound);
         }
-        
+
         let index = self.labels_map[channel];
 
         let mut ret = vec![0; actual_end - actual_start];
-        
-        let res = Error::from_phaseh5_error(unsafe {sys::raw_data(phase_ptr!(self), index, actual_start, actual_end, ret.as_mut_ptr().cast())});
+
+        let res = Error::from_phaseh5_error(unsafe {
+            sys::raw_data(
+                phase_ptr!(self),
+                index,
+                actual_start,
+                actual_end,
+                ret.as_mut_ptr().cast(),
+            )
+        });
 
         match res {
             Ok(()) => {
-                let conversion_factor = self.phase.raw_data.info_channels[index].conversion_factor as f32 *
-                    f32::powf(10f32, self.phase.raw_data.info_channels[index].exponent as f32);
+                let conversion_factor = self.phase.raw_data.info_channels[index].conversion_factor
+                    as f32
+                    * f32::powf(
+                        10f32,
+                        self.phase.raw_data.info_channels[index].exponent as f32,
+                    );
                 let offset = self.phase.raw_data.info_channels[index].ad_zero;
 
-                Ok(ret.iter().map(|x| (*x - offset) as f32 * conversion_factor).collect())
-            },
-            Err(err) => {
-                Err(err.into())
+                Ok(ret
+                    .iter()
+                    .map(|x| (*x - offset) as f32 * conversion_factor)
+                    .collect())
             }
+            Err(err) => Err(err.into()),
         }
     }
 
@@ -531,7 +685,7 @@ impl PhaseHandler for Phase {
             Some(val) => val,
             None => 0,
         };
-        
+
         let actual_end = actual_start + data.len();
 
         if actual_end >= self.datalen() {
@@ -544,13 +698,25 @@ impl PhaseHandler for Phase {
 
         let index = self.labels_map[channel];
 
-        let conversion_factor = self.phase.raw_data.info_channels[index].conversion_factor as f32 *
-            f32::powf(10f32, self.phase.raw_data.info_channels[index].exponent as f32);
+        let conversion_factor = self.phase.raw_data.info_channels[index].conversion_factor as f32
+            * f32::powf(
+                10f32,
+                self.phase.raw_data.info_channels[index].exponent as f32,
+            );
         let offset = self.phase.raw_data.info_channels[index].ad_zero;
-        let buf : Vec<i32> = data.iter().map(|x| (*x / conversion_factor) as i32 + offset).collect();
+        let buf: Vec<i32> = data
+            .iter()
+            .map(|x| (*x / conversion_factor) as i32 + offset)
+            .collect();
 
         let res = unsafe {
-            sys::set_raw_data(phase_ptr!(self), index, actual_start, actual_end, buf.as_ptr())
+            sys::set_raw_data(
+                phase_ptr!(self),
+                index,
+                actual_start,
+                actual_end,
+                buf.as_ptr(),
+            )
         };
 
         Ok(Error::from_phaseh5_error(res)?)
@@ -592,15 +758,20 @@ impl PhaseHandler for Phase {
             return Err(SpikeError::DigitalStartIsAfterEnd);
         }
 
-        let mut buf = vec![0f32; actual_end-actual_start];
+        let mut buf = vec![0f32; actual_end - actual_start];
 
-        let res = unsafe { sys::digital(phase_ptr!(self), actual_start, actual_end, buf.as_mut_ptr().cast()) };
+        let res = unsafe {
+            sys::digital(
+                phase_ptr!(self),
+                actual_start,
+                actual_end,
+                buf.as_mut_ptr().cast(),
+            )
+        };
 
         match Error::from_phaseh5_error(res) {
             Ok(()) => Ok(buf),
-            Err(err) => {
-                Err(err.into())
-            }
+            Err(err) => Err(err.into()),
         }
     }
 
@@ -632,13 +803,18 @@ impl PhaseHandler for Phase {
             panic!("set_digital: [start] is not before [end]");
         }
 
-        let res = unsafe { sys::set_digital(phase_ptr!(self), actual_start, actual_end, data.as_ptr().cast()) };
+        let res = unsafe {
+            sys::set_digital(
+                phase_ptr!(self),
+                actual_start,
+                actual_end,
+                data.as_ptr().cast(),
+            )
+        };
 
         match Error::from_phaseh5_error(res) {
             Ok(()) => Ok(()),
-            Err(err) => {
-                Err(err.into())
-            }
+            Err(err) => Err(err.into()),
         }
     }
 
@@ -646,17 +822,15 @@ impl PhaseHandler for Phase {
         self.phase.n_events as usize
     }
 
-    fn events(&self, index: usize) -> Result<Vec<i64>, SpikeError> { 
+    fn events(&self, index: usize) -> Result<Vec<i64>, SpikeError> {
         let len = self.events_len(index);
         let mut data = vec![0i64; len];
 
-        let res = unsafe {
-            sys::events(phase_ptr!(self), index, data.as_mut_ptr())
-        };
-        
+        let res = unsafe { sys::events(phase_ptr!(self), index, data.as_mut_ptr()) };
+
         match Error::from_phaseh5_error(res) {
             Ok(()) => Ok(data),
-            Err(err) => Err(err.into())
+            Err(err) => Err(err.into()),
         }
     }
 
@@ -664,14 +838,21 @@ impl PhaseHandler for Phase {
         &self,
         channel: &str,
         start: Option<usize>,
-        end: Option<usize>
+        end: Option<usize>,
     ) -> Result<(Vec<usize>, Vec<f32>), SpikeError> {
         let channel_c = CString::new(channel).expect("peak_train_len: Failed to convert the CStr");
         let peak_train_len = self.peak_train_len(channel);
+        if peak_train_len == 0 {
+            return Ok((vec![], vec![]));
+        }
         let mut peak_train = PeakTrain::new(peak_train_len);
         let mut peak_train_c = peak_train.as_c_repr();
         let res = unsafe {
-            sys::peak_train(phase_ptr!(self), channel_c.as_ptr(), peak_train_ptr!(peak_train_c))
+            sys::peak_train(
+                phase_ptr!(self),
+                channel_c.as_ptr(),
+                peak_train_ptr!(peak_train_c),
+            )
         };
 
         match Error::from_phaseh5_error(res) {
@@ -685,7 +866,7 @@ impl PhaseHandler for Phase {
                     let mut i_start = 0;
                     let mut i_end = samples.len() - 1;
 
-                    for (i, val) in samples.iter().enumerate(){
+                    for (i, val) in samples.iter().enumerate() {
                         if *val >= start {
                             i_start = i;
                             break;
@@ -697,13 +878,13 @@ impl PhaseHandler for Phase {
                             break;
                         }
                     }
-                    Ok((samples[i_start..i_end].iter().map(|x| *x).collect(),
-                        values[i_start..i_end].iter().map(|x| *x).collect()))
+                    Ok((
+                        samples[i_start..i_end].iter().map(|x| *x).collect(),
+                        values[i_start..i_end].iter().map(|x| *x).collect(),
+                    ))
                 }
-            },
-            Err(err) => {
-                Err(err.into())
             }
+            Err(err) => Err(err.into()),
         }
     }
 
@@ -712,91 +893,124 @@ impl PhaseHandler for Phase {
         channel: &str,
         start: Option<usize>,
         end: Option<usize>,
-        data: (Vec<usize>, Vec<f32>)
+        data: (Vec<usize>, Vec<f32>),
     ) -> Result<(), SpikeError> {
         let channel_c = CString::new(channel).expect("peak_train_len: Failed to convert the CStr");
         let peak_train_len = self.peak_train_len(channel);
-        let mut peak_train = PeakTrain::new(peak_train_len);
-        let mut peak_train_c = peak_train.as_c_repr();
-        let res = unsafe {
-            sys::peak_train(phase_ptr!(self), channel_c.as_ptr(), peak_train_ptr!(peak_train_c))
-        };
 
-        match Error::from_phaseh5_error(res) {
-            Ok(()) => {
-                // there is a group. Get the data and replace the new ones
-                let (samples, values) = (peak_train.samples, peak_train.values);
+        if peak_train_len == 0 {
+            // there is no group yet. Create a peak_train and set the data to it
 
-                // the spikes train in present and contains data so the new data must be
-                // inserted between start and stop positions
-                let start = start.unwrap_or(samples[0]);
-                let end = end.unwrap_or(samples[samples.len() - 1]);
-                let mut i_start = 0;
-                let mut i_end = samples.len() - 1;
-                for (i, val) in samples.iter().enumerate() {
-                    if *val >= start {
-                        i_start = i;
-                        break;
+            let mut peak_train = match PeakTrain::from(data.0, data.1) {
+                Ok(peak_train) => peak_train,
+                Err(err) => {
+                    return Err(err.into());
+                }
+            };
+
+            let mut peak_train_c = peak_train.as_c_repr();
+
+            let res = unsafe {
+                sys::set_peak_train(
+                    phase_ptr!(self),
+                    channel_c.as_ptr(),
+                    peak_train_ptr!(peak_train_c),
+                )
+            };
+            match Error::from_phaseh5_error(res) {
+                Ok(()) => Ok(()),
+                Err(err) => Err(err.into()),
+            }
+        } else {
+            let mut peak_train = PeakTrain::new(peak_train_len);
+            let mut peak_train_c = peak_train.as_c_repr();
+            let res = unsafe {
+                sys::peak_train(
+                    phase_ptr!(self),
+                    channel_c.as_ptr(),
+                    peak_train_ptr!(peak_train_c),
+                )
+            };
+
+            match Error::from_phaseh5_error(res) {
+                Ok(()) => {
+                    // there is a group. Get the data and replace the new ones
+                    let (samples, values) = (peak_train.samples, peak_train.values);
+
+                    // the spikes train in present and contains data so the new data must be
+                    // inserted between start and stop positions
+                    let start = start.unwrap_or(samples[0]);
+                    let end = end.unwrap_or(samples[samples.len() - 1]);
+                    let mut i_start = 0;
+                    let mut i_end = samples.len() - 1;
+                    for (i, val) in samples.iter().enumerate() {
+                        if *val >= start {
+                            i_start = i;
+                            break;
+                        }
+                    }
+                    for (i, val) in samples.iter().enumerate() {
+                        if *val >= end {
+                            i_end = i;
+                            break;
+                        }
+                    }
+
+                    // get all values before start
+                    let before_start_samples = samples[0..i_start].to_vec();
+                    let before_start_values = values[0..i_start].to_vec();
+
+                    // get all values after end
+                    let after_end_samples = samples[i_end..].to_vec();
+                    let after_end_values = values[i_end..].to_vec();
+
+                    // join the values with data
+                    let mut new_samples = vec![];
+                    let mut new_values = vec![];
+
+                    new_samples.extend_from_slice(before_start_samples.as_slice());
+                    new_samples.extend_from_slice(data.0.as_slice());
+                    new_samples.extend_from_slice(after_end_samples.as_slice());
+
+                    new_values.extend_from_slice(before_start_values.as_slice());
+                    new_values.extend_from_slice(data.1.as_slice());
+                    new_values.extend_from_slice(after_end_values.as_slice());
+
+                    // create the new PeakTrain
+                    let mut new_peak_train = PeakTrain::new(new_samples.len());
+                    let mut new_peak_train_c = new_peak_train.as_c_repr();
+
+                    // try to write it
+                    let res = unsafe {
+                        sys::set_peak_train(
+                            phase_ptr!(self),
+                            channel_c.as_ptr(),
+                            peak_train_ptr!(new_peak_train_c),
+                        )
+                    };
+
+                    match Error::from_phaseh5_error(res) {
+                        Ok(()) => Ok(()),
+                        Err(err) => Err(err.into()),
                     }
                 }
-                for (i, val) in samples.iter().enumerate() {
-                    if *val >= end {
-                        i_end = i;
-                        break;
+
+                Err(Error::PeakTrainNoPeakGroup) => {
+                    // there is no group yet. Just pass the new data
+                    let res = unsafe {
+                        sys::set_peak_train(
+                            phase_ptr!(self),
+                            channel_c.as_ptr(),
+                            peak_train_ptr!(peak_train_c),
+                        )
+                    };
+                    match Error::from_phaseh5_error(res) {
+                        Ok(()) => Ok(()),
+                        Err(err) => Err(err.into()),
                     }
                 }
 
-                // get all values before start
-                let before_start_samples = samples[0..i_start].to_vec();
-                let before_start_values = values[0..i_start].to_vec();
-
-                // get all values after end
-                let after_end_samples = samples[i_end..].to_vec();
-                let after_end_values = values[i_end..].to_vec();
-
-                // join the values with data
-                let mut new_samples = vec![];
-                let mut new_values = vec![];
-
-                new_samples
-                    .extend_from_slice(before_start_samples.as_slice());
-                new_samples.extend_from_slice(data.0.as_slice());
-                new_samples.extend_from_slice(after_end_samples.as_slice());
-
-                new_values
-                    .extend_from_slice(before_start_values.as_slice());
-                new_values.extend_from_slice(data.1.as_slice());
-                new_values
-                    .extend_from_slice(after_end_values.as_slice());
-
-                // create the new PeakTrain
-                let mut new_peak_train = PeakTrain::new(new_samples.len());
-                let mut new_peak_train_c = new_peak_train.as_c_repr();
-
-                // try to write it
-                let res = unsafe {
-                    sys::set_peak_train(phase_ptr!(self), channel_c.as_ptr(), peak_train_ptr!(new_peak_train_c))
-                };
-
-                match Error::from_phaseh5_error(res) {
-                    Ok(()) => Ok(()),
-                    Err(err) => Err(err.into()),
-                }
-            },
-
-            Err(Error::PeakTrainNoPeakGroup) => {
-                // there is no group yet. Just pass the new data
-                let res = unsafe {
-                    sys::set_peak_train(phase_ptr!(self), channel_c.as_ptr(), peak_train_ptr!(peak_train_c))
-                };
-                match Error::from_phaseh5_error(res) {
-                    Ok(()) => Ok(()),
-                    Err(err) => Err(err.into()),
-                }
-            },
-
-            Err(err) => {
-                Err(err.into())
+                Err(err) => Err(err.into()),
             }
         }
     }
@@ -846,13 +1060,11 @@ impl PyPhase {
     ) -> Option<Vec<f32>> {
         match &self.phase {
             None => None,
-            Some(phase) => {
-                match phase.raw_data(channel, start, end) {
-                    Ok(res) => Some(res),
-                    Err(err) => {
-                        println!("{err:?}");
-                        None
-                    },
+            Some(phase) => match phase.raw_data(channel, start, end) {
+                Ok(res) => Some(res),
+                Err(err) => {
+                    println!("{err:?}");
+                    None
                 }
             },
         }
@@ -866,13 +1078,11 @@ impl PyPhase {
     ) -> Option<bool> {
         match &mut self.phase {
             None => None,
-            Some(phase) => {
-                match phase.set_raw_data(channel, start, data[..].as_ref()) {
-                    Ok(()) => Some(true),
-                    Err(err) => {
-                        println!("{err:?}");
-                        Some(false)
-                    },
+            Some(phase) => match phase.set_raw_data(channel, start, data[..].as_ref()) {
+                Ok(()) => Some(true),
+                Err(err) => {
+                    println!("{err:?}");
+                    Some(false)
                 }
             },
         }
@@ -894,13 +1104,11 @@ impl PyPhase {
     ) -> Option<Vec<f32>> {
         match &self.phase {
             None => None,
-            Some(phase) => {
-                match phase.digital(index, start, end) {
-                    Ok(ret) => Some(ret),
-                    Err(err) => {
-                        println!("{err:?}");
-                        None
-                    },
+            Some(phase) => match phase.digital(index, start, end) {
+                Ok(ret) => Some(ret),
+                Err(err) => {
+                    println!("{err:?}");
+                    None
                 }
             },
         }
@@ -915,13 +1123,11 @@ impl PyPhase {
     ) -> Option<bool> {
         match &mut self.phase {
             None => None,
-            Some(phase) => {
-                match phase.set_digital(index, start, data[..].as_ref()) {
-                    Ok(()) => Some(true),
-                    Err(err) => {
-                        println!("{err:?}");
-                        Some(false)
-                    },
+            Some(phase) => match phase.set_digital(index, start, data[..].as_ref()) {
+                Ok(()) => Some(true),
+                Err(err) => {
+                    println!("{err:?}");
+                    Some(false)
                 }
             },
         }
@@ -943,13 +1149,11 @@ impl PyPhase {
     ) -> Option<(Vec<usize>, Vec<f32>)> {
         match &self.phase {
             None => None,
-            Some(phase) => {
-                match phase.peak_train(channel, start, end) {
-                    Ok(ret) => Some(ret),
-                    Err(err) => {
-                        println!("{err:?}");
-                        None
-                    },
+            Some(phase) => match phase.peak_train(channel, start, end) {
+                Ok(ret) => Some(ret),
+                Err(err) => {
+                    println!("{err:?}");
+                    None
                 }
             },
         }
@@ -961,17 +1165,15 @@ impl PyPhase {
         channel: &str,
         data: (Vec<usize>, Vec<f32>),
         start: Option<usize>,
-        end: Option<usize>
+        end: Option<usize>,
     ) -> Option<bool> {
         match &mut self.phase {
             None => None,
-            Some(phase) => {
-                match phase.set_peak_train(channel, start, end, data) {
-                    Ok(()) => Some(true),
-                    Err(err) => {
-                        println!("{err:?}");
-                        Some(false)
-                    },
+            Some(phase) => match phase.set_peak_train(channel, start, end, data) {
+                Ok(()) => Some(true),
+                Err(err) => {
+                    println!("{err:?}");
+                    Some(false)
                 }
             },
         }
@@ -1000,42 +1202,43 @@ fn py_close() {
 //        subsample_range,
 
 #[pyfunction]
-fn compute_threshold(
-    range: Vec<f32>,
-    sampling_frequency: f32,
-    multiplier: f32,
-) -> Option<f32> {
+fn compute_threshold(range: Vec<f32>, sampling_frequency: f32, multiplier: f32) -> Option<f32> {
     match operations::compute_threshold(range[..].as_ref(), sampling_frequency, multiplier) {
         Ok(ret) => Some(ret),
         Err(err) => {
             eprintln!("compute_threshold: {err:?}");
             None
-        },
+        }
     }
 }
 
 #[pyfunction]
 fn spike_detection(
-    data: Vec<f32>, 
+    data: Vec<f32>,
     sampling_frequency: f32,
     threshold: f32,
     peak_duration: f32,
     refractory_time: f32,
 ) -> Option<(Vec<usize>, Vec<f32>)> {
-    match operations::spike_detection(data[..].as_ref(), sampling_frequency, threshold, peak_duration, refractory_time) {
+    match operations::spike_detection(
+        data[..].as_ref(),
+        sampling_frequency,
+        threshold,
+        peak_duration,
+        refractory_time,
+    ) {
         Ok(ret) => Some(ret),
         Err(err) => {
             eprintln!("spike_detection: {err:?}");
             None
-        },
+        }
     }
 }
 
 #[pyfunction]
-fn get_digital_intervals(
-    digital: Vec<f32>, 
-) -> Option<Vec<(usize, usize)>> {
-    Some(operations::get_digital_intervals(digital[..].as_ref()))}
+fn get_digital_intervals(digital: Vec<f32>) -> Option<Vec<(usize, usize)>> {
+    Some(operations::get_digital_intervals(digital[..].as_ref()))
+}
 
 #[pyfunction]
 pub fn subsample_range(
@@ -1044,13 +1247,12 @@ pub fn subsample_range(
     bin_size: usize,
     n_bins: usize,
 ) -> Option<Vec<usize>> {
-    Some(
-        operations::subsample_range(
-            peak_times[..].as_ref(),
-            starting_sample,
-            bin_size,
-            n_bins,
-        ))
+    Some(operations::subsample_range(
+        peak_times[..].as_ref(),
+        starting_sample,
+        bin_size,
+        n_bins,
+    ))
 }
 
 #[pymodule(name = "pycode")]

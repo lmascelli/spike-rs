@@ -96,7 +96,7 @@ pub trait PhaseHandler {
     /// with the provided `data`.
     /// The `start` and `end` of the slice are optional and if omitted the
     /// start and the end of the whole data will be used.
-    /// THE TRAIN IS SUPPOSED TO BE SORTED IN TIME AND THE PROVIDED `data` 
+    /// THE TRAIN IS SUPPOSED TO BE SORTED IN TIME AND THE PROVIDED `data`
     /// MUST BE VALID IN THE REPLACED SLICE. PAY ATTENTION THAT THERE IS NO
     /// CHECK ON THAT FOR NOW!!!
     fn set_peak_train(
