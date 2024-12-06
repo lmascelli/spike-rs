@@ -2,7 +2,7 @@ from typing import Any, Optional
 import atexit
 import builtins
 
-from .pycode import PyPhase, init, close
+from .pycode import PyPhase, init, close, logspace, lowess
 
 init()
 atexit.register(close)

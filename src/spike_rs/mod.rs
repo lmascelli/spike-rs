@@ -1,4 +1,4 @@
-pub mod analisys;
+pub mod analysis;
 /// Spike-rs
 /// Author: Mascelli Leonardo
 /// Organization: University of Genoa

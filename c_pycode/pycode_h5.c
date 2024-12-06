@@ -938,7 +938,7 @@ phaseh5_error set_peak_train(PhaseH5* phase, const char* label, const PeakTrain*
     if (res <= 0) {
       return SET_PEAK_TRAIN_CREATE_GROUP_FAIL;
     }
-  } 
+  }
 
   // Create memory dataspace for the new values
   hsize_t memory_len[] = { peak_train->n_peaks };

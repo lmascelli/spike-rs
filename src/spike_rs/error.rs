@@ -10,10 +10,17 @@ pub enum SpikeError {
     DigitalStartIsAfterEnd,
     IndexOutOfRange,
     ReplaceRangeError,
+
     ComputeThresholdTooFewSamples(usize, usize),
+
     SpikeDetectionTooFewSamples,
     NoSpikeTrainsAvailable,
     OperationFailed,
+
+    LogISITooFewSamples,
+    LogISICalcThresholdNoIntraIndex,
+    LogISICalcThresholdIntraAtEndOfPeaks,
+    LogISICalcThresholdNoMinWithRequiredVoidParameter,
 }
 
 impl std::fmt::Display for SpikeError {

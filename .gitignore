@@ -9,5 +9,7 @@ Cargo.lock
 **/target
 test.py
 /install/
+/.ropeproject/
+/.mypy_cache/
 tags
 TAGS

@@ -1255,6 +1255,16 @@ pub fn subsample_range(
     ))
 }
 
+#[pyfunction]
+pub fn logspace(start: f32, end: f32, n_points: usize) -> Vec<f32> {
+    return spike_rs::operations::math::logspace(start, end, n_points);
+}
+
+#[pyfunction]
+pub fn lowess(data: Vec<f32>, span: f32) -> Vec<f32> {
+    return spike_rs::operations::math::lowess(data[..].as_ref(), span);
+}
+
 #[pymodule(name = "pycode")]
 fn pycode_rs_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyPhase>()?;
@@ -1264,5 +1274,7 @@ fn pycode_rs_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(spike_detection, m)?)?;
     m.add_function(wrap_pyfunction!(get_digital_intervals, m)?)?;
     m.add_function(wrap_pyfunction!(subsample_range, m)?)?;
+    m.add_function(wrap_pyfunction!(logspace, m)?)?;
+    m.add_function(wrap_pyfunction!(lowess, m)?)?;
     Ok(())
 }
