@@ -47,7 +47,7 @@ switch($args[0]) {
     }
 
     "develop" {
-        Invoke-Expression "./.venv/$bin_dir/maturin develop --release"
+        Invoke-Expression "./.venv/$bin_dir/maturin develop"
     }
 
     "build" {

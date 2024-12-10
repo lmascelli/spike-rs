@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 
-pub mod spike_rs;
 use pyo3::prelude::*;
-use spike_rs::{error::SpikeError, operations, types::PhaseHandler};
+use spike_rs::{analysis, error::SpikeError, types::PhaseHandler};
 
 mod sys {
     #![allow(non_upper_case_globals)]
@@ -1203,7 +1202,11 @@ fn py_close() {
 
 #[pyfunction]
 fn compute_threshold(range: Vec<f32>, sampling_frequency: f32, multiplier: f32) -> Option<f32> {
-    match operations::compute_threshold(range[..].as_ref(), sampling_frequency, multiplier) {
+    match analysis::spike_detection::compute_threshold(
+        range[..].as_ref(),
+        sampling_frequency,
+        multiplier,
+    ) {
         Ok(ret) => Some(ret),
         Err(err) => {
             eprintln!("compute_threshold: {err:?}");
@@ -1220,7 +1223,7 @@ fn spike_detection(
     peak_duration: f32,
     refractory_time: f32,
 ) -> Option<(Vec<usize>, Vec<f32>)> {
-    match operations::spike_detection(
+    match analysis::spike_detection::spike_detection(
         data[..].as_ref(),
         sampling_frequency,
         threshold,
@@ -1237,7 +1240,9 @@ fn spike_detection(
 
 #[pyfunction]
 fn get_digital_intervals(digital: Vec<f32>) -> Option<Vec<(usize, usize)>> {
-    Some(operations::get_digital_intervals(digital[..].as_ref()))
+    Some(analysis::digital::get_digital_intervals(
+        digital[..].as_ref(),
+    ))
 }
 
 #[pyfunction]
@@ -1247,7 +1252,7 @@ pub fn subsample_range(
     bin_size: usize,
     n_bins: usize,
 ) -> Option<Vec<usize>> {
-    Some(operations::subsample_range(
+    Some(analysis::subsampling::subsample_range(
         peak_times[..].as_ref(),
         starting_sample,
         bin_size,

@@ -21,6 +21,7 @@ pub enum SpikeError {
     LogISICalcThresholdNoIntraIndex,
     LogISICalcThresholdIntraAtEndOfPeaks,
     LogISICalcThresholdNoMinWithRequiredVoidParameter,
+    LogISIFindBurstTooManyBursts,
 }
 
 impl std::fmt::Display for SpikeError {
