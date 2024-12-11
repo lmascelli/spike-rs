@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::{
     analysis::{
         digital::get_digital_intervals, spike_analysis::get_subsampled_pre_stim_post_from_intervals,
@@ -6,6 +5,7 @@ use crate::{
     error::SpikeError,
     types::PhaseHandler,
 };
+use std::collections::HashMap;
 
 /// Subsample the given range returning a vector with the number of spikes in
 /// each bin. The input range shoulds contain the times of each peak detected

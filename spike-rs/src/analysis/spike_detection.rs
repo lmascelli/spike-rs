@@ -1,4 +1,4 @@
-use crate::{error::SpikeError, types::PhaseHandler, operations::math};
+use crate::{error::SpikeError, operations::math, types::PhaseHandler};
 
 pub fn compute_threshold(
     range: &[f32],

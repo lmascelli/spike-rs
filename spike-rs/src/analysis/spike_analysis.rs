@@ -1,10 +1,8 @@
-use std::collections::HashMap;
 use crate::{
-    operations::math,
-    error::SpikeError,
+    analysis::subsampling::subsample_range, error::SpikeError, operations::math,
     types::PhaseHandler,
-    analysis::subsampling::subsample_range,
 };
+use std::collections::HashMap;
 
 /// Build an histogram of `n_bins` equidistant values containing the distribution of
 /// the magnitude of the peaks. Returns the built histogram and the minimum and
@@ -428,7 +426,7 @@ pub mod logisi {
     }
 
     // TODO handle the default value of cutoff to be 0.1
-    pub fn method(
+    pub fn detect_bursts(
         peak_train: &[usize],
         sampling_frequency: f32,
         cutoff: f32,
